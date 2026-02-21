@@ -25,7 +25,7 @@ class NationalShopServiceTest extends TestCase
     public function testFetchProductByExternalId(): void
     {
         $client = $this->createMock(Client::class);
-        $response = $this->createMock(Response::class);
+        $response = $this->createStub(Response::class);
         $expected = ['data' => ['id' => 123, 'name' => 'Test Product']];
 
         $response->method('isOk')->willReturn(true);
@@ -53,7 +53,7 @@ class NationalShopServiceTest extends TestCase
     public function testFetchProductByExternalIdThrowsOnFailure(): void
     {
         $client = $this->createMock(Client::class);
-        $response = $this->createMock(Response::class);
+        $response = $this->createStub(Response::class);
 
         $response->method('isOk')->willReturn(false);
         $response->method('getStatusCode')->willReturn(500);
@@ -80,7 +80,7 @@ class NationalShopServiceTest extends TestCase
     public function testFetchProductByExternalIdThrowsOnInvalidJson(): void
     {
         $client = $this->createMock(Client::class);
-        $response = $this->createMock(Response::class);
+        $response = $this->createStub(Response::class);
 
         $response->method('isOk')->willReturn(true);
         $response->method('getJson')->willReturn(null);
