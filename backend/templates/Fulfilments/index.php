@@ -11,7 +11,6 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('fulfilment_date') ?></th>
                     <th><?= $this->Paginator->sort('fulfilment_number') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
@@ -20,7 +19,6 @@
             <tbody>
                 <?php foreach ($fulfilments as $fulfilment): ?>
                 <tr>
-                    <td><?= h($fulfilment->id) ?></td>
                     <td><?= h($fulfilment->fulfilment_date) ?></td>
                     <td><?= h($fulfilment->fulfilment_number) ?></td>
                     <td class="actions">
@@ -31,7 +29,7 @@
                             ['action' => 'delete', $fulfilment->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $fulfilment->id),
+                                'confirm' => __('Are you sure you want to delete this fulfilment?'),
                             ]
                         ) ?>
                     </td>

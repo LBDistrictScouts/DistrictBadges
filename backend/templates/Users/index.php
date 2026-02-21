@@ -11,10 +11,9 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('first_name') ?></th>
                     <th><?= $this->Paginator->sort('last_name') ?></th>
-                    <th><?= $this->Paginator->sort('account_id') ?></th>
+                    <th><?= $this->Paginator->sort('account_id', __('Account')) ?></th>
                     <th><?= $this->Paginator->sort('email') ?></th>
                     <th><?= $this->Paginator->sort('login') ?></th>
                     <th><?= $this->Paginator->sort('admin_role') ?></th>
@@ -25,7 +24,6 @@
             <tbody>
                 <?php foreach ($users as $user): ?>
                 <tr>
-                    <td><?= h($user->id) ?></td>
                     <td><?= h($user->first_name) ?></td>
                     <td><?= h($user->last_name) ?></td>
                     <td><?= $user->hasValue('account') ? $this->Html->link($user->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $user->account->id]) : '' ?></td>
@@ -41,7 +39,7 @@
                             ['action' => 'delete', $user->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $user->id),
+                                'confirm' => __('Are you sure you want to delete this user?'),
                             ]
                         ) ?>
                     </td>

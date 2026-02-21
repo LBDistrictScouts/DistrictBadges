@@ -11,20 +11,18 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('transaction_type') ?></th>
                     <th><?= $this->Paginator->sort('transaction_timestamp') ?></th>
-                    <th><?= $this->Paginator->sort('badge_id') ?></th>
+                    <th><?= $this->Paginator->sort('badge_id', __('Badge')) ?></th>
                     <th><?= $this->Paginator->sort('change_amount') ?></th>
                     <th><?= $this->Paginator->sort('audit_hash') ?></th>
-                    <th><?= $this->Paginator->sort('fulfilment_id') ?></th>
+                    <th><?= $this->Paginator->sort('fulfilment_id', __('Fulfilment')) ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($stockTransactions as $stockTransaction): ?>
                 <tr>
-                    <td><?= h($stockTransaction->id) ?></td>
                     <td><?= h($stockTransaction->transaction_type) ?></td>
                     <td><?= h($stockTransaction->transaction_timestamp) ?></td>
                     <td><?= $stockTransaction->hasValue('badge') ? $this->Html->link($stockTransaction->badge->badge_name, ['controller' => 'Badges', 'action' => 'view', $stockTransaction->badge->id]) : '' ?></td>
@@ -39,7 +37,7 @@
                             ['action' => 'delete', $stockTransaction->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $stockTransaction->id),
+                                'confirm' => __('Are you sure you want to delete this stock transaction?'),
                             ]
                         ) ?>
                     </td>

@@ -9,7 +9,7 @@
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
             <?= $this->Html->link(__('Edit Stock Transaction'), ['action' => 'edit', $stockTransaction->id], ['class' => 'side-nav-item']) ?>
-            <?= $this->Form->postLink(__('Delete Stock Transaction'), ['action' => 'delete', $stockTransaction->id], ['confirm' => __('Are you sure you want to delete # {0}?', $stockTransaction->id), 'class' => 'side-nav-item']) ?>
+            <?= $this->Form->postLink(__('Delete Stock Transaction'), ['action' => 'delete', $stockTransaction->id], ['confirm' => __('Are you sure you want to delete this stock transaction?'), 'class' => 'side-nav-item']) ?>
             <?= $this->Html->link(__('List Stock Transactions'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
             <?= $this->Html->link(__('New Stock Transaction'), ['action' => 'add'], ['class' => 'side-nav-item']) ?>
         </div>
@@ -18,10 +18,6 @@
         <div class="stockTransactions view content">
             <h3><?= h($stockTransaction->transaction_type) ?></h3>
             <table>
-                <tr>
-                    <th><?= __('Id') ?></th>
-                    <td><?= h($stockTransaction->id) ?></td>
-                </tr>
                 <tr>
                     <th><?= __('Transaction Type') ?></th>
                     <td><?= h($stockTransaction->transaction_type) ?></td>

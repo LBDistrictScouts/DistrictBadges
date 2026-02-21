@@ -11,7 +11,6 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('group_name') ?></th>
                     <th><?= $this->Paginator->sort('group_osm_id') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
@@ -20,7 +19,6 @@
             <tbody>
                 <?php foreach ($groups as $group): ?>
                 <tr>
-                    <td><?= h($group->id) ?></td>
                     <td><?= h($group->group_name) ?></td>
                     <td><?= h('#' . (string)$group->group_osm_id) ?></td>
                     <td class="actions">
@@ -31,7 +29,7 @@
                             ['action' => 'delete', $group->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $group->id),
+                                'confirm' => __('Are you sure you want to delete this group?'),
                             ]
                         ) ?>
                     </td>

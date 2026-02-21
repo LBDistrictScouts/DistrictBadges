@@ -9,7 +9,7 @@
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
             <?= $this->Html->link(__('Edit User'), ['action' => 'edit', $user->id], ['class' => 'side-nav-item']) ?>
-            <?= $this->Form->postLink(__('Delete User'), ['action' => 'delete', $user->id], ['confirm' => __('Are you sure you want to delete # {0}?', $user->id), 'class' => 'side-nav-item']) ?>
+            <?= $this->Form->postLink(__('Delete User'), ['action' => 'delete', $user->id], ['confirm' => __('Are you sure you want to delete this user?'), 'class' => 'side-nav-item']) ?>
             <?= $this->Html->link(__('List Users'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
             <?= $this->Html->link(__('New User'), ['action' => 'add'], ['class' => 'side-nav-item']) ?>
         </div>
@@ -18,10 +18,6 @@
         <div class="users view content">
             <h3><?= h($user->first_name) ?></h3>
             <table>
-                <tr>
-                    <th><?= __('Id') ?></th>
-                    <td><?= h($user->id) ?></td>
-                </tr>
                 <tr>
                     <th><?= __('First Name') ?></th>
                     <td><?= h($user->first_name) ?></td>
@@ -57,24 +53,20 @@
                 <div class="table-responsive">
                     <table>
                         <tr>
-                            <th><?= __('Id') ?></th>
                             <th><?= __('Order Number') ?></th>
                             <th><?= __('Placed Date') ?></th>
                             <th><?= __('Fulfilled') ?></th>
                             <th><?= __('Total Amount') ?></th>
                             <th><?= __('Total Quantity') ?></th>
-                            <th><?= __('Account Id') ?></th>
                             <th class="actions"><?= __('Actions') ?></th>
                         </tr>
                         <?php foreach ($user->orders as $order) : ?>
                         <tr>
-                            <td><?= h($order->id) ?></td>
                             <td><?= h($order->order_number) ?></td>
                             <td><?= h($order->placed_date) ?></td>
                             <td><?= h($order->fulfilled) ?></td>
                             <td><?= h($order->total_amount) ?></td>
                             <td><?= h($order->total_quantity) ?></td>
-                            <td><?= h($order->account_id) ?></td>
                             <td class="actions">
                                 <?= $this->Html->link(__('View'), ['controller' => 'Orders', 'action' => 'view', $order->id]) ?>
                                 <?= $this->Html->link(__('Edit'), ['controller' => 'Orders', 'action' => 'edit', $order->id]) ?>
@@ -83,7 +75,7 @@
                                     ['controller' => 'Orders', 'action' => 'delete', $order->id],
                                     [
                                         'method' => 'delete',
-                                        'confirm' => __('Are you sure you want to delete # {0}?', $order->id),
+                                        'confirm' => __('Are you sure you want to delete this order?'),
                                     ]
                                 ) ?>
                             </td>

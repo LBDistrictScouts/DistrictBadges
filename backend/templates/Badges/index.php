@@ -11,7 +11,6 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('badge_name') ?></th>
                     <th><?= $this->Paginator->sort('national_product_code') ?></th>
                     <th><?= $this->Paginator->sort('stocked') ?></th>
@@ -22,7 +21,6 @@
             <tbody>
                 <?php foreach ($badges as $badge): ?>
                 <tr>
-                    <td><?= h($badge->id) ?></td>
                     <td><?= h($badge->badge_name) ?></td>
                     <td><?= $badge->national_product_code === null ? '' : h((string)$badge->national_product_code) ?></td>
                     <td><?= $badge->stocked ? __('Yes') : __('No') ?></td>
@@ -35,7 +33,7 @@
                             ['action' => 'delete', $badge->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $badge->id),
+                                'confirm' => __('Are you sure you want to delete this badge?'),
                             ]
                         ) ?>
                     </td>

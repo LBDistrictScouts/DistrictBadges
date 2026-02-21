@@ -11,18 +11,16 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('invoice_date') ?></th>
                     <th><?= $this->Paginator->sort('due_date') ?></th>
                     <th><?= $this->Paginator->sort('invoice_number') ?></th>
-                    <th><?= $this->Paginator->sort('account_id') ?></th>
+                    <th><?= $this->Paginator->sort('account_id', __('Account')) ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($invoices as $invoice): ?>
                 <tr>
-                    <td><?= h($invoice->id) ?></td>
                     <td><?= h($invoice->invoice_date) ?></td>
                     <td><?= h($invoice->due_date) ?></td>
                     <td><?= h($invoice->invoice_number) ?></td>
@@ -35,7 +33,7 @@
                             ['action' => 'delete', $invoice->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $invoice->id),
+                                'confirm' => __('Are you sure you want to delete this invoice?'),
                             ]
                         ) ?>
                     </td>

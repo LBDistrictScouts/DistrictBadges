@@ -89,8 +89,7 @@ class StockTransactionsTable extends Table
             ->notEmptyString('audit_hash');
 
         $validator
-            ->uuid('fulfilment_id')
-            ->notEmptyString('fulfilment_id');
+            ->uuid('fulfilment_id');
 
         return $validator;
     }

@@ -11,16 +11,14 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('account_name') ?></th>
-                    <th><?= $this->Paginator->sort('group_id') ?></th>
+                    <th><?= $this->Paginator->sort('group_id', __('Group')) ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($accounts as $account): ?>
                 <tr>
-                    <td><?= h($account->id) ?></td>
                     <td><?= h($account->account_name) ?></td>
                     <td><?= $account->hasValue('group') ? $this->Html->link($account->group->group_name, ['controller' => 'Groups', 'action' => 'view', $account->group->id]) : '' ?></td>
                     <td class="actions">
@@ -31,7 +29,7 @@
                             ['action' => 'delete', $account->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $account->id),
+                                'confirm' => __('Are you sure you want to delete this account?'),
                             ]
                         ) ?>
                     </td>

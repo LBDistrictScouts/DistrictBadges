@@ -11,9 +11,8 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
-                    <th><?= $this->Paginator->sort('order_id') ?></th>
-                    <th><?= $this->Paginator->sort('badge_id') ?></th>
+                    <th><?= $this->Paginator->sort('order_id', __('Order')) ?></th>
+                    <th><?= $this->Paginator->sort('badge_id', __('Badge')) ?></th>
                     <th><?= $this->Paginator->sort('quantity') ?></th>
                     <th><?= $this->Paginator->sort('amount') ?></th>
                     <th><?= $this->Paginator->sort('fulfilled') ?></th>
@@ -23,7 +22,6 @@
             <tbody>
                 <?php foreach ($orderLines as $orderLine): ?>
                 <tr>
-                    <td><?= h($orderLine->id) ?></td>
                     <td><?= $orderLine->hasValue('order') ? $this->Html->link($orderLine->order->order_number, ['controller' => 'Orders', 'action' => 'view', $orderLine->order->id]) : '' ?></td>
                     <td><?= $orderLine->hasValue('badge') ? $this->Html->link($orderLine->badge->badge_name, ['controller' => 'Badges', 'action' => 'view', $orderLine->badge->id]) : '' ?></td>
                     <td><?= $this->Number->format($orderLine->quantity) ?></td>
@@ -37,7 +35,7 @@
                             ['action' => 'delete', $orderLine->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete # {0}?', $orderLine->id),
+                                'confirm' => __('Are you sure you want to delete this order line?'),
                             ]
                         ) ?>
                     </td>
