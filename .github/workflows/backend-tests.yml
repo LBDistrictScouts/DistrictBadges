@@ -1,0 +1,42 @@
+name: Backend Tests
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, intl, pdo_sqlite
+          coverage: none
+
+      - name: Composer install
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Composer post install
+        working-directory: backend
+        run: composer run-script post-install-cmd --no-interaction
+
+      - name: Run tests
+        working-directory: backend
+        run: composer test
+        env:
+          DATABASE_TEST_URL: sqlite://./testdb.sqlite

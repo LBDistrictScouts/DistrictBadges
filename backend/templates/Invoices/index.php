@@ -22,7 +22,7 @@
             <tbody>
                 <?php foreach ($invoices as $invoice): ?>
                 <tr>
-                    <td><?= $this->Number->format($invoice->id) ?></td>
+                    <td><?= h($invoice->id) ?></td>
                     <td><?= h($invoice->invoice_date) ?></td>
                     <td><?= h($invoice->due_date) ?></td>
                     <td><?= h($invoice->invoice_number) ?></td>

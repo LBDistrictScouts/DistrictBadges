@@ -24,8 +24,6 @@ class AccountsControllerTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
-        'app.Invoices',
-        'app.Orders',
     ];
 
     /**
@@ -36,7 +34,9 @@ class AccountsControllerTest extends TestCase
      */
     public function testIndex(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/accounts');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -47,7 +47,9 @@ class AccountsControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/accounts/view/ae471706-04cc-4c9c-8916-e4be1f913edf');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -58,7 +60,23 @@ class AccountsControllerTest extends TestCase
      */
     public function testAdd(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $before = $accounts->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post('/accounts/add', [
+            'account_name' => 'New Account',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Accounts', 'action' => 'index']);
+        $this->assertFlashMessage('The account has been saved.');
+        $this->assertSame($before + 1, $accounts->find()->count());
+
+        $saved = $accounts->find()
+            ->where(['account_name' => 'New Account'])
+            ->firstOrFail();
+        $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $saved->group_id);
     }
 
     /**
@@ -69,7 +87,20 @@ class AccountsControllerTest extends TestCase
      */
     public function testEdit(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $id = 'ae471706-04cc-4c9c-8916-e4be1f913edf';
+
+        $this->enableCsrfToken();
+        $this->put("/accounts/edit/{$id}", [
+            'account_name' => 'Updated Account',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Accounts', 'action' => 'index']);
+        $this->assertFlashMessage('The account has been saved.');
+
+        $updated = $accounts->get($id);
+        $this->assertSame('Updated Account', $updated->account_name);
     }
 
     /**
@@ -80,6 +111,21 @@ class AccountsControllerTest extends TestCase
      */
     public function testDelete(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $entity = $accounts->newEntity([
+            'account_name' => 'Delete Account',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+        ]);
+        $accounts->saveOrFail($entity);
+        $id = $entity->id;
+        $before = $accounts->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post("/accounts/delete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Accounts', 'action' => 'index']);
+        $this->assertFlashMessage('The account has been deleted.');
+        $this->assertSame($before - 1, $accounts->find()->count());
+        $this->assertFalse($accounts->exists(['id' => $id]));
     }
 }

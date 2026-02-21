@@ -59,6 +59,46 @@ class BadgesTableTest extends TestCase
      */
     public function testValidationDefault(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $entity = $this->Badges->newEntity([
+            'badge_name' => '',
+            'stocked' => 'not-bool',
+        ]);
+
+        $errors = $entity->getErrors();
+        $this->assertArrayHasKey('badge_name', $errors);
+        $this->assertArrayHasKey('stocked', $errors);
+
+        $valid = $this->Badges->newEntity([
+            'badge_name' => 'Test Badge',
+            'stocked' => true,
+            'national_product_code' => null,
+            'national_data' => null,
+        ]);
+        $this->assertSame([], $valid->getErrors());
+    }
+
+    /**
+     * Test save method
+     *
+     * @return void
+     */
+    public function testSave(): void
+    {
+        $entity = $this->Badges->newEntity([
+            'badge_name' => 'New Badge',
+            'stocked' => true,
+            'national_product_code' => null,
+            'national_data' => null,
+        ]);
+
+        $result = $this->Badges->save($entity);
+        $this->assertNotFalse($result);
+        $this->assertNotEmpty($result->id);
+
+        $saved = $this->Badges->get($result->id);
+        $this->assertSame('New Badge', $saved->badge_name);
+        $this->assertTrue((bool)$saved->stocked);
+        $this->assertNull($saved->national_product_code);
+        $this->assertNull($saved->national_data);
     }
 }

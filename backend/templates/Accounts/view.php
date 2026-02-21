@@ -77,8 +77,9 @@
                             <th><?= __('Order Number') ?></th>
                             <th><?= __('Placed Date') ?></th>
                             <th><?= __('Fulfilled') ?></th>
-                            <th><?= __('Amount') ?></th>
+                            <th><?= __('Total Amount') ?></th>
                             <th><?= __('Total Quantity') ?></th>
+                            <th><?= __('User Id') ?></th>
                             <th class="actions"><?= __('Actions') ?></th>
                         </tr>
                         <?php foreach ($account->orders as $order) : ?>
@@ -87,8 +88,9 @@
                             <td><?= h($order->order_number) ?></td>
                             <td><?= h($order->placed_date) ?></td>
                             <td><?= h($order->fulfilled) ?></td>
-                            <td><?= h($order->amount) ?></td>
+                            <td><?= h($order->total_amount) ?></td>
                             <td><?= h($order->total_quantity) ?></td>
+                            <td><?= h($order->user_id) ?></td>
                             <td class="actions">
                                 <?= $this->Html->link(__('View'), ['controller' => 'Orders', 'action' => 'view', $order->id]) ?>
                                 <?= $this->Html->link(__('Edit'), ['controller' => 'Orders', 'action' => 'edit', $order->id]) ?>

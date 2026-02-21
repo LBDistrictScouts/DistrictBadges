@@ -15,7 +15,8 @@ class CreateInvoices extends BaseMigration
      */
     public function change(): void
     {
-        $table = $this->table('invoices');
+        $table = $this->table('invoices', ['id' => false, 'primary_key' => ['id']]);
+        $table->addColumn('id', 'uuid', ['null' => false]);
         $table->addColumn('invoice_date', 'timestamp', [
             'default' => null,
             'null' => false,
@@ -39,7 +40,8 @@ class CreateInvoices extends BaseMigration
             'id',
             [
                 'update' => 'CASCADE',
-                'delete' => 'RESTRICT'
+                'delete' => 'RESTRICT',
+                'constraint' => 'fk_invoices_account_id',
             ],
         );
         $table->create();

@@ -32,7 +32,8 @@ class CreateAccounts extends BaseMigration
             'id',
             [
                 'update' => 'CASCADE',
-                'delete' => 'RESTRICT'
+                'delete' => 'RESTRICT',
+                'constraint' => 'fk_accounts_group_id',
             ],
         );
         $table->create();

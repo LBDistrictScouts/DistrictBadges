@@ -33,7 +33,9 @@ class BadgesControllerTest extends TestCase
      */
     public function testIndex(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/badges');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -44,7 +46,9 @@ class BadgesControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/badges/view/f525eb6d-021c-4ef2-811f-feac8db8d35d');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -55,7 +59,27 @@ class BadgesControllerTest extends TestCase
      */
     public function testAdd(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $badges = $this->getTableLocator()->get('Badges');
+        $before = $badges->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post('/badges/add', [
+            'badge_name' => 'New Badge',
+            'stocked' => true,
+            'national_product_code' => null,
+            'national_data' => null,
+        ]);
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $this->assertFlashMessage('The badge has been saved.');
+        $this->assertSame($before + 1, $badges->find()->count());
+
+        $saved = $badges->find()
+            ->where(['badge_name' => 'New Badge'])
+            ->firstOrFail();
+        $this->assertTrue((bool)$saved->stocked);
+        $this->assertNull($saved->national_product_code);
+        $this->assertNull($saved->national_data);
     }
 
     /**
@@ -66,7 +90,23 @@ class BadgesControllerTest extends TestCase
      */
     public function testEdit(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->enableCsrfToken();
+        $this->put("/badges/edit/{$id}", [
+            'badge_name' => 'Updated Badge',
+            'stocked' => false,
+            'national_product_code' => null,
+            'national_data' => null,
+        ]);
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $this->assertFlashMessage('The badge has been saved.');
+
+        $updated = $badges->get($id);
+        $this->assertSame('Updated Badge', $updated->badge_name);
+        $this->assertFalse((bool)$updated->stocked);
     }
 
     /**
@@ -77,6 +117,23 @@ class BadgesControllerTest extends TestCase
      */
     public function testDelete(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $badges = $this->getTableLocator()->get('Badges');
+        $entity = $badges->newEntity([
+            'badge_name' => 'Delete Badge',
+            'stocked' => true,
+            'national_product_code' => null,
+            'national_data' => null,
+        ]);
+        $badges->saveOrFail($entity);
+        $id = $entity->id;
+        $before = $badges->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post("/badges/delete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $this->assertFlashMessage('The badge has been deleted.');
+        $this->assertSame($before - 1, $badges->find()->count());
+        $this->assertFalse($badges->exists(['id' => $id]));
     }
 }

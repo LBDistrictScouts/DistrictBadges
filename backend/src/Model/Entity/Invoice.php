@@ -8,7 +8,7 @@ use Cake\ORM\Entity;
 /**
  * Invoice Entity
  *
- * @property int $id
+ * @property string $id
  * @property \Cake\I18n\DateTime $invoice_date
  * @property \Cake\I18n\DateTime $due_date
  * @property string $invoice_number

@@ -30,9 +30,10 @@ class CreateOrders extends BaseMigration
             'default' => null,
             'null' => false,
         ]);
-        $table->addColumn('amount', 'string', [
+        $table->addColumn('total_amount', 'decimal', [
             'default' => null,
-            'limit' => 255,
+            'precision' => 10,
+            'scale' => 2,
             'null' => false,
         ]);
         $table->addColumn('total_quantity', 'integer', [
@@ -50,7 +51,8 @@ class CreateOrders extends BaseMigration
             'id',
             [
                 'update' => 'CASCADE',
-                'delete' => 'RESTRICT'
+                'delete' => 'RESTRICT',
+                'constraint' => 'fk_orders_account_id',
             ],
         );
         $table->create();

@@ -19,16 +19,16 @@
             <h3><?= h($invoice->invoice_number) ?></h3>
             <table>
                 <tr>
+                    <th><?= __('Id') ?></th>
+                    <td><?= h($invoice->id) ?></td>
+                </tr>
+                <tr>
                     <th><?= __('Invoice Number') ?></th>
                     <td><?= h($invoice->invoice_number) ?></td>
                 </tr>
                 <tr>
                     <th><?= __('Account') ?></th>
                     <td><?= $invoice->hasValue('account') ? $this->Html->link($invoice->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $invoice->account->id]) : '' ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Id') ?></th>
-                    <td><?= $this->Number->format($invoice->id) ?></td>
                 </tr>
                 <tr>
                     <th><?= __('Invoice Date') ?></th>

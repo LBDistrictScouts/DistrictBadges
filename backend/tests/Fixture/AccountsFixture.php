@@ -19,7 +19,7 @@ class AccountsFixture extends TestFixture
     {
         $this->records = [
             [
-                'id' => 'b88bcc28-9810-4896-8118-3b2ecbc94b32',
+                'id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
                 'account_name' => 'Lorem ipsum dolor sit amet',
                 'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
             ],

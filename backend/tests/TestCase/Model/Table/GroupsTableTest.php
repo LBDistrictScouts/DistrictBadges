@@ -60,6 +60,40 @@ class GroupsTableTest extends TestCase
      */
     public function testValidationDefault(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $entity = $this->Groups->newEntity([
+            'group_name' => '',
+            'group_osm_id' => null,
+        ]);
+
+        $errors = $entity->getErrors();
+        $this->assertArrayHasKey('group_name', $errors);
+        $this->assertArrayHasKey('group_osm_id', $errors);
+
+        $valid = $this->Groups->newEntity([
+            'group_name' => 'Test Group',
+            'group_osm_id' => 123,
+        ]);
+        $this->assertSame([], $valid->getErrors());
+    }
+
+    /**
+     * Test save method
+     *
+     * @return void
+     */
+    public function testSave(): void
+    {
+        $entity = $this->Groups->newEntity([
+            'group_name' => 'New Group',
+            'group_osm_id' => 456,
+        ]);
+
+        $result = $this->Groups->save($entity);
+        $this->assertNotFalse($result);
+        $this->assertNotEmpty($result->id);
+
+        $saved = $this->Groups->get($result->id);
+        $this->assertSame('New Group', $saved->group_name);
+        $this->assertSame(456, (int)$saved->group_osm_id);
     }
 }

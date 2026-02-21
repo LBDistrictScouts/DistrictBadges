@@ -55,6 +55,9 @@ class AccountsTable extends Table
         $this->hasMany('Orders', [
             'foreignKey' => 'account_id',
         ]);
+        $this->hasMany('Users', [
+            'foreignKey' => 'account_id',
+        ]);
     }
 
     /**

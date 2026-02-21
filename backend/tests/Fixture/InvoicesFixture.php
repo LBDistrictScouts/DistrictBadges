@@ -19,11 +19,11 @@ class InvoicesFixture extends TestFixture
     {
         $this->records = [
             [
-                'id' => 1,
-                'invoice_date' => 1771681541,
-                'due_date' => 1771681541,
+                'id' => 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138',
+                'invoice_date' => 1771712806,
+                'due_date' => 1771712806,
                 'invoice_number' => 'Lorem ipsum dolor sit amet',
-                'account_id' => 'b88bcc28-9810-4896-8118-3b2ecbc94b32',
+                'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             ],
         ];
         parent::init();

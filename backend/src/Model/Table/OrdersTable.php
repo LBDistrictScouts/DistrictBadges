@@ -47,6 +47,13 @@ class OrdersTable extends Table
             'foreignKey' => 'account_id',
             'joinType' => 'INNER',
         ]);
+        $this->belongsTo('Users', [
+            'foreignKey' => 'user_id',
+            'joinType' => 'INNER',
+        ]);
+        $this->hasMany('OrderLines', [
+            'foreignKey' => 'order_id',
+        ]);
     }
 
     /**
@@ -74,10 +81,9 @@ class OrdersTable extends Table
             ->notEmptyString('fulfilled');
 
         $validator
-            ->scalar('amount')
-            ->maxLength('amount', 255)
-            ->requirePresence('amount', 'create')
-            ->notEmptyString('amount');
+            ->decimal('total_amount')
+            ->requirePresence('total_amount', 'create')
+            ->notEmptyString('total_amount');
 
         $validator
             ->integer('total_quantity')
@@ -87,6 +93,10 @@ class OrdersTable extends Table
         $validator
             ->uuid('account_id')
             ->notEmptyString('account_id');
+
+        $validator
+            ->uuid('user_id')
+            ->notEmptyString('user_id');
 
         return $validator;
     }
@@ -101,6 +111,7 @@ class OrdersTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->existsIn(['account_id'], 'Accounts'), ['errorField' => 'account_id']);
+        $rules->add($rules->existsIn(['user_id'], 'Users'), ['errorField' => 'user_id']);
 
         return $rules;
     }

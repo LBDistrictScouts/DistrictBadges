@@ -24,8 +24,8 @@ class InvoicesControllerTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
+        'app.Users',
         'app.Invoices',
-        'app.Orders',
     ];
 
     /**
@@ -36,7 +36,9 @@ class InvoicesControllerTest extends TestCase
      */
     public function testIndex(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/invoices');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -47,7 +49,9 @@ class InvoicesControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/invoices/view/a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -58,7 +62,27 @@ class InvoicesControllerTest extends TestCase
      */
     public function testAdd(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $invoices = $this->getTableLocator()->get('Invoices');
+        $before = $invoices->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post('/invoices/add', [
+            'invoice_date' => '2025-05-01 09:00:00',
+            'due_date' => '2025-05-10 09:00:00',
+            'invoice_number' => 'INV-NEW',
+            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Invoices', 'action' => 'index']);
+        $this->assertFlashMessage('The invoice has been saved.');
+        $this->assertSame($before + 1, $invoices->find()->count());
+
+        $saved = $invoices->find()
+            ->where(['invoice_number' => 'INV-NEW'])
+            ->firstOrFail();
+        $this->assertSame('2025-05-01 09:00:00', $saved->invoice_date->format('Y-m-d H:i:s'));
+        $this->assertSame('2025-05-10 09:00:00', $saved->due_date->format('Y-m-d H:i:s'));
+        $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
     }
 
     /**
@@ -69,7 +93,22 @@ class InvoicesControllerTest extends TestCase
      */
     public function testEdit(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $invoices = $this->getTableLocator()->get('Invoices');
+        $id = 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138';
+
+        $this->enableCsrfToken();
+        $this->put("/invoices/edit/{$id}", [
+            'invoice_date' => '2025-05-02 09:00:00',
+            'due_date' => '2025-05-12 09:00:00',
+            'invoice_number' => 'INV-UPDATED',
+            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Invoices', 'action' => 'index']);
+        $this->assertFlashMessage('The invoice has been saved.');
+
+        $updated = $invoices->get($id);
+        $this->assertSame('INV-UPDATED', $updated->invoice_number);
     }
 
     /**
@@ -80,6 +119,23 @@ class InvoicesControllerTest extends TestCase
      */
     public function testDelete(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $invoices = $this->getTableLocator()->get('Invoices');
+        $entity = $invoices->newEntity([
+            'invoice_date' => '2025-05-03 09:00:00',
+            'due_date' => '2025-05-13 09:00:00',
+            'invoice_number' => 'INV-DELETE',
+            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+        ]);
+        $invoices->saveOrFail($entity);
+        $id = $entity->id;
+        $before = $invoices->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post("/invoices/delete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Invoices', 'action' => 'index']);
+        $this->assertFlashMessage('The invoice has been deleted.');
+        $this->assertSame($before - 1, $invoices->find()->count());
+        $this->assertFalse($invoices->exists(['id' => $id]));
     }
 }

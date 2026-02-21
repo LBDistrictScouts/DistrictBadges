@@ -12,9 +12,10 @@ use Cake\ORM\Entity;
  * @property string $order_number
  * @property \Cake\I18n\DateTime $placed_date
  * @property bool $fulfilled
- * @property string $amount
+ * @property string $total_amount
  * @property int $total_quantity
  * @property string $account_id
+ * @property string $user_id
  *
  * @property \App\Model\Entity\Account $account
  */
@@ -33,9 +34,10 @@ class Order extends Entity
         'order_number' => true,
         'placed_date' => true,
         'fulfilled' => true,
-        'amount' => true,
+        'total_amount' => true,
         'total_quantity' => true,
         'account_id' => true,
+        'user_id' => true,
         'account' => true,
     ];
 }

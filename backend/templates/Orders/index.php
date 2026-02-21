@@ -15,9 +15,10 @@
                     <th><?= $this->Paginator->sort('order_number') ?></th>
                     <th><?= $this->Paginator->sort('placed_date') ?></th>
                     <th><?= $this->Paginator->sort('fulfilled') ?></th>
-                    <th><?= $this->Paginator->sort('amount') ?></th>
+                    <th><?= $this->Paginator->sort('total_amount') ?></th>
                     <th><?= $this->Paginator->sort('total_quantity') ?></th>
                     <th><?= $this->Paginator->sort('account_id') ?></th>
+                    <th><?= $this->Paginator->sort('user_id') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
@@ -28,9 +29,10 @@
                     <td><?= h($order->order_number) ?></td>
                     <td><?= h($order->placed_date) ?></td>
                     <td><?= h($order->fulfilled) ?></td>
-                    <td><?= h($order->amount) ?></td>
+                    <td><?= $this->Number->format($order->total_amount) ?></td>
                     <td><?= $this->Number->format($order->total_quantity) ?></td>
                     <td><?= $order->hasValue('account') ? $this->Html->link($order->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $order->account->id]) : '' ?></td>
+                    <td><?= h($order->user_id) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $order->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $order->id]) ?>

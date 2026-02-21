@@ -34,7 +34,9 @@ class GroupsControllerTest extends TestCase
      */
     public function testIndex(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/groups');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -45,7 +47,9 @@ class GroupsControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/groups/view/4d5149f3-6214-4457-a04d-e428dc1200d7');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -56,7 +60,23 @@ class GroupsControllerTest extends TestCase
      */
     public function testAdd(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $groups = $this->getTableLocator()->get('Groups');
+        $before = $groups->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post('/groups/add', [
+            'group_name' => 'New Group',
+            'group_osm_id' => 999,
+        ]);
+
+        $this->assertRedirect(['controller' => 'Groups', 'action' => 'index']);
+        $this->assertFlashMessage('The group has been saved.');
+        $this->assertSame($before + 1, $groups->find()->count());
+
+        $saved = $groups->find()
+            ->where(['group_name' => 'New Group'])
+            ->firstOrFail();
+        $this->assertSame(999, (int)$saved->group_osm_id);
     }
 
     /**
@@ -67,7 +87,20 @@ class GroupsControllerTest extends TestCase
      */
     public function testEdit(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $groups = $this->getTableLocator()->get('Groups');
+        $id = '4d5149f3-6214-4457-a04d-e428dc1200d7';
+
+        $this->enableCsrfToken();
+        $this->put("/groups/edit/{$id}", [
+            'group_name' => 'Updated Group',
+            'group_osm_id' => 1000,
+        ]);
+
+        $this->assertRedirect(['controller' => 'Groups', 'action' => 'index']);
+        $this->assertFlashMessage('The group has been saved.');
+
+        $updated = $groups->get($id);
+        $this->assertSame('Updated Group', $updated->group_name);
     }
 
     /**
@@ -78,6 +111,21 @@ class GroupsControllerTest extends TestCase
      */
     public function testDelete(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $groups = $this->getTableLocator()->get('Groups');
+        $entity = $groups->newEntity([
+            'group_name' => 'Delete Group',
+            'group_osm_id' => 1001,
+        ]);
+        $groups->saveOrFail($entity);
+        $id = $entity->id;
+        $before = $groups->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post("/groups/delete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Groups', 'action' => 'index']);
+        $this->assertFlashMessage('The group has been deleted.');
+        $this->assertSame($before - 1, $groups->find()->count());
+        $this->assertFalse($groups->exists(['id' => $id]));
     }
 }

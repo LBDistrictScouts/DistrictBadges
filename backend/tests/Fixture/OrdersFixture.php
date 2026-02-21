@@ -19,13 +19,14 @@ class OrdersFixture extends TestFixture
     {
         $this->records = [
             [
-                'id' => '5496848a-e6f8-43e4-8ba3-00a9582f3f34',
+                'id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
                 'order_number' => 'Lorem ipsum dolor sit amet',
-                'placed_date' => 1771681545,
+                'placed_date' => 1771712800,
                 'fulfilled' => 1,
-                'amount' => 'Lorem ipsum dolor sit amet',
+                'total_amount' => 1.5,
                 'total_quantity' => 1,
-                'account_id' => 'b88bcc28-9810-4896-8118-3b2ecbc94b32',
+                'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+                'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
             ],
         ];
         parent::init();

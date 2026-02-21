@@ -27,12 +27,16 @@
                     <td><?= h($order->order_number) ?></td>
                 </tr>
                 <tr>
-                    <th><?= __('Amount') ?></th>
-                    <td><?= h($order->amount) ?></td>
-                </tr>
-                <tr>
                     <th><?= __('Account') ?></th>
                     <td><?= $order->hasValue('account') ? $this->Html->link($order->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $order->account->id]) : '' ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('User Id') ?></th>
+                    <td><?= h($order->user_id) ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('Total Amount') ?></th>
+                    <td><?= $this->Number->format($order->total_amount) ?></td>
                 </tr>
                 <tr>
                     <th><?= __('Total Quantity') ?></th>

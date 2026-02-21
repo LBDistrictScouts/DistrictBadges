@@ -26,6 +26,7 @@ class AccountsTableTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
+        'app.Users',
         'app.Invoices',
         'app.Orders',
     ];
@@ -62,7 +63,20 @@ class AccountsTableTest extends TestCase
      */
     public function testValidationDefault(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $entity = $this->Accounts->newEntity([
+            'account_name' => '',
+            'group_id' => 'not-a-uuid',
+        ]);
+
+        $errors = $entity->getErrors();
+        $this->assertArrayHasKey('account_name', $errors);
+        $this->assertArrayHasKey('group_id', $errors);
+
+        $valid = $this->Accounts->newEntity([
+            'account_name' => 'Test Account',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+        ]);
+        $this->assertSame([], $valid->getErrors());
     }
 
     /**
@@ -73,6 +87,34 @@ class AccountsTableTest extends TestCase
      */
     public function testBuildRules(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $entity = $this->Accounts->newEntity([
+            'account_name' => 'Rule Fail Account',
+            'group_id' => '11111111-1111-1111-1111-111111111111',
+        ]);
+
+        $result = $this->Accounts->save($entity);
+        $this->assertFalse($result);
+        $this->assertArrayHasKey('group_id', $entity->getErrors());
+    }
+
+    /**
+     * Test save method
+     *
+     * @return void
+     */
+    public function testSave(): void
+    {
+        $entity = $this->Accounts->newEntity([
+            'account_name' => 'New Account',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+        ]);
+
+        $result = $this->Accounts->save($entity);
+        $this->assertNotFalse($result);
+        $this->assertNotEmpty($result->id);
+
+        $saved = $this->Accounts->get($result->id);
+        $this->assertSame('New Account', $saved->account_name);
+        $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $saved->group_id);
     }
 }
