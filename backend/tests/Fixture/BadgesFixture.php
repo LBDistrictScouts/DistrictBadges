@@ -19,11 +19,11 @@ class BadgesFixture extends TestFixture
     {
         $this->records = [
             [
-                'id' => 'ced8fa0e-4e7a-4367-b4c1-f5d011979f69',
+                'id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                 'badge_name' => 'Lorem ipsum dolor sit amet',
                 'national_product_code' => 1,
                 'national_data' => '',
-                'stocked' => false,
+                'stocked' => 1,
             ],
         ];
         parent::init();
