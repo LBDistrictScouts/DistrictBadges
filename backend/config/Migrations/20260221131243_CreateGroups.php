@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 use Migrations\BaseMigration;
 
-class CreateBadges extends BaseMigration
+class CreateGroups extends BaseMigration
 {
     /**
      * Change Method.
@@ -15,20 +15,17 @@ class CreateBadges extends BaseMigration
      */
     public function change(): void
     {
-        $table = $this->table('badges', ['id' => false, 'primary_key' => ['id']]);
+        $table = $this->table('groups', ['id' => false, 'primary_key' => ['id']]);
         $table->addColumn('id', 'uuid', ['null' => false]);
-        $table->addColumn('badge_name', 'string', [
+        $table->addColumn('group_name', 'string', [
             'default' => null,
             'limit' => 255,
             'null' => false,
         ]);
-        $table->addColumn('national_product_code', 'integer', [
+        $table->addColumn('group_osm_id', 'integer', [
             'default' => null,
-            'null' => true,
-        ]);
-        $table->addColumn('national_data', 'json', [
-            'default' => null,
-            'null' => true,
+            'limit' => 11,
+            'null' => false,
         ]);
         $table->create();
     }

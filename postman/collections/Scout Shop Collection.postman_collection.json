@@ -12,7 +12,37 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": ""
+          "raw": "https://shop.scouts.org.uk/api/n/load?type=product&verbosity=3&ids={{ProductID}}&pushDeps=true",
+          "protocol": "https",
+          "host": [
+            "shop",
+            "scouts",
+            "org",
+            "uk"
+          ],
+          "path": [
+            "api",
+            "n",
+            "load"
+          ],
+          "query": [
+            {
+              "key": "type",
+              "value": "product"
+            },
+            {
+              "key": "verbosity",
+              "value": "3"
+            },
+            {
+              "key": "ids",
+              "value": "{{ProductID}}"
+            },
+            {
+              "key": "pushDeps",
+              "value": "true"
+            }
+          ]
         }
       },
       "response": [
@@ -174,7 +204,7 @@
   ],
   "variable": [
     {
-      "id": "2c326de4-dd38-4777-92a2-e9fa5ebb8527",
+      "id": "ed8b6b8b-6a33-4333-874b-b797c4a822aa",
       "key": "ProductID",
       "value": "",
       "type": "default"
