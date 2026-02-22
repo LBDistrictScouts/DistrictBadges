@@ -4,6 +4,7 @@
  * @var \App\Model\Entity\StockTransaction $stockTransaction
  * @var string[]|\Cake\Collection\CollectionInterface $badges
  * @var string[]|\Cake\Collection\CollectionInterface $fulfilments
+ * @var array<string, string> $transactionTypes
  */
 ?>
 <div class="row">
@@ -24,8 +25,7 @@
             <fieldset>
                 <legend><?= __('Edit Stock Transaction') ?></legend>
                 <?php
-                    echo $this->Form->control('transaction_type');
-                    echo $this->Form->control('transaction_timestamp');
+                    echo $this->Form->control('transaction_type', ['options' => $transactionTypes]);
                     echo $this->Form->control('badge_id', ['options' => $badges]);
                     echo $this->Form->control('change_amount');
                     echo $this->Form->control('audit_hash');

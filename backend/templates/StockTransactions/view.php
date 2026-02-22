@@ -20,7 +20,21 @@
             <table>
                 <tr>
                     <th><?= __('Transaction Type') ?></th>
-                    <td><?= h($stockTransaction->transaction_type) ?></td>
+                    <td>
+                        <?php
+                            $transactionTypeValue = $stockTransaction->transaction_type;
+                            $transactionTypeLabel = $transactionTypeValue;
+                            if ($transactionTypeValue instanceof \App\Model\Enum\TransactionType) {
+                                $transactionTypeLabel = $transactionTypeValue->label();
+                            } elseif (is_string($transactionTypeValue)) {
+                                try {
+                                    $transactionTypeLabel = \App\Model\Enum\TransactionType::from($transactionTypeValue)->label();
+                                } catch (\ValueError $e) {
+                                }
+                            }
+                        ?>
+                        <?= h($transactionTypeLabel) ?>
+                    </td>
                 </tr>
                 <tr>
                     <th><?= __('Badge') ?></th>

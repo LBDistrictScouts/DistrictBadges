@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Enum\TransactionType;
+
 /**
  * StockTransactions Controller
  *
@@ -56,7 +58,11 @@ class StockTransactionsController extends AppController
         }
         $badges = $this->StockTransactions->Badges->find('list', limit: 200)->all();
         $fulfilments = $this->StockTransactions->Fulfilments->find('list', limit: 200)->all();
-        $this->set(compact('stockTransaction', 'badges', 'fulfilments'));
+        $transactionTypes = [];
+        foreach (TransactionType::cases() as $type) {
+            $transactionTypes[$type->value] = $type->label();
+        }
+        $this->set(compact('stockTransaction', 'badges', 'fulfilments', 'transactionTypes'));
     }
 
     /**
@@ -80,7 +86,11 @@ class StockTransactionsController extends AppController
         }
         $badges = $this->StockTransactions->Badges->find('list', limit: 200)->all();
         $fulfilments = $this->StockTransactions->Fulfilments->find('list', limit: 200)->all();
-        $this->set(compact('stockTransaction', 'badges', 'fulfilments'));
+        $transactionTypes = [];
+        foreach (TransactionType::cases() as $type) {
+            $transactionTypes[$type->value] = $type->label();
+        }
+        $this->set(compact('stockTransaction', 'badges', 'fulfilments', 'transactionTypes'));
     }
 
     /**

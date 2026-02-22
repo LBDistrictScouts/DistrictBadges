@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Controller;
 
 use App\Controller\StockTransactionsController;
+use App\Model\Enum\TransactionType;
+use Cake\I18n\FrozenTime;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -61,11 +63,12 @@ class StockTransactionsControllerTest extends TestCase
     {
         $transactions = $this->getTableLocator()->get('StockTransactions');
         $before = $transactions->find()->count();
+        $now = new FrozenTime('2025-07-01 12:00:00');
+        FrozenTime::setTestNow($now);
 
         $this->enableCsrfToken();
         $this->post('/stock-transactions/add', [
-            'transaction_type' => 'adjustment',
-            'transaction_timestamp' => '2025-07-01 12:00:00',
+            'transaction_type' => 'AUDIT',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'change_amount' => 2,
             'audit_hash' => str_repeat('a', 64),
@@ -79,10 +82,11 @@ class StockTransactionsControllerTest extends TestCase
         $saved = $transactions->find()
             ->where(['audit_hash' => str_repeat('a', 64)])
             ->firstOrFail();
-        $this->assertSame('adjustment', $saved->transaction_type);
-        $this->assertSame('2025-07-01 12:00:00', $saved->transaction_timestamp->format('Y-m-d H:i:s'));
+        $this->assertSame(TransactionType::AUDIT, $saved->transaction_type);
+        $this->assertSame($now->format('Y-m-d H:i:s'), $saved->transaction_timestamp->format('Y-m-d H:i:s'));
         $this->assertSame('f525eb6d-021c-4ef2-811f-feac8db8d35d', $saved->badge_id);
         $this->assertSame('be5a0a9f-9d87-4191-b819-b7e1c1c50a3a', $saved->fulfilment_id);
+        FrozenTime::setTestNow(null);
     }
 
     /**
@@ -95,11 +99,11 @@ class StockTransactionsControllerTest extends TestCase
     {
         $transactions = $this->getTableLocator()->get('StockTransactions');
         $id = 'ec3a656c-e83b-497d-86d3-b0b0604e2ee7';
+        $beforeTimestamp = $transactions->get($id)->transaction_timestamp;
 
         $this->enableCsrfToken();
         $this->put("/stock-transactions/edit/{$id}", [
-            'transaction_type' => 'adjustment',
-            'transaction_timestamp' => '2025-07-02 12:30:00',
+            'transaction_type' => 'FULFILMENT',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'change_amount' => 4,
             'audit_hash' => str_repeat('b', 64),
@@ -112,6 +116,10 @@ class StockTransactionsControllerTest extends TestCase
         $updated = $transactions->get($id);
         $this->assertSame(4, (int)$updated->change_amount);
         $this->assertSame(str_repeat('b', 64), $updated->audit_hash);
+        $this->assertSame(
+            $beforeTimestamp->format('Y-m-d H:i:s'),
+            $updated->transaction_timestamp->format('Y-m-d H:i:s')
+        );
     }
 
     /**
@@ -124,7 +132,7 @@ class StockTransactionsControllerTest extends TestCase
     {
         $transactions = $this->getTableLocator()->get('StockTransactions');
         $entity = $transactions->newEntity([
-            'transaction_type' => 'adjustment',
+            'transaction_type' => 'REPLENISHMENT',
             'transaction_timestamp' => '2025-07-03 12:00:00',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'change_amount' => 1,

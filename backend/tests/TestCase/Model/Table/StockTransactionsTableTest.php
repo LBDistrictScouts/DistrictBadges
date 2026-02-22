@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
+use App\Model\Enum\TransactionType;
 use App\Model\Table\StockTransactionsTable;
 use Cake\TestSuite\TestCase;
 
@@ -72,14 +73,13 @@ class StockTransactionsTableTest extends TestCase
 
         $errors = $entity->getErrors();
         $this->assertArrayHasKey('transaction_type', $errors);
-        $this->assertArrayHasKey('transaction_timestamp', $errors);
         $this->assertArrayHasKey('badge_id', $errors);
         $this->assertArrayHasKey('change_amount', $errors);
         $this->assertArrayHasKey('audit_hash', $errors);
         $this->assertArrayHasKey('fulfilment_id', $errors);
 
         $valid = $this->StockTransactions->newEntity([
-            'transaction_type' => 'adjustment',
+            'transaction_type' => 'AUDIT',
             'transaction_timestamp' => '2025-01-01 12:00:00',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'change_amount' => 5,
@@ -98,7 +98,7 @@ class StockTransactionsTableTest extends TestCase
     public function testBuildRules(): void
     {
         $entity = $this->StockTransactions->newEntity([
-            'transaction_type' => 'adjustment',
+            'transaction_type' => 'REPLENISHMENT',
             'transaction_timestamp' => '2025-02-01 12:00:00',
             'badge_id' => '11111111-1111-1111-1111-111111111111',
             'change_amount' => 5,
@@ -120,7 +120,7 @@ class StockTransactionsTableTest extends TestCase
     public function testSave(): void
     {
         $entity = $this->StockTransactions->newEntity([
-            'transaction_type' => 'adjustment',
+            'transaction_type' => 'FULFILMENT',
             'transaction_timestamp' => '2025-03-01 12:00:00',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'change_amount' => 2,
@@ -133,7 +133,7 @@ class StockTransactionsTableTest extends TestCase
         $this->assertNotEmpty($result->id);
 
         $saved = $this->StockTransactions->get($result->id);
-        $this->assertSame('adjustment', $saved->transaction_type);
+        $this->assertSame(TransactionType::FULFILMENT, $saved->transaction_type);
         $this->assertSame('2025-03-01 12:00:00', $saved->transaction_timestamp->format('Y-m-d H:i:s'));
         $this->assertSame('f525eb6d-021c-4ef2-811f-feac8db8d35d', $saved->badge_id);
         $this->assertSame(2, (int)$saved->change_amount);

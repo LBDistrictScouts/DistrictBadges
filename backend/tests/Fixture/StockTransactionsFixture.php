@@ -20,7 +20,7 @@ class StockTransactionsFixture extends TestFixture
         $this->records = [
             [
                 'id' => 'ec3a656c-e83b-497d-86d3-b0b0604e2ee7',
-                'transaction_type' => 'Lorem ipsum dolor ',
+                'transaction_type' => 'AUDIT',
                 'transaction_timestamp' => 1771712815,
                 'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                 'change_amount' => 1,

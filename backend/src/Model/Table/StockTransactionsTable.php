@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
+use App\Model\Enum\TransactionType;
+use Cake\Database\Type\EnumType;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -44,6 +45,15 @@ class StockTransactionsTable extends Table
         $this->setDisplayField('transaction_type');
         $this->setPrimaryKey('id');
 
+        $this->getSchema()->setColumnType('transaction_type', EnumType::from(TransactionType::class));
+        $this->addBehavior('Timestamp', [
+            'events' => [
+                'Model.beforeSave' => [
+                    'transaction_timestamp' => 'new',
+                ],
+            ],
+        ]);
+
         $this->belongsTo('Badges', [
             'foreignKey' => 'badge_id',
             'joinType' => 'INNER',
@@ -66,12 +76,12 @@ class StockTransactionsTable extends Table
             ->scalar('transaction_type')
             ->maxLength('transaction_type', 20)
             ->requirePresence('transaction_type', 'create')
-            ->notEmptyString('transaction_type');
+            ->notEmptyString('transaction_type')
+            ->enum('transaction_type', TransactionType::class);
 
         $validator
             ->dateTime('transaction_timestamp')
-            ->requirePresence('transaction_timestamp', 'create')
-            ->notEmptyDateTime('transaction_timestamp');
+            ->allowEmptyDateTime('transaction_timestamp');
 
         $validator
             ->uuid('badge_id')
@@ -89,7 +99,8 @@ class StockTransactionsTable extends Table
             ->notEmptyString('audit_hash');
 
         $validator
-            ->uuid('fulfilment_id');
+            ->uuid('fulfilment_id')
+            ->allowEmptyString('fulfilment_id');
 
         return $validator;
     }
@@ -104,7 +115,10 @@ class StockTransactionsTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->existsIn(['badge_id'], 'Badges'), ['errorField' => 'badge_id']);
-        $rules->add($rules->existsIn(['fulfilment_id'], 'Fulfilments'), ['errorField' => 'fulfilment_id']);
+        $rules->add($rules->existsIn(['fulfilment_id'], 'Fulfilments'), [
+            'errorField' => 'fulfilment_id',
+            'allowNull' => true
+        ]);
 
         return $rules;
     }
