@@ -52,6 +52,8 @@
         ],
         "cs-check": "phpcs --colors -p",
         "cs-fix": "phpcbf --colors -p",
+        "sass": "npm --prefix . run sass:build",
+        "sass:watch": "npm --prefix . run sass:watch",
         "test": "phpunit --colors=always"
     }
 }

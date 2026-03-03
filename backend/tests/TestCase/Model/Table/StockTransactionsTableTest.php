@@ -33,6 +33,8 @@ class StockTransactionsTableTest extends TestCase
         'app.Badges',
         'app.Fulfilments',
         'app.Replenishments',
+        'app.Orders',
+        'app.OrderLines',
         'app.StockTransactions',
     ];
 
@@ -92,6 +94,7 @@ class StockTransactionsTableTest extends TestCase
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
             'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
             'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'on_hand_quantity_change' => 1,
             'receipted_quantity_change' => 1,
             'pending_quantity_change' => 1,
@@ -115,6 +118,7 @@ class StockTransactionsTableTest extends TestCase
             'fulfilment_id' => '22222222-2222-2222-2222-222222222222',
             'audit_id' => '33333333-3333-3333-3333-333333333333',
             'replenishment_id' => '44444444-4444-4444-4444-444444444444',
+            'order_line_id' => '55555555-5555-5555-5555-555555555555',
             'on_hand_quantity_change' => 1,
             'receipted_quantity_change' => 1,
             'pending_quantity_change' => 1,
@@ -127,6 +131,7 @@ class StockTransactionsTableTest extends TestCase
         $this->assertArrayHasKey('fulfilment_id', $entity->getErrors());
         $this->assertArrayHasKey('audit_id', $entity->getErrors());
         $this->assertArrayHasKey('replenishment_id', $entity->getErrors());
+        $this->assertArrayHasKey('order_line_id', $entity->getErrors());
     }
 
     /**
@@ -147,6 +152,7 @@ class StockTransactionsTableTest extends TestCase
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
             'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
             'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'on_hand_quantity_change' => 0,
             'receipted_quantity_change' => 0,
             'pending_quantity_change' => 0,
@@ -169,6 +175,7 @@ class StockTransactionsTableTest extends TestCase
             'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
             'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'transaction_timestamp' => $timestamp->format('Y-m-d H:i:s'),
         ];
         $expectedHash = hash('sha256', json_encode($payload) . '|' . $latestHash);
@@ -185,6 +192,7 @@ class StockTransactionsTableTest extends TestCase
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
             'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
             'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'on_hand_quantity_change' => 3,
             'receipted_quantity_change' => 2,
             'pending_quantity_change' => 1,
@@ -209,6 +217,7 @@ class StockTransactionsTableTest extends TestCase
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
             'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
             'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'on_hand_quantity_change' => 5,
             'receipted_quantity_change' => 0,
             'pending_quantity_change' => 0,

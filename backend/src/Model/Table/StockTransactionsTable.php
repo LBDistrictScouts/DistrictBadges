@@ -25,6 +25,7 @@ use Cake\Validation\Validator;
  * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\BelongsTo $Fulfilments
  * @property \App\Model\Table\AuditsTable&\Cake\ORM\Association\BelongsTo $Audits
  * @property \App\Model\Table\ReplenishmentsTable&\Cake\ORM\Association\BelongsTo $Replenishments
+ * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\BelongsTo $OrderLines
  *
  * @method \App\Model\Entity\StockTransaction newEmptyEntity()
  * @method \App\Model\Entity\StockTransaction newEntity(array $data, array $options = [])
@@ -85,6 +86,9 @@ class StockTransactionsTable extends Table
         $this->belongsTo('Replenishments', [
             'foreignKey' => 'replenishment_id',
         ]);
+        $this->belongsTo('OrderLines', [
+            'foreignKey' => 'order_line_id',
+        ]);
     }
 
     /**
@@ -119,6 +123,10 @@ class StockTransactionsTable extends Table
         $validator
             ->uuid('replenishment_id')
             ->allowEmptyString('replenishment_id');
+
+        $validator
+            ->uuid('order_line_id')
+            ->allowEmptyString('order_line_id');
 
         $validator
             ->integer('on_hand_quantity_change')
@@ -178,6 +186,7 @@ class StockTransactionsTable extends Table
             'audit_id' => $entity->get('audit_id'),
             'fulfilment_id' => $entity->get('fulfilment_id'),
             'replenishment_id' => $entity->get('replenishment_id'),
+            'order_line_id' => $entity->get('order_line_id'),
             'transaction_timestamp' => (string)$entity->get('transaction_timestamp')->format('Y-m-d H:i:s'),
         ];
 
@@ -270,6 +279,7 @@ class StockTransactionsTable extends Table
         $rules->add($rules->existsIn(['fulfilment_id'], 'Fulfilments'), ['errorField' => 'fulfilment_id']);
         $rules->add($rules->existsIn(['audit_id'], 'Audits'), ['errorField' => 'audit_id']);
         $rules->add($rules->existsIn(['replenishment_id'], 'Replenishments'), ['errorField' => 'replenishment_id']);
+        $rules->add($rules->existsIn(['order_line_id'], 'OrderLines'), ['errorField' => 'order_line_id']);
 
         return $rules;
     }

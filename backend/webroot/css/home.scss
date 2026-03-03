@@ -1,14 +1,25 @@
+$ops-bg: #f3f1ec;
+$ops-ink: #1c1b19;
+$ops-ink-muted: #4f4a45;
+$ops-card: #ffffff;
+$ops-accent: #15616d;
+$ops-accent-soft: #8ec4c8;
+$ops-primary: #1f3a5f;
+$ops-ghost: #ede4d7;
+$ops-border: rgba(28, 27, 25, 0.12);
+$ops-shadow: 0 24px 40px -32px rgba(17, 18, 20, 0.45);
+
 :root {
-    --ops-bg: #f3f1ec;
-    --ops-ink: #1c1b19;
-    --ops-ink-muted: #4f4a45;
-    --ops-card: #ffffff;
-    --ops-accent: #15616d;
-    --ops-accent-soft: #8ec4c8;
-    --ops-primary: #1f3a5f;
-    --ops-ghost: #ede4d7;
-    --ops-border: rgba(28, 27, 25, 0.12);
-    --ops-shadow: 0 24px 40px -32px rgba(17, 18, 20, 0.45);
+    --ops-bg: #{$ops-bg};
+    --ops-ink: #{$ops-ink};
+    --ops-ink-muted: #{$ops-ink-muted};
+    --ops-card: #{$ops-card};
+    --ops-accent: #{$ops-accent};
+    --ops-accent-soft: #{$ops-accent-soft};
+    --ops-primary: #{$ops-primary};
+    --ops-ghost: #{$ops-ghost};
+    --ops-border: #{$ops-border};
+    --ops-shadow: #{$ops-shadow};
 }
 
 body {
@@ -50,10 +61,12 @@ body {
     margin: 0 0 1rem;
 }
 
-.ops-hero__copy h1 {
-    font-size: 2.4rem;
-    line-height: 1.1;
-    margin: 0 0 1rem;
+.ops-hero__copy {
+    h1 {
+        font-size: 2.4rem;
+        line-height: 1.1;
+        margin: 0 0 1rem;
+    }
 }
 
 .ops-subtitle {
@@ -78,27 +91,27 @@ body {
     text-decoration: none;
     border: 1px solid transparent;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
 
-.ops-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.6);
-}
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.6);
+    }
 
-.ops-btn--primary {
-    background: var(--ops-primary);
-    color: #ffffff;
-}
+    &--primary {
+        background: var(--ops-primary);
+        color: #ffffff;
+    }
 
-.ops-btn--accent {
-    background: var(--ops-accent);
-    color: #ffffff;
-}
+    &--accent {
+        background: var(--ops-accent);
+        color: #ffffff;
+    }
 
-.ops-btn--ghost {
-    background: var(--ops-ghost);
-    color: var(--ops-primary);
-    border-color: rgba(31, 58, 95, 0.2);
+    &--ghost {
+        background: var(--ops-ghost);
+        color: var(--ops-primary);
+        border-color: rgba(31, 58, 95, 0.2);
+    }
 }
 
 .ops-hero__panel {
@@ -131,15 +144,15 @@ body {
 .ops-panel__links {
     display: grid;
     gap: 0.65rem;
-}
 
-.ops-panel__links a {
-    text-decoration: none;
-    color: var(--ops-primary);
-    font-weight: 600;
-    padding: 0.35rem 0.4rem;
-    border-radius: 8px;
-    background: rgba(31, 58, 95, 0.06);
+    a {
+        text-decoration: none;
+        color: var(--ops-primary);
+        font-weight: 600;
+        padding: 0.35rem 0.4rem;
+        border-radius: 8px;
+        background: rgba(31, 58, 95, 0.06);
+    }
 }
 
 .ops-grid {
@@ -217,15 +230,15 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-}
 
-.ops-rail__card h3 {
-    margin: 0 0 0.5rem;
-}
+    h3 {
+        margin: 0 0 0.5rem;
+    }
 
-.ops-rail__card p {
-    margin: 0;
-    color: var(--ops-ink-muted);
+    p {
+        margin: 0;
+        color: var(--ops-ink-muted);
+    }
 }
 
 .ops-rail__actions {
@@ -265,5 +278,64 @@ body {
 
     .ops-btn {
         width: 100%;
+    }
+}
+
+// App navbar styles
+.top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 112rem;
+    padding: 2rem;
+    margin: 0 auto;
+}
+
+.top-nav-title {
+    display: flex;
+    align-items: baseline;
+
+    a {
+        font-size: 2.4rem;
+        color: var(--ops-ink);
+        font-weight: 700;
+        text-decoration: none;
+    }
+}
+
+.top-nav-subtitle {
+    color: var(--ops-ink-muted);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-left: 0.75rem;
+}
+
+.top-nav-links {
+    display: flex;
+    gap: 1rem;
+
+    a {
+        color: var(--ops-ink-muted);
+        font-weight: 700;
+        text-decoration: none;
+        border-bottom: 2px solid transparent;
+        padding-bottom: 0.2rem;
+
+        &:hover {
+            color: var(--ops-primary);
+            border-bottom-color: var(--ops-primary);
+        }
+    }
+}
+
+@media (max-width: 820px) {
+    .top-nav {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .top-nav-links {
+        flex-wrap: wrap;
     }
 }
