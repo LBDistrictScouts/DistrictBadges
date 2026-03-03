@@ -7,7 +7,10 @@ use App\Model\Enum\TransactionType;
 
 class FulfilmentLine extends StockTransaction
 {
-    public function setTransactionType()
+    /**
+     * @return \App\Model\Enum\TransactionType
+     */
+    public function setTransactionType(): TransactionType
     {
         return TransactionType::Fulfilment;
     }

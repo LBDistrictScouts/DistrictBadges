@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -7,14 +8,20 @@ use RuntimeException;
 
 class NationalShopService
 {
-
     private Client $http;
 
+    /**
+     * @param \Cake\Http\Client|null $http HTTP client override.
+     */
     public function __construct(?Client $http = null)
     {
         $this->http = $http ?? new Client();
     }
 
+    /**
+     * @param int $externalId External product id.
+     * @return array<string, mixed>
+     */
     public function fetchProductByExternalId(int $externalId): array
     {
         $response = $this->http->get('https://shop.scouts.org.uk/api/n/load', [
@@ -25,7 +32,9 @@ class NationalShopService
         ]);
 
         if (!$response->isOk()) {
-            throw new RuntimeException('National Shop API request failed. Status: ' . $response->getStatusCode());
+            throw new RuntimeException(
+                'National Shop API request failed. Status: ' . $response->getStatusCode(),
+            );
         }
 
         $data = $response->getJson();

@@ -11,6 +11,10 @@ use Cake\Validation\Validator;
 
 class ReplenishmentReceiptLinesTable extends StockTransactionsTable
 {
+    /**
+     * @param array<string, mixed> $config Config.
+     * @return void
+     */
     public function initialize(array $config): void
     {
         parent::initialize($config);
@@ -19,6 +23,10 @@ class ReplenishmentReceiptLinesTable extends StockTransactionsTable
         $this->setEntityClass('App\Model\Entity\ReplenishmentReceiptLine');
     }
 
+    /**
+     * @param \Cake\Validation\Validator $validator Validator.
+     * @return \Cake\Validation\Validator
+     */
     public function validationDefault(Validator $validator): Validator
     {
         $validator = parent::validationDefault($validator);
@@ -29,11 +37,18 @@ class ReplenishmentReceiptLinesTable extends StockTransactionsTable
         return $validator;
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\ORM\Query\SelectQuery $query Query.
+     * @param \ArrayObject $options Options.
+     * @param bool $primary Primary flag.
+     * @return void
+     */
     public function beforeFind(
         EventInterface $event,
         SelectQuery $query,
         ArrayObject $options,
-        bool $primary
+        bool $primary,
     ): void {
         $query->where([
             'replenishment_id IS NOT' => null,

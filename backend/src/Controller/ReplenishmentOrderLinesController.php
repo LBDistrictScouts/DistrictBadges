@@ -31,9 +31,12 @@ class ReplenishmentOrderLinesController extends AppController
      * @return \Cake\Http\Response|null|void Renders view
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function view($id = null)
+    public function view(?string $id = null)
     {
-        $replenishmentOrderLine = $this->ReplenishmentOrderLines->get($id, contain: ['Badges', 'Fulfilments', 'Audits', 'Replenishments']);
+        $replenishmentOrderLine = $this->ReplenishmentOrderLines->get(
+            $id,
+            contain: ['Badges', 'Fulfilments', 'Audits', 'Replenishments'],
+        );
         $this->set(compact('replenishmentOrderLine'));
     }
 
@@ -46,7 +49,10 @@ class ReplenishmentOrderLinesController extends AppController
     {
         $replenishmentOrderLine = $this->ReplenishmentOrderLines->newEmptyEntity();
         if ($this->request->is('post')) {
-            $replenishmentOrderLine = $this->ReplenishmentOrderLines->patchEntity($replenishmentOrderLine, $this->request->getData());
+            $replenishmentOrderLine = $this->ReplenishmentOrderLines->patchEntity(
+                $replenishmentOrderLine,
+                $this->request->getData(),
+            );
             if ($this->ReplenishmentOrderLines->save($replenishmentOrderLine)) {
                 $this->Flash->success(__('The replenishment order line has been saved.'));
 
@@ -58,7 +64,13 @@ class ReplenishmentOrderLinesController extends AppController
         $fulfilments = $this->ReplenishmentOrderLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->ReplenishmentOrderLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->ReplenishmentOrderLines->Replenishments->find('list', limit: 200)->all();
-        $this->set(compact('replenishmentOrderLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
+        $this->set(compact(
+            'replenishmentOrderLine',
+            'badges',
+            'fulfilments',
+            'audits',
+            'replenishments',
+        ));
     }
 
     /**
@@ -68,11 +80,14 @@ class ReplenishmentOrderLinesController extends AppController
      * @return \Cake\Http\Response|null|void Redirects on successful edit, renders view otherwise.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function edit($id = null)
+    public function edit(?string $id = null)
     {
         $replenishmentOrderLine = $this->ReplenishmentOrderLines->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $replenishmentOrderLine = $this->ReplenishmentOrderLines->patchEntity($replenishmentOrderLine, $this->request->getData());
+            $replenishmentOrderLine = $this->ReplenishmentOrderLines->patchEntity(
+                $replenishmentOrderLine,
+                $this->request->getData(),
+            );
             if ($this->ReplenishmentOrderLines->save($replenishmentOrderLine)) {
                 $this->Flash->success(__('The replenishment order line has been saved.'));
 
@@ -84,7 +99,13 @@ class ReplenishmentOrderLinesController extends AppController
         $fulfilments = $this->ReplenishmentOrderLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->ReplenishmentOrderLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->ReplenishmentOrderLines->Replenishments->find('list', limit: 200)->all();
-        $this->set(compact('replenishmentOrderLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
+        $this->set(compact(
+            'replenishmentOrderLine',
+            'badges',
+            'fulfilments',
+            'audits',
+            'replenishments',
+        ));
     }
 
     /**
@@ -94,7 +115,7 @@ class ReplenishmentOrderLinesController extends AppController
      * @return \Cake\Http\Response|null Redirects to index.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function delete($id = null)
+    public function delete(?string $id = null)
     {
         $this->request->allowMethod(['post', 'delete']);
         $replenishmentOrderLine = $this->ReplenishmentOrderLines->get($id);

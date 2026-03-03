@@ -3,12 +3,9 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
-use App\Model\Entity\Badge;
-use App\Model\Table\BadgesTable;
 use App\Service\AlgoliaService;
-use Cake\TestSuite\TestCase;
 use Cake\Datasource\EntityInterface;
-use RuntimeException;
+use Cake\TestSuite\TestCase;
 
 /**
  * App\Model\Table\BadgesTable Test Case
@@ -128,24 +125,5 @@ class BadgesTableTest extends TestCase
 
         $result = $this->Badges->save($entity);
         $this->assertNotFalse($result);
-    }
-}
-
-class BadgesTableWithAlgolia extends BadgesTable
-{
-    private ?AlgoliaService $algoliaService = null;
-
-    public function setAlgoliaService(AlgoliaService $service): void
-    {
-        $this->algoliaService = $service;
-    }
-
-    protected function buildAlgoliaService(): AlgoliaService
-    {
-        if ($this->algoliaService === null) {
-            throw new RuntimeException('Algolia service not set for test.');
-        }
-
-        return $this->algoliaService;
     }
 }

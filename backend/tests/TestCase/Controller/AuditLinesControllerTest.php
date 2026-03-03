@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Controller\AuditLinesController;
-use App\Model\Entity\AuditLine;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -110,7 +108,7 @@ class AuditLinesControllerTest extends TestCase
         $this->assertRedirect(['controller' => 'AuditLines', 'action' => 'index']);
         $this->assertFlashMessage('The audit line has been saved.');
 
-        /** @var $updated AuditLine */
+        /** @var AuditLine $updated */
         $updated = $lines->get($id);
         $this->assertSame(5, (int)$updated->on_hand_quantity_change);
         $this->assertSame(0, $updated->get('transaction_type')->value);

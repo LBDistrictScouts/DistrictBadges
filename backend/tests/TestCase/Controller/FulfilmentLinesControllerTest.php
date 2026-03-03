@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Controller\FulfilmentLinesController;
-use App\Model\Entity\FulfilmentLine;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -110,7 +108,7 @@ class FulfilmentLinesControllerTest extends TestCase
         $this->assertRedirect(['controller' => 'FulfilmentLines', 'action' => 'index']);
         $this->assertFlashMessage('The fulfilment line has been saved.');
 
-        /** @var $updated FulfilmentLine */
+        /** @var FulfilmentLine $updated */
         $updated = $lines->get($id);
         $this->assertSame(4, (int)$updated->on_hand_quantity_change);
         $this->assertSame(2, $updated->get('transaction_type')->value);

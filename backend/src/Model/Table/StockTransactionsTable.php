@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use App\Model\Enum\TransactionType;
 use App\Model\Entity\AuditLine;
 use App\Model\Entity\FulfilmentLine;
 use App\Model\Entity\ReplenishmentOrderLine;
 use App\Model\Entity\ReplenishmentReceiptLine;
+use App\Model\Enum\TransactionType;
 use ArrayObject;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
@@ -26,7 +26,6 @@ use Cake\Validation\Validator;
  * @property \App\Model\Table\AuditsTable&\Cake\ORM\Association\BelongsTo $Audits
  * @property \App\Model\Table\ReplenishmentsTable&\Cake\ORM\Association\BelongsTo $Replenishments
  * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\BelongsTo $OrderLines
- *
  * @method \App\Model\Entity\StockTransaction newEmptyEntity()
  * @method \App\Model\Entity\StockTransaction newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\StockTransaction> newEntities(array $data, array $options = [])
@@ -145,13 +144,19 @@ class StockTransactionsTable extends Table
             ->requirePresence('transaction_type', 'create')
             ->notEmptyString('transaction_type')
             ->add('transaction_type', 'enum', [
-                'rule' => static fn ($value) => TransactionType::tryFrom((int)$value) !== null,
+                'rule' => static fn($value) => TransactionType::tryFrom((int)$value) !== null,
                 'message' => 'Invalid transaction type.',
             ]);
 
         return $validator;
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \ArrayObject $data Data.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
     public function beforeMarshal(EventInterface $event, ArrayObject $data, ArrayObject $options): void
     {
         $transactionType = $this->resolveEntityTransactionType();
@@ -194,6 +199,12 @@ class StockTransactionsTable extends Table
         $entity->set('audit_hash', $auditHash);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
     public function beforeSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
         $transactionType = $this->resolveEntityTransactionType($entity);
@@ -204,16 +215,28 @@ class StockTransactionsTable extends Table
         $this->generateAuditHash($entity);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @param string $operation Operation name.
+     * @return void
+     */
     public function beforeRules(
         EventInterface $event,
         EntityInterface $entity,
         ArrayObject $options,
-        string $operation
-    ): void
-    {
+        string $operation,
+    ): void {
         $this->generateAuditHash($entity);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
     public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
         $badgeId = $entity->get('badge_id');
@@ -227,6 +250,10 @@ class StockTransactionsTable extends Table
         }
     }
 
+    /**
+     * @param string $badgeId Badge id.
+     * @return void
+     */
     private function refreshBadgeStock(string $badgeId): void
     {
         $stockTransactions = $this->getAlias() === 'StockTransactions'
@@ -259,6 +286,10 @@ class StockTransactionsTable extends Table
         $this->Badges->saveOrFail($badge, ['checkRules' => false, 'validate' => false]);
     }
 
+    /**
+     * @param \Cake\Datasource\EntityInterface|null $entity Entity.
+     * @return \App\Model\Enum\TransactionType|null
+     */
     private function resolveEntityTransactionType(?EntityInterface $entity = null): ?TransactionType
     {
         $entityClass = $entity ? $entity::class : $this->getEntityClass();

@@ -31,9 +31,12 @@ class ReplenishmentReceiptLinesController extends AppController
      * @return \Cake\Http\Response|null|void Renders view
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function view($id = null)
+    public function view(?string $id = null)
     {
-        $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->get($id, contain: ['Badges', 'Fulfilments', 'Audits', 'Replenishments']);
+        $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->get(
+            $id,
+            contain: ['Badges', 'Fulfilments', 'Audits', 'Replenishments'],
+        );
         $this->set(compact('replenishmentReceiptLine'));
     }
 
@@ -46,7 +49,10 @@ class ReplenishmentReceiptLinesController extends AppController
     {
         $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->newEmptyEntity();
         if ($this->request->is('post')) {
-            $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->patchEntity($replenishmentReceiptLine, $this->request->getData());
+            $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->patchEntity(
+                $replenishmentReceiptLine,
+                $this->request->getData(),
+            );
             if ($this->ReplenishmentReceiptLines->save($replenishmentReceiptLine)) {
                 $this->Flash->success(__('The replenishment receipt line has been saved.'));
 
@@ -58,7 +64,13 @@ class ReplenishmentReceiptLinesController extends AppController
         $fulfilments = $this->ReplenishmentReceiptLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->ReplenishmentReceiptLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->ReplenishmentReceiptLines->Replenishments->find('list', limit: 200)->all();
-        $this->set(compact('replenishmentReceiptLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
+        $this->set(compact(
+            'replenishmentReceiptLine',
+            'badges',
+            'fulfilments',
+            'audits',
+            'replenishments',
+        ));
     }
 
     /**
@@ -68,11 +80,14 @@ class ReplenishmentReceiptLinesController extends AppController
      * @return \Cake\Http\Response|null|void Redirects on successful edit, renders view otherwise.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function edit($id = null)
+    public function edit(?string $id = null)
     {
         $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->patchEntity($replenishmentReceiptLine, $this->request->getData());
+            $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->patchEntity(
+                $replenishmentReceiptLine,
+                $this->request->getData(),
+            );
             if ($this->ReplenishmentReceiptLines->save($replenishmentReceiptLine)) {
                 $this->Flash->success(__('The replenishment receipt line has been saved.'));
 
@@ -84,7 +99,13 @@ class ReplenishmentReceiptLinesController extends AppController
         $fulfilments = $this->ReplenishmentReceiptLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->ReplenishmentReceiptLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->ReplenishmentReceiptLines->Replenishments->find('list', limit: 200)->all();
-        $this->set(compact('replenishmentReceiptLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
+        $this->set(compact(
+            'replenishmentReceiptLine',
+            'badges',
+            'fulfilments',
+            'audits',
+            'replenishments',
+        ));
     }
 
     /**
@@ -94,7 +115,7 @@ class ReplenishmentReceiptLinesController extends AppController
      * @return \Cake\Http\Response|null Redirects to index.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function delete($id = null)
+    public function delete(?string $id = null)
     {
         $this->request->allowMethod(['post', 'delete']);
         $replenishmentReceiptLine = $this->ReplenishmentReceiptLines->get($id);

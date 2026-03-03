@@ -101,4 +101,10 @@ return [
         'apiKey' => env('ALGOLIA_ADMIN_API_KEY', ''),
         'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
     ],
+
+    'Sqs' => [
+        'region' => env('AWS_REGION', 'us-east-1'),
+        'queueUrl' => env('SQS_ORDER_QUEUE_URL', ''),
+        'endpoint' => env('SQS_ENDPOINT', null),
+    ],
 ];

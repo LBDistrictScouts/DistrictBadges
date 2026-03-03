@@ -7,6 +7,9 @@ use App\Model\Enum\TransactionType;
 
 class AuditLine extends StockTransaction
 {
+    /**
+     * @return \App\Model\Enum\TransactionType
+     */
     public function setTransactionType(): TransactionType
     {
         return TransactionType::Audit;

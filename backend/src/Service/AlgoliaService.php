@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -18,6 +19,10 @@ class AlgoliaService
     private string $apiKey;
     private string $indexName;
 
+    /**
+     * @param array<string, mixed>|null $config Config override.
+     * @param \Algolia\AlgoliaSearch\Api\SearchClient|null $client Client override.
+     */
     public function __construct(?array $config = null, ?SearchClient $client = null)
     {
         $config = $config ?? (array)Configure::read('Algolia');
@@ -30,6 +35,10 @@ class AlgoliaService
         $this->client = $client ?? $this->initClient();
     }
 
+    /**
+     * @param \Cake\Datasource\EntityInterface $badge Badge entity.
+     * @return void
+     */
     public function upsertBadge(EntityInterface $badge): void
     {
         if (!$this->enabled || $this->client === null) {
@@ -50,10 +59,17 @@ class AlgoliaService
         $this->client->saveObject($this->indexName, $payload);
     }
 
+    /**
+     * @return \Algolia\AlgoliaSearch\Api\SearchClient|null
+     */
     private function initClient(): ?SearchClient
     {
         if ($this->appId === '' || $this->apiKey === '' || $this->indexName === '') {
-            Log::warning('Algolia badge sync disabled: missing ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY, or ALGOLIA_INDEX_BADGES.');
+            Log::warning(
+                'Algolia badge sync disabled: missing ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY, '
+                . 'or ALGOLIA_INDEX_BADGES.',
+            );
+
             return null;
         }
 
@@ -63,11 +79,15 @@ class AlgoliaService
             throw new RuntimeException(
                 'Algolia badge sync failed: unable to initialize client.',
                 0,
-                $exception
+                $exception,
             );
         }
     }
 
+    /**
+     * @param \Cake\Datasource\EntityInterface $badge Badge entity.
+     * @return array<string, mixed>
+     */
     private function resolveBadgePayload(EntityInterface $badge): array
     {
         if (!$badge instanceof Badge) {

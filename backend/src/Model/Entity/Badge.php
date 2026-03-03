@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
-use Cake\Utility\Hash;
 
 /**
  * Badge Entity
@@ -51,7 +50,6 @@ class Badge extends Entity
         'price' => true,
     ];
 
-
     protected array $_hidden = [
         'stock_transactions' => true,
     ];
@@ -63,11 +61,17 @@ class Badge extends Entity
         'image_medium_url' => true,
     ];
 
+    /**
+     * @return array
+     */
     protected function _getNationalCoreData(): array
     {
         return $this->national_data['result'][0] ?? [];
     }
 
+    /**
+     * @return string|null
+     */
     protected function _getImagePath(): ?string
     {
         if (!key_exists('image', $this->national_core_data)) {
@@ -77,28 +81,39 @@ class Badge extends Entity
         return $this->national_core_data['image'];
     }
 
+    /**
+     * @return string|null
+     */
     protected function _getImageLargeUrl(): ?string
     {
         if (is_null($this->image_path)) {
             return null;
         }
 
-        $large = 'https://shop.scouts.org.uk/tco-images/o/2560x2560/filters:upscale():fill(white)/static/media/catalog';
+        $large = 'https://shop.scouts.org.uk/tco-images/o/2560x2560/'
+            . 'filters:upscale():fill(white)/static/media/catalog';
 
         return $large . $this->image_path;
     }
 
+    /**
+     * @return string|null
+     */
     protected function _getImageMediumUrl(): ?string
     {
         if (is_null($this->image_path)) {
             return null;
         }
 
-        $medium = 'https://shop.scouts.org.uk/tco-images/o/1154x1443/filters:upscale():fill(white)/static/media/catalog';
+        $medium = 'https://shop.scouts.org.uk/tco-images/o/1154x1443/'
+            . 'filters:upscale():fill(white)/static/media/catalog';
 
         return $medium . $this->image_path;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toAlgoliaPayload(): array
     {
         return [
@@ -112,5 +127,4 @@ class Badge extends Entity
             'image_medium_url' => $this->get('image_medium_url'),
         ];
     }
-
 }

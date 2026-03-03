@@ -5,8 +5,8 @@ namespace App\Test\TestCase\Model\Table;
 
 use App\Model\Table\StockTransactionsTable;
 use Cake\I18n\FrozenTime;
-use Cake\Utility\Security;
 use Cake\TestSuite\TestCase;
+use Cake\Utility\Security;
 
 /**
  * App\Model\Table\StockTransactionsTable Test Case

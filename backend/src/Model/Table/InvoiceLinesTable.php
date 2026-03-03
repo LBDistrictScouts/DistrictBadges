@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -13,7 +12,6 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\InvoicesTable&\Cake\ORM\Association\BelongsTo $Invoices
  * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsTo $Badges
- *
  * @method \App\Model\Entity\InvoiceLine newEmptyEntity()
  * @method \App\Model\Entity\InvoiceLine newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\InvoiceLine> newEntities(array $data, array $options = [])

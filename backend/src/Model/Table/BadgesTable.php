@@ -9,10 +9,9 @@ use ArrayObject;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\Log\Log;
-use Cake\ORM\Query\SelectQuery;
-use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use RuntimeException;
 
 /**
  * Badges Model
@@ -77,10 +76,16 @@ class BadgesTable extends Table
         return $validator;
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
     public function beforeSave(
         EventInterface $event,
         EntityInterface $entity,
-        ArrayObject $options
+        ArrayObject $options,
     ): void {
         if (!empty($options['skipNationalData'])) {
             return;
@@ -93,6 +98,11 @@ class BadgesTable extends Table
         $this->populateNationalData($entity);
     }
 
+    /**
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param bool $force Force refresh.
+     * @return void
+     */
     public function populateNationalData(EntityInterface $entity, bool $force = false): void
     {
         if (!$force && !$entity->isDirty('national_product_code')) {
@@ -108,6 +118,9 @@ class BadgesTable extends Table
         $entity->set('national_data', $service->fetchProductByExternalId((int)$productId));
     }
 
+    /**
+     * @return void
+     */
     public function refreshAllNationalData(): void
     {
         $query = $this->find()
@@ -119,10 +132,16 @@ class BadgesTable extends Table
         }
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
     public function afterSave(
         EventInterface $event,
         EntityInterface $entity,
-        ArrayObject $options
+        ArrayObject $options,
     ): void {
         if (!empty($options['skipAlgolia'])) {
             return;
@@ -132,11 +151,14 @@ class BadgesTable extends Table
 
         try {
             $service->upsertBadge($entity);
-        } catch (\RuntimeException $exception) {
+        } catch (RuntimeException $exception) {
             Log::warning($exception->getMessage());
         }
     }
 
+    /**
+     * @return \App\Service\AlgoliaService
+     */
     protected function buildAlgoliaService(): AlgoliaService
     {
         return new AlgoliaService();

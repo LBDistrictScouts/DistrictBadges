@@ -31,9 +31,12 @@ class FulfilmentLinesController extends AppController
      * @return \Cake\Http\Response|null|void Renders view
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function view($id = null)
+    public function view(?string $id = null)
     {
-        $fulfilmentLine = $this->FulfilmentLines->get($id, contain: ['Badges', 'Fulfilments', 'Audits', 'Replenishments']);
+        $fulfilmentLine = $this->FulfilmentLines->get(
+            $id,
+            contain: ['Badges', 'Fulfilments', 'Audits', 'Replenishments'],
+        );
         $this->set(compact('fulfilmentLine'));
     }
 
@@ -46,7 +49,10 @@ class FulfilmentLinesController extends AppController
     {
         $fulfilmentLine = $this->FulfilmentLines->newEmptyEntity();
         if ($this->request->is('post')) {
-            $fulfilmentLine = $this->FulfilmentLines->patchEntity($fulfilmentLine, $this->request->getData());
+            $fulfilmentLine = $this->FulfilmentLines->patchEntity(
+                $fulfilmentLine,
+                $this->request->getData(),
+            );
             if ($this->FulfilmentLines->save($fulfilmentLine)) {
                 $this->Flash->success(__('The fulfilment line has been saved.'));
 
@@ -58,7 +64,13 @@ class FulfilmentLinesController extends AppController
         $fulfilments = $this->FulfilmentLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->FulfilmentLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->FulfilmentLines->Replenishments->find('list', limit: 200)->all();
-        $this->set(compact('fulfilmentLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
+        $this->set(compact(
+            'fulfilmentLine',
+            'badges',
+            'fulfilments',
+            'audits',
+            'replenishments',
+        ));
     }
 
     /**
@@ -68,11 +80,14 @@ class FulfilmentLinesController extends AppController
      * @return \Cake\Http\Response|null|void Redirects on successful edit, renders view otherwise.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function edit($id = null)
+    public function edit(?string $id = null)
     {
         $fulfilmentLine = $this->FulfilmentLines->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $fulfilmentLine = $this->FulfilmentLines->patchEntity($fulfilmentLine, $this->request->getData());
+            $fulfilmentLine = $this->FulfilmentLines->patchEntity(
+                $fulfilmentLine,
+                $this->request->getData(),
+            );
             if ($this->FulfilmentLines->save($fulfilmentLine)) {
                 $this->Flash->success(__('The fulfilment line has been saved.'));
 
@@ -84,7 +99,13 @@ class FulfilmentLinesController extends AppController
         $fulfilments = $this->FulfilmentLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->FulfilmentLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->FulfilmentLines->Replenishments->find('list', limit: 200)->all();
-        $this->set(compact('fulfilmentLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
+        $this->set(compact(
+            'fulfilmentLine',
+            'badges',
+            'fulfilments',
+            'audits',
+            'replenishments',
+        ));
     }
 
     /**
@@ -94,7 +115,7 @@ class FulfilmentLinesController extends AppController
      * @return \Cake\Http\Response|null Redirects to index.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function delete($id = null)
+    public function delete(?string $id = null)
     {
         $this->request->allowMethod(['post', 'delete']);
         $fulfilmentLine = $this->FulfilmentLines->get($id);

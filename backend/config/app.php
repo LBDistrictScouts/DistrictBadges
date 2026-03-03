@@ -88,6 +88,12 @@ return [
         'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
     ],
 
+    'Sqs' => [
+        'region' => env('AWS_REGION', 'us-east-1'),
+        'queueUrl' => env('SQS_ORDER_QUEUE_URL', ''),
+        'endpoint' => env('SQS_ENDPOINT', null),
+    ],
+
     /*
      * Apply timestamps with the last modified time to static assets (js, css, images).
      * Will append a querystring parameter containing the time the file was modified.

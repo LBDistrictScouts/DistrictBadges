@@ -40,7 +40,7 @@ class NationalShopServiceTest extends TestCase
                     'verbosity' => 3,
                     'ids' => 123,
                     'pushDeps' => 'true',
-                ]
+                ],
             )
             ->willReturn($response);
 
@@ -67,7 +67,7 @@ class NationalShopServiceTest extends TestCase
                     'verbosity' => 3,
                     'ids' => 123,
                     'pushDeps' => 'true',
-                ]
+                ],
             )
             ->willReturn($response);
 
@@ -94,7 +94,7 @@ class NationalShopServiceTest extends TestCase
                     'verbosity' => 3,
                     'ids' => 123,
                     'pushDeps' => 'true',
-                ]
+                ],
             )
             ->willReturn($response);
 

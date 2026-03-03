@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
-use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
@@ -12,7 +10,6 @@ use Cake\Validation\Validator;
  * Groups Model
  *
  * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\HasMany $Accounts
- *
  * @method \App\Model\Entity\Group newEmptyEntity()
  * @method \App\Model\Entity\Group newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Group> newEntities(array $data, array $options = [])
