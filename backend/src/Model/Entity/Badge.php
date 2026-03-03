@@ -99,4 +99,18 @@ class Badge extends Entity
         return $medium . $this->image_path;
     }
 
+    public function toAlgoliaPayload(): array
+    {
+        return [
+            'objectID' => (string)$this->get('id'),
+            'id' => (string)$this->get('id'),
+            'badge_name' => $this->get('badge_name'),
+            'national_product_code' => $this->get('national_product_code'),
+            'stocked' => (bool)$this->get('stocked'),
+            'price' => $this->get('price'),
+            'image_large_url' => $this->get('image_large_url'),
+            'image_medium_url' => $this->get('image_medium_url'),
+        ];
+    }
+
 }

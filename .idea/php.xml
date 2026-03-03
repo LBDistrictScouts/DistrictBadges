@@ -7,11 +7,15 @@
     <option name="transferred" value="true" />
   </component>
   <component name="PHPCodeSnifferOptionsConfiguration">
+    <option name="codingStandard" value="CakePHP" />
     <option name="highlightLevel" value="WARNING" />
+    <option name="installedPaths" value="$PROJECT_DIR$/backend/vendor/cakephp/cakephp-codesniffer" />
+    <option name="useInstalledPaths" value="true" />
     <option name="transferred" value="true" />
   </component>
   <component name="PhpCodeSniffer">
     <phpcs_settings>
+      <PhpCSConfiguration beautifier_path="$PROJECT_DIR$/backend/vendor/bin/phpcbf" tool_path="$PROJECT_DIR$/backend/vendor/bin/phpcs" />
       <phpcs_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" timeout="30000" />
     </phpcs_settings>
   </component>
@@ -96,6 +100,9 @@
       <path value="$PROJECT_DIR$/backend/vendor/theseer/tokenizer" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/markdown-extra" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/twig" />
+      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/psr7" />
+      <path value="$PROJECT_DIR$/backend/vendor/ralouphie/getallheaders" />
+      <path value="$PROJECT_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.2">

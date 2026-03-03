@@ -85,6 +85,9 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/theseer/tokenizer" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig/markdown-extra" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig/twig" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/psr7" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ralouphie/getallheaders" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

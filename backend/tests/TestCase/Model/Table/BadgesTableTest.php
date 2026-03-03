@@ -3,8 +3,12 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
+use App\Model\Entity\Badge;
 use App\Model\Table\BadgesTable;
+use App\Service\AlgoliaService;
 use Cake\TestSuite\TestCase;
+use Cake\Datasource\EntityInterface;
+use RuntimeException;
 
 /**
  * App\Model\Table\BadgesTable Test Case
@@ -35,8 +39,9 @@ class BadgesTableTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $config = $this->getTableLocator()->exists('Badges') ? [] : ['className' => BadgesTable::class];
-        $this->Badges = $this->getTableLocator()->get('Badges', $config);
+        $locator = $this->getTableLocator();
+        $locator->clear();
+        $this->Badges = $locator->get('Badges', ['className' => BadgesTableWithAlgolia::class]);
     }
 
     /**
@@ -91,7 +96,7 @@ class BadgesTableTest extends TestCase
             'national_data' => null,
         ]);
 
-        $result = $this->Badges->save($entity);
+        $result = $this->Badges->save($entity, ['skipAlgolia' => true]);
         $this->assertNotFalse($result);
         $this->assertNotEmpty($result->id);
 
@@ -100,5 +105,47 @@ class BadgesTableTest extends TestCase
         $this->assertTrue((bool)$saved->stocked);
         $this->assertNull($saved->national_product_code);
         $this->assertNull($saved->national_data);
+    }
+
+    /**
+     * Test afterSave triggers Algolia sync.
+     *
+     * @return void
+     */
+    public function testAfterSaveTriggersAlgoliaSync(): void
+    {
+        $service = $this->createMock(AlgoliaService::class);
+        $service->expects($this->once())
+            ->method('upsertBadge')
+            ->with($this->isInstanceOf(EntityInterface::class));
+
+        $this->Badges->setAlgoliaService($service);
+
+        $entity = $this->Badges->newEntity([
+            'badge_name' => 'Algolia Badge',
+            'stocked' => true,
+        ]);
+
+        $result = $this->Badges->save($entity);
+        $this->assertNotFalse($result);
+    }
+}
+
+class BadgesTableWithAlgolia extends BadgesTable
+{
+    private ?AlgoliaService $algoliaService = null;
+
+    public function setAlgoliaService(AlgoliaService $service): void
+    {
+        $this->algoliaService = $service;
+    }
+
+    protected function buildAlgoliaService(): AlgoliaService
+    {
+        if ($this->algoliaService === null) {
+            throw new RuntimeException('Algolia service not set for test.');
+        }
+
+        return $this->algoliaService;
     }
 }
