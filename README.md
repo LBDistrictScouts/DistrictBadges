@@ -9,7 +9,7 @@ District Badges is a stock management and ordering system for Scout badge mercha
 | [`backend/`](backend/) | CakePHP 5 back-office application and REST API | [backend/README.md](backend/README.md) |
 | [`webstore/`](webstore/) | React 19 / TypeScript customer-facing webstore | [webstore/README.md](webstore/README.md) |
 | [`design/`](design/) | Bootstrap Studio UI design assets | [design/README.md](design/README.md) |
-| [`postman/`](postman/) | Postman API collections and globals | – |
+| [`postman/`](postman/) | Postman API collections and globals | [postman/README.md](postman/README.md) |
 
 ## System Architecture
 
