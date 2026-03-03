@@ -1,5 +1,7 @@
 # District Badges – Design
 
+> Part of the [District Badges](../README.md) system. See also: [Backend](../backend/README.md) · [Webstore](../webstore/README.md)
+
 This directory contains the visual design assets for the District Badges system.
 
 ## File

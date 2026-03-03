@@ -1,5 +1,7 @@
 # District Badges – Webstore
 
+> Part of the [District Badges](../README.md) system. See also: [Backend](../backend/README.md) · [Design](../design/README.md)
+
 The webstore is the customer-facing front end for the District Badges system. It is built with [React 19](https://react.dev), [TypeScript](https://www.typescriptlang.org) and [Vite](https://vite.dev), and uses [React Bootstrap](https://react-bootstrap.github.io) for UI components.
 
 Scout group administrators use the webstore to browse available badges, place orders and view their account history.
