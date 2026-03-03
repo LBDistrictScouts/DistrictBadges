@@ -233,5 +233,7 @@ ServerRequest::addDetector('tablet', function ($request) {
 // set a custom date and time format
 // see https://book.cakephp.org/5/en/core-libraries/time.html#setting-the-default-locale-and-format-string
 // and https://unicode-org.github.io/icu/userguide/format_parse/datetime/#datetime-format-syntax
-// \Cake\I18n\Date::setToStringFormat('dd.MM.yyyy');
-// \Cake\I18n\Time::setToStringFormat('dd.MM.yyyy HH:mm');
+\Cake\I18n\Date::setToStringFormat('dd-MMM-yy');
+\Cake\I18n\Time::setToStringFormat('dd-MMM-yy HH:mm');
+\Cake\I18n\DateTime::setToStringFormat('dd-MMM-yy HH:mm');
+\Cake\I18n\FrozenTime::setToStringFormat('dd-MMM-yy HH:mm');

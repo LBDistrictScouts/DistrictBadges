@@ -4,12 +4,17 @@ declare(strict_types=1);
 namespace App\Model\Table;
 
 use App\Model\Enum\TransactionType;
+use App\Model\Entity\AuditLine;
+use App\Model\Entity\FulfilmentLine;
+use App\Model\Entity\ReplenishmentOrderLine;
+use App\Model\Entity\ReplenishmentReceiptLine;
 use ArrayObject;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
+use Cake\ORM\TableRegistry;
 use Cake\Utility\Security;
 use Cake\Validation\Validator;
 
@@ -37,6 +42,13 @@ use Cake\Validation\Validator;
  */
 class StockTransactionsTable extends Table
 {
+    private const ENTITY_TRANSACTION_TYPES = [
+        AuditLine::class => TransactionType::Audit,
+        FulfilmentLine::class => TransactionType::Fulfilment,
+        ReplenishmentOrderLine::class => TransactionType::ReplenishmentOrder,
+        ReplenishmentReceiptLine::class => TransactionType::ReplenishmentReceipt,
+    ];
+
     /**
      * Initialize method
      *
@@ -132,6 +144,14 @@ class StockTransactionsTable extends Table
         return $validator;
     }
 
+    public function beforeMarshal(EventInterface $event, ArrayObject $data, ArrayObject $options): void
+    {
+        $transactionType = $this->resolveEntityTransactionType();
+        if ($transactionType !== null) {
+            $data['transaction_type'] = $transactionType->value;
+        }
+    }
+
     /**
      * Ensure audit_hash is generated before validation for new records.
      *
@@ -167,6 +187,11 @@ class StockTransactionsTable extends Table
 
     public function beforeSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
+        $transactionType = $this->resolveEntityTransactionType($entity);
+        if ($transactionType !== null) {
+            $entity->set('transaction_type', $transactionType);
+        }
+
         $this->generateAuditHash($entity);
     }
 
@@ -178,6 +203,58 @@ class StockTransactionsTable extends Table
     ): void
     {
         $this->generateAuditHash($entity);
+    }
+
+    public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        $badgeId = $entity->get('badge_id');
+        if (!empty($badgeId)) {
+            $this->refreshBadgeStock($badgeId);
+        }
+
+        $originalBadgeId = $entity->getOriginal('badge_id');
+        if (!empty($originalBadgeId) && $originalBadgeId !== $badgeId) {
+            $this->refreshBadgeStock($originalBadgeId);
+        }
+    }
+
+    private function refreshBadgeStock(string $badgeId): void
+    {
+        $stockTransactions = $this->getAlias() === 'StockTransactions'
+            ? $this
+            : TableRegistry::getTableLocator()->get('StockTransactions');
+
+        $totals = $stockTransactions->find()
+            ->select([
+                'on_hand_total' => $stockTransactions->find()->func()->sum('on_hand_quantity_change'),
+                'receipted_total' => $stockTransactions->find()->func()->sum('receipted_quantity_change'),
+                'pending_total' => $stockTransactions->find()->func()->sum('pending_quantity_change'),
+            ])
+            ->where(['badge_id' => $badgeId])
+            ->disableHydration()
+            ->first();
+
+        $latest = $stockTransactions->find()
+            ->select(['audit_hash'])
+            ->where(['badge_id' => $badgeId])
+            ->orderBy(['transaction_timestamp' => 'DESC', 'id' => 'DESC'])
+            ->disableHydration()
+            ->first();
+
+        $badge = $this->Badges->get($badgeId);
+        $badge->set('on_hand_quantity', (int)($totals['on_hand_total'] ?? 0));
+        $badge->set('receipted_quantity', (int)($totals['receipted_total'] ?? 0));
+        $badge->set('pending_quantity', (int)($totals['pending_total'] ?? 0));
+        $badge->set('latest_hash', (string)($latest['audit_hash'] ?? ''));
+
+        $this->Badges->saveOrFail($badge, ['checkRules' => false, 'validate' => false]);
+    }
+
+    private function resolveEntityTransactionType(?EntityInterface $entity = null): ?TransactionType
+    {
+        $entityClass = $entity ? $entity::class : $this->getEntityClass();
+
+        return self::ENTITY_TRANSACTION_TYPES[$entityClass] ?? null;
     }
 
     /**

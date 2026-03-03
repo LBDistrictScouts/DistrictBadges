@@ -24,7 +24,13 @@
                 <legend><?= __('Edit Audit') ?></legend>
                 <?php
                     echo $this->Form->control('user_id', ['options' => $users]);
-                    echo $this->Form->control('audit_timestamp');
+                    echo $this->Form->control('audit_timestamp', [
+                        'type' => 'text',
+                        'value' => $audit->get('audit_timestamp')
+                            ? (string)$audit->get('audit_timestamp')
+                            : '',
+                        'disabled' => true,
+                    ]);
                     echo $this->Form->control('audit_completed');
                 ?>
             </fieldset>

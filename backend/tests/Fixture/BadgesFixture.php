@@ -30,6 +30,18 @@ class BadgesFixture extends TestFixture
                 'latest_hash' => 'Lorem ipsum dolor sit amet',
                 'price' => 1.5,
             ],
+            [
+                'id' => '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70',
+                'badge_name' => 'Second badge',
+                'national_product_code' => null,
+                'national_data' => '',
+                'stocked' => 1,
+                'on_hand_quantity' => 0,
+                'receipted_quantity' => 0,
+                'pending_quantity' => 0,
+                'latest_hash' => '',
+                'price' => 0.0,
+            ],
         ];
         parent::init();
     }

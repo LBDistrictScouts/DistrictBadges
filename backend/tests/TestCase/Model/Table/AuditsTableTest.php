@@ -79,10 +79,21 @@ class AuditsTableTest extends TestCase
 
         $valid = $this->Audits->newEntity([
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
-            'audit_timestamp' => '2026-02-22 10:00:00',
             'audit_completed' => true,
         ]);
         $this->assertSame([], $valid->getErrors());
+    }
+
+    public function testTimestampBehaviorSetsAuditTimestamp(): void
+    {
+        $entity = $this->Audits->newEntity([
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'audit_completed' => false,
+        ]);
+
+        $result = $this->Audits->save($entity);
+        $this->assertNotFalse($result);
+        $this->assertNotNull($result->get('audit_timestamp'));
     }
 
     /**
