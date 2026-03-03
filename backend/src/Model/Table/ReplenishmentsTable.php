@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
-use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
@@ -12,7 +10,8 @@ use Cake\Validation\Validator;
  * Replenishments Model
  *
  * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
- *
+ * @property \App\Model\Table\ReplenishmentOrderLinesTable&\Cake\ORM\Association\HasMany $ReplenishmentOrderLines
+ * @property \App\Model\Table\ReplenishmentReceiptLinesTable&\Cake\ORM\Association\HasMany $ReplenishmentReceiptLines
  * @method \App\Model\Entity\Replenishment newEmptyEntity()
  * @method \App\Model\Entity\Replenishment newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Replenishment> newEntities(array $data, array $options = [])
@@ -44,6 +43,12 @@ class ReplenishmentsTable extends Table
         $this->setPrimaryKey('id');
 
         $this->hasMany('StockTransactions', [
+            'foreignKey' => 'replenishment_id',
+        ]);
+        $this->hasMany('ReplenishmentOrderLines', [
+            'foreignKey' => 'replenishment_id',
+        ]);
+        $this->hasMany('ReplenishmentReceiptLines', [
             'foreignKey' => 'replenishment_id',
         ]);
     }

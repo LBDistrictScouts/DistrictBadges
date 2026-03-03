@@ -94,4 +94,17 @@ return [
             'url' => env('EMAIL_TRANSPORT_DEFAULT_URL', null),
         ],
     ],
+
+    'Algolia' => [
+        'enabled' => filter_var(env('ALGOLIA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+        'appId' => env('ALGOLIA_APP_ID', ''),
+        'apiKey' => env('ALGOLIA_ADMIN_API_KEY', ''),
+        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
+    ],
+
+    'Sqs' => [
+        'region' => env('AWS_REGION', 'us-east-1'),
+        'queueUrl' => env('SQS_ORDER_QUEUE_URL', ''),
+        'endpoint' => env('SQS_ENDPOINT', null),
+    ],
 ];

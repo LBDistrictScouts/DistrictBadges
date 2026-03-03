@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
-use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
@@ -12,7 +10,7 @@ use Cake\Validation\Validator;
  * Fulfilments Model
  *
  * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
- *
+ * @property \App\Model\Table\FulfilmentLinesTable&\Cake\ORM\Association\HasMany $FulfilmentLines
  * @method \App\Model\Entity\Fulfilment newEmptyEntity()
  * @method \App\Model\Entity\Fulfilment newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Fulfilment> newEntities(array $data, array $options = [])
@@ -44,6 +42,9 @@ class FulfilmentsTable extends Table
         $this->setPrimaryKey('id');
 
         $this->hasMany('StockTransactions', [
+            'foreignKey' => 'fulfilment_id',
+        ]);
+        $this->hasMany('FulfilmentLines', [
             'foreignKey' => 'fulfilment_id',
         ]);
     }

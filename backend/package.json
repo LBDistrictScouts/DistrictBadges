@@ -1,0 +1,11 @@
+{
+    "name": "districtbadges-backend",
+    "private": true,
+    "devDependencies": {
+        "sass": "^1.77.8"
+    },
+    "scripts": {
+        "sass:build": "sass webroot/css/home.scss webroot/css/home.css && sass webroot/css/cake.scss webroot/css/cake.css",
+        "sass:watch": "sass --watch webroot/css/home.scss:webroot/css/home.css webroot/css/cake.scss:webroot/css/cake.css"
+    }
+}

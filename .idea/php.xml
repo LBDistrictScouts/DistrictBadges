@@ -7,8 +7,26 @@
     <option name="transferred" value="true" />
   </component>
   <component name="PHPCodeSnifferOptionsConfiguration">
+    <option name="codingStandard" value="CakePHP" />
     <option name="highlightLevel" value="WARNING" />
+    <option name="installedPaths" value="$PROJECT_DIR$/backend/vendor/cakephp/cakephp-codesniffer" />
+    <option name="showSniffs" value="true" />
+    <option name="useInstalledPaths" value="true" />
     <option name="transferred" value="true" />
+  </component>
+  <component name="PhpCSFixer">
+    <phpcsfixer_settings>
+      <phpcs_fixer_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" timeout="30000" />
+    </phpcsfixer_settings>
+  </component>
+  <component name="PhpCodeSniffer">
+    <phpcs_settings>
+      <PhpCSConfiguration beautifier_path="$PROJECT_DIR$/backend/vendor/bin/phpcbf" tool_path="$PROJECT_DIR$/backend/vendor/bin/phpcs" />
+      <phpcs_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" standards="CakePHP;PEAR;PSR1;PSR12;PSR2;Squiz;Zend" tool_path="/Users/jacob/Development/DistrictBadges/backend/vendor/bin/phpcs" timeout="30000" />
+    </phpcs_settings>
+  </component>
+  <component name="PhpExternalFormatter">
+    <option name="externalFormatter" value="PHP_CBF" />
   </component>
   <component name="PhpIncludePathManager">
     <include_path>
@@ -91,10 +109,23 @@
       <path value="$PROJECT_DIR$/backend/vendor/theseer/tokenizer" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/markdown-extra" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/twig" />
+      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/psr7" />
+      <path value="$PROJECT_DIR$/backend/vendor/ralouphie/getallheaders" />
+      <path value="$PROJECT_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
+      <path value="$PROJECT_DIR$/backend/vendor/mtdowling/jmespath.php" />
+      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/guzzle" />
+      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/promises" />
+      <path value="$PROJECT_DIR$/backend/vendor/aws/aws-crt-php" />
+      <path value="$PROJECT_DIR$/backend/vendor/aws/aws-sdk-php" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.2">
     <option name="suggestChangeDefaultLanguageLevel" value="false" />
+  </component>
+  <component name="PhpStan">
+    <PhpStan_settings>
+      <phpstan_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" timeout="60000" />
+    </PhpStan_settings>
   </component>
   <component name="PhpStanOptionsConfiguration">
     <option name="transferred" value="true" />
@@ -103,6 +134,11 @@
     <phpunit_settings>
       <PhpUnitSettings configuration_file_path="$PROJECT_DIR$/backend/phpunit.xml.dist" custom_loader_path="$PROJECT_DIR$/backend/vendor/autoload.php" use_configuration_file="true" />
     </phpunit_settings>
+  </component>
+  <component name="Psalm">
+    <Psalm_settings>
+      <psalm_fixer_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" timeout="60000" />
+    </Psalm_settings>
   </component>
   <component name="PsalmOptionsConfiguration">
     <option name="transferred" value="true" />

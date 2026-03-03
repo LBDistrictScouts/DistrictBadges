@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Model\Entity\StockTransaction;
 use Cake\Controller\Exception\MissingActionException;
 use Cake\I18n\FrozenTime;
 use Cake\TestSuite\IntegrationTestTrait;
@@ -112,7 +111,7 @@ class StockTransactionsControllerTest extends TestCase
     {
         $transactions = $this->getTableLocator()->get('StockTransactions');
         $id = 'bad57a31-305f-4398-87d6-8fcfe4600793';
-        /** @var $original StockTransaction */
+        /** @var StockTransaction $original */
         $original = $transactions->get($id);
 
         $this->enableCsrfToken();
@@ -130,7 +129,7 @@ class StockTransactionsControllerTest extends TestCase
         $this->assertRedirect(['controller' => 'StockTransactions', 'action' => 'index']);
         $this->assertFlashMessage('The stock transaction has been saved.');
 
-        /** @var $updated StockTransaction */
+        /** @var StockTransaction $updated */
         $updated = $transactions->get($id);
         $this->assertSame(4, (int)$updated->on_hand_quantity_change);
         $this->assertSame($original->audit_hash, $updated->audit_hash);

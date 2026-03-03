@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Entity\AuditLine;
+use App\Model\Entity\FulfilmentLine;
+use App\Model\Entity\ReplenishmentOrderLine;
+use App\Model\Entity\ReplenishmentReceiptLine;
 use App\Model\Enum\TransactionType;
 use ArrayObject;
 use Cake\Database\Type\EnumType;
@@ -10,6 +14,7 @@ use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
+use Cake\ORM\TableRegistry;
 use Cake\Utility\Security;
 use Cake\Validation\Validator;
 
@@ -20,7 +25,7 @@ use Cake\Validation\Validator;
  * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\BelongsTo $Fulfilments
  * @property \App\Model\Table\AuditsTable&\Cake\ORM\Association\BelongsTo $Audits
  * @property \App\Model\Table\ReplenishmentsTable&\Cake\ORM\Association\BelongsTo $Replenishments
- *
+ * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\BelongsTo $OrderLines
  * @method \App\Model\Entity\StockTransaction newEmptyEntity()
  * @method \App\Model\Entity\StockTransaction newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\StockTransaction> newEntities(array $data, array $options = [])
@@ -37,6 +42,13 @@ use Cake\Validation\Validator;
  */
 class StockTransactionsTable extends Table
 {
+    private const ENTITY_TRANSACTION_TYPES = [
+        AuditLine::class => TransactionType::Audit,
+        FulfilmentLine::class => TransactionType::Fulfilment,
+        ReplenishmentOrderLine::class => TransactionType::ReplenishmentOrder,
+        ReplenishmentReceiptLine::class => TransactionType::ReplenishmentReceipt,
+    ];
+
     /**
      * Initialize method
      *
@@ -72,6 +84,9 @@ class StockTransactionsTable extends Table
         ]);
         $this->belongsTo('Replenishments', [
             'foreignKey' => 'replenishment_id',
+        ]);
+        $this->belongsTo('OrderLines', [
+            'foreignKey' => 'order_line_id',
         ]);
     }
 
@@ -109,6 +124,10 @@ class StockTransactionsTable extends Table
             ->allowEmptyString('replenishment_id');
 
         $validator
+            ->uuid('order_line_id')
+            ->allowEmptyString('order_line_id');
+
+        $validator
             ->integer('on_hand_quantity_change')
             ->notEmptyString('on_hand_quantity_change');
 
@@ -125,11 +144,25 @@ class StockTransactionsTable extends Table
             ->requirePresence('transaction_type', 'create')
             ->notEmptyString('transaction_type')
             ->add('transaction_type', 'enum', [
-                'rule' => static fn ($value) => TransactionType::tryFrom((int)$value) !== null,
+                'rule' => static fn($value) => TransactionType::tryFrom((int)$value) !== null,
                 'message' => 'Invalid transaction type.',
             ]);
 
         return $validator;
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \ArrayObject $data Data.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
+    public function beforeMarshal(EventInterface $event, ArrayObject $data, ArrayObject $options): void
+    {
+        $transactionType = $this->resolveEntityTransactionType();
+        if ($transactionType !== null) {
+            $data['transaction_type'] = $transactionType->value;
+        }
     }
 
     /**
@@ -158,6 +191,7 @@ class StockTransactionsTable extends Table
             'audit_id' => $entity->get('audit_id'),
             'fulfilment_id' => $entity->get('fulfilment_id'),
             'replenishment_id' => $entity->get('replenishment_id'),
+            'order_line_id' => $entity->get('order_line_id'),
             'transaction_timestamp' => (string)$entity->get('transaction_timestamp')->format('Y-m-d H:i:s'),
         ];
 
@@ -165,19 +199,102 @@ class StockTransactionsTable extends Table
         $entity->set('audit_hash', $auditHash);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
     public function beforeSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
+        $transactionType = $this->resolveEntityTransactionType($entity);
+        if ($transactionType !== null) {
+            $entity->set('transaction_type', $transactionType);
+        }
+
         $this->generateAuditHash($entity);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @param string $operation Operation name.
+     * @return void
+     */
     public function beforeRules(
         EventInterface $event,
         EntityInterface $entity,
         ArrayObject $options,
-        string $operation
-    ): void
-    {
+        string $operation,
+    ): void {
         $this->generateAuditHash($entity);
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
+    public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        $badgeId = $entity->get('badge_id');
+        if (!empty($badgeId)) {
+            $this->refreshBadgeStock($badgeId);
+        }
+
+        $originalBadgeId = $entity->getOriginal('badge_id');
+        if (!empty($originalBadgeId) && $originalBadgeId !== $badgeId) {
+            $this->refreshBadgeStock($originalBadgeId);
+        }
+    }
+
+    /**
+     * @param string $badgeId Badge id.
+     * @return void
+     */
+    private function refreshBadgeStock(string $badgeId): void
+    {
+        $stockTransactions = $this->getAlias() === 'StockTransactions'
+            ? $this
+            : TableRegistry::getTableLocator()->get('StockTransactions');
+
+        $totals = $stockTransactions->find()
+            ->select([
+                'on_hand_total' => $stockTransactions->find()->func()->sum('on_hand_quantity_change'),
+                'receipted_total' => $stockTransactions->find()->func()->sum('receipted_quantity_change'),
+                'pending_total' => $stockTransactions->find()->func()->sum('pending_quantity_change'),
+            ])
+            ->where(['badge_id' => $badgeId])
+            ->disableHydration()
+            ->first();
+
+        $latest = $stockTransactions->find()
+            ->select(['audit_hash'])
+            ->where(['badge_id' => $badgeId])
+            ->orderBy(['transaction_timestamp' => 'DESC', 'id' => 'DESC'])
+            ->disableHydration()
+            ->first();
+
+        $badge = $this->Badges->get($badgeId);
+        $badge->set('on_hand_quantity', (int)($totals['on_hand_total'] ?? 0));
+        $badge->set('receipted_quantity', (int)($totals['receipted_total'] ?? 0));
+        $badge->set('pending_quantity', (int)($totals['pending_total'] ?? 0));
+        $badge->set('latest_hash', (string)($latest['audit_hash'] ?? ''));
+
+        $this->Badges->saveOrFail($badge, ['checkRules' => false, 'validate' => false]);
+    }
+
+    /**
+     * @param \Cake\Datasource\EntityInterface|null $entity Entity.
+     * @return \App\Model\Enum\TransactionType|null
+     */
+    private function resolveEntityTransactionType(?EntityInterface $entity = null): ?TransactionType
+    {
+        $entityClass = $entity ? $entity::class : $this->getEntityClass();
+
+        return self::ENTITY_TRANSACTION_TYPES[$entityClass] ?? null;
     }
 
     /**
@@ -193,6 +310,7 @@ class StockTransactionsTable extends Table
         $rules->add($rules->existsIn(['fulfilment_id'], 'Fulfilments'), ['errorField' => 'fulfilment_id']);
         $rules->add($rules->existsIn(['audit_id'], 'Audits'), ['errorField' => 'audit_id']);
         $rules->add($rules->existsIn(['replenishment_id'], 'Replenishments'), ['errorField' => 'replenishment_id']);
+        $rules->add($rules->existsIn(['order_line_id'], 'OrderLines'), ['errorField' => 'order_line_id']);
 
         return $rules;
     }

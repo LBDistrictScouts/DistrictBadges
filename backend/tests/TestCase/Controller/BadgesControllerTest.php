@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Controller\BadgesController;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -46,8 +45,7 @@ class BadgesControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $badges = $this->getTableLocator()->get('Badges');
-        $id = $badges->find()->select(['id'])->firstOrFail()->id;
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
 
         $this->get("/badges/view/{$id}");
         $this->assertResponseOk();
@@ -94,7 +92,7 @@ class BadgesControllerTest extends TestCase
     public function testEdit(): void
     {
         $badges = $this->getTableLocator()->get('Badges');
-        $id = $badges->find()->select(['id'])->firstOrFail()->id;
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
 
         $this->enableCsrfToken();
         $this->put("/badges/edit/{$id}", [

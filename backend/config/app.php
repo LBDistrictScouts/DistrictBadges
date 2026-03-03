@@ -81,6 +81,19 @@ return [
         'salt' => env('SECURITY_SALT'),
     ],
 
+    'Algolia' => [
+        'enabled' => filter_var(env('ALGOLIA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+        'appId' => env('ALGOLIA_APP_ID', ''),
+        'apiKey' => env('ALGOLIA_ADMIN_API_KEY', ''),
+        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
+    ],
+
+    'Sqs' => [
+        'region' => env('AWS_REGION', 'us-east-1'),
+        'queueUrl' => env('SQS_ORDER_QUEUE_URL', ''),
+        'endpoint' => env('SQS_ENDPOINT', null),
+    ],
+
     /*
      * Apply timestamps with the last modified time to static assets (js, css, images).
      * Will append a querystring parameter containing the time the file was modified.

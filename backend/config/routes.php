@@ -49,6 +49,13 @@ return function (RouteBuilder $routes): void {
      */
     $routes->setRouteClass(DashedRoute::class);
 
+    $routes->prefix('Api', function (RouteBuilder $builder): void {
+        $builder->setExtensions(['json']);
+
+        $builder->connect('/orders/dependencies', ['controller' => 'Orders', 'action' => 'dependencies']);
+        $builder->connect('/orders', ['controller' => 'Orders', 'action' => 'place'], ['_method' => 'POST']);
+    });
+
     $routes->scope('/', function (RouteBuilder $builder): void {
         /*
          * Here, we are connecting '/' (base path) to a controller called 'Pages',

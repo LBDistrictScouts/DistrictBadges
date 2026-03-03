@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -13,7 +12,7 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
  * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
- *
+ * @property \App\Model\Table\AuditLinesTable&\Cake\ORM\Association\HasMany $AuditLines
  * @method \App\Model\Entity\Audit newEmptyEntity()
  * @method \App\Model\Entity\Audit newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Audit> newEntities(array $data, array $options = [])
@@ -44,11 +43,22 @@ class AuditsTable extends Table
         $this->setDisplayField('id');
         $this->setPrimaryKey('id');
 
+        $this->addBehavior('Timestamp', [
+            'events' => [
+                'Model.beforeRules' => [
+                    'audit_timestamp' => 'new',
+                ],
+            ],
+        ]);
+
         $this->belongsTo('Users', [
             'foreignKey' => 'user_id',
             'joinType' => 'INNER',
         ]);
         $this->hasMany('StockTransactions', [
+            'foreignKey' => 'audit_id',
+        ]);
+        $this->hasMany('AuditLines', [
             'foreignKey' => 'audit_id',
         ]);
     }
@@ -67,8 +77,7 @@ class AuditsTable extends Table
 
         $validator
             ->dateTime('audit_timestamp')
-            ->requirePresence('audit_timestamp', 'create')
-            ->notEmptyDateTime('audit_timestamp');
+            ->allowEmptyDateTime('audit_timestamp');
 
         $validator
             ->boolean('audit_completed')

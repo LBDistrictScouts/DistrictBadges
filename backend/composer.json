@@ -6,6 +6,8 @@
     "homepage": "https://cakephp.org",
     "require": {
         "php": ">=8.2",
+        "algolia/algoliasearch-client-php": "^4.0",
+        "aws/aws-sdk-php": "^3.0",
         "cakephp/cakephp": "5.3.*",
         "cakephp/migrations": "^5.0",
         "cakephp/plugin-installer": "^2.0",
@@ -52,6 +54,8 @@
         ],
         "cs-check": "phpcs --colors -p",
         "cs-fix": "phpcbf --colors -p",
+        "sass": "npm --prefix . run sass:build",
+        "sass:watch": "npm --prefix . run sass:watch",
         "test": "phpunit --colors=always"
     }
 }

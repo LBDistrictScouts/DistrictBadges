@@ -3,14 +3,15 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Service\AlgoliaService;
 use App\Service\NationalShopService;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
-use Cake\ORM\Query\SelectQuery;
-use Cake\ORM\RulesChecker;
+use Cake\Log\Log;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use RuntimeException;
 
 /**
  * Badges Model
@@ -75,11 +76,21 @@ class BadgesTable extends Table
         return $validator;
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
     public function beforeSave(
         EventInterface $event,
         EntityInterface $entity,
-        ArrayObject $options
+        ArrayObject $options,
     ): void {
+        if (!empty($options['skipNationalData'])) {
+            return;
+        }
+
         if (!$entity->isDirty('national_product_code')) {
             return;
         }
@@ -87,6 +98,11 @@ class BadgesTable extends Table
         $this->populateNationalData($entity);
     }
 
+    /**
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param bool $force Force refresh.
+     * @return void
+     */
     public function populateNationalData(EntityInterface $entity, bool $force = false): void
     {
         if (!$force && !$entity->isDirty('national_product_code')) {
@@ -102,6 +118,9 @@ class BadgesTable extends Table
         $entity->set('national_data', $service->fetchProductByExternalId((int)$productId));
     }
 
+    /**
+     * @return void
+     */
     public function refreshAllNationalData(): void
     {
         $query = $this->find()
@@ -111,5 +130,37 @@ class BadgesTable extends Table
             $this->populateNationalData($badge, true);
             $this->saveOrFail($badge);
         }
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
+    public function afterSave(
+        EventInterface $event,
+        EntityInterface $entity,
+        ArrayObject $options,
+    ): void {
+        if (!empty($options['skipAlgolia'])) {
+            return;
+        }
+
+        $service = $this->buildAlgoliaService();
+
+        try {
+            $service->upsertBadge($entity);
+        } catch (RuntimeException $exception) {
+            Log::warning($exception->getMessage());
+        }
+    }
+
+    /**
+     * @return \App\Service\AlgoliaService
+     */
+    protected function buildAlgoliaService(): AlgoliaService
+    {
+        return new AlgoliaService();
     }
 }

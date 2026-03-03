@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
-use Cake\Utility\Security;
-use Cake\Utility\Text;
 
 /**
  * StockTransaction Entity
@@ -17,6 +15,7 @@ use Cake\Utility\Text;
  * @property string|null $fulfilment_id
  * @property string|null $audit_id
  * @property string|null $replenishment_id
+ * @property string|null $order_line_id
  * @property int $on_hand_quantity_change
  * @property int $receipted_quantity_change
  * @property int $pending_quantity_change
@@ -26,6 +25,7 @@ use Cake\Utility\Text;
  * @property \App\Model\Entity\Fulfilment $fulfilment
  * @property \App\Model\Entity\Audit $audit
  * @property \App\Model\Entity\Replenishment $replenishment
+ * @property \App\Model\Entity\OrderLine $order_line
  */
 class StockTransaction extends Entity
 {
@@ -43,6 +43,7 @@ class StockTransaction extends Entity
         'fulfilment_id' => true,
         'audit_id' => true,
         'replenishment_id' => true,
+        'order_line_id' => true,
         'on_hand_quantity_change' => true,
         'receipted_quantity_change' => true,
         'pending_quantity_change' => true,
@@ -51,5 +52,6 @@ class StockTransaction extends Entity
         'fulfilment' => true,
         'audit' => true,
         'replenishment' => true,
+        'order_line' => true,
     ];
 }

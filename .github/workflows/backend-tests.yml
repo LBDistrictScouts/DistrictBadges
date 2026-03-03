@@ -35,6 +35,10 @@ jobs:
         working-directory: backend
         run: composer run-script post-install-cmd --no-interaction
 
+      - name: CS check
+        working-directory: backend
+        run: composer cs-check
+
       - name: Run tests
         working-directory: backend
         run: composer test

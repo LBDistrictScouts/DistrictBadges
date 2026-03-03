@@ -85,6 +85,14 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/theseer/tokenizer" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig/markdown-extra" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig/twig" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/psr7" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ralouphie/getallheaders" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/aws/aws-crt-php" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/aws/aws-sdk-php" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/guzzle" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/promises" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/mtdowling/jmespath.php" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
