@@ -1,58 +1,138 @@
-# CakePHP Application Skeleton
+# District Badges – Backend
 
-![Build Status](https://github.com/cakephp/app/actions/workflows/ci.yml/badge.svg?branch=5.x)
-[![Total Downloads](https://img.shields.io/packagist/dt/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg?style=flat-square)](https://github.com/phpstan/phpstan)
+The backend is a [CakePHP 5](https://cakephp.org) PHP application that provides the data management layer for the District Badges system. It handles badge stock, orders, invoices, accounts, groups, users and the audit trail that keeps the stock ledger accurate.
 
-A skeleton for creating applications with [CakePHP](https://cakephp.org) 5.x.
+## Requirements
 
-The framework source code can be found here: [cakephp/cakephp](https://github.com/cakephp/cakephp).
+| Dependency | Version |
+|------------|---------|
+| PHP        | ≥ 8.2   |
+| MySQL / MariaDB | any recent release |
+| [Composer](https://getcomposer.org) | ≥ 2.x |
 
-## Installation
+## Getting Started
 
-1. Download [Composer](https://getcomposer.org/doc/00-intro.md) or update `composer self-update`.
-2. Run `php composer.phar create-project --prefer-dist cakephp/app [app_name]`.
-
-If Composer is installed globally, run
-
-```bash
-composer create-project --prefer-dist cakephp/app
-```
-
-In case you want to use a custom app dir name (e.g. `/myapp/`):
+### 1. Install PHP dependencies
 
 ```bash
-composer create-project --prefer-dist cakephp/app myapp
+composer install
 ```
 
-You can now either use your machine's webserver to view the default home page, or start
-up the built-in webserver with:
+### 2. Configure the environment
+
+Copy the example environment file and fill in the values for your local setup:
+
+```bash
+cp config/.env.example config/.env
+```
+
+Key variables to set in `config/.env`:
+
+| Variable | Description |
+|----------|-------------|
+| `APP_NAME` | Application name (used for cache key prefixes) |
+| `DEBUG` | Set to `true` in development, `false` in production |
+| `SECURITY_SALT` | A long random string used for hashing |
+| `APP_FULL_BASE_URL` | Full URL of this application (e.g. `https://badges.example.com`) |
+| `DATABASE_URL` | Full DSN for the primary database (see below) |
+| `DATABASE_TEST_URL` | Full DSN for the test database |
+
+**Database DSN format:**
+
+```
+mysql://username:password@hostname/database_name?encoding=utf8mb4&timezone=UTC&cacheMetadata=true
+```
+
+### 3. Run database migrations
+
+```bash
+bin/cake migrations migrate
+```
+
+### 4. Start the development server
 
 ```bash
 bin/cake server -p 8765
 ```
 
-Then visit `http://localhost:8765` to see the welcome page.
+Visit [http://localhost:8765](http://localhost:8765) to confirm the application is running.
 
-## Demo app
+## Project Structure
 
-Check out the [5.x-demo branch](https://github.com/cakephp/app/tree/5.x-demo), which contains demo migrations and a seeder.
-See the [README](https://github.com/cakephp/app/blob/5.x-demo/README.md) on how to get it running.
+```
+backend/
+├── config/           # Application configuration, routes, migrations
+│   ├── .env.example  # Environment variable template
+│   ├── Migrations/   # Database migration files
+│   ├── app.php       # Application-level defaults
+│   └── routes.php    # URL routing definitions
+├── src/
+│   ├── Controller/   # Request handling – one controller per resource
+│   ├── Model/
+│   │   ├── Entity/   # ORM entity classes
+│   │   └── Table/    # ORM table classes with associations & validation
+│   ├── Service/      # Business logic separated from controllers
+│   └── View/         # View helpers
+├── templates/        # HTML templates (CakePHP .php template files)
+├── tests/            # PHPUnit test suite
+└── webroot/          # Public web root (index.php, static assets)
+```
 
-## Update
+## Key Domain Concepts
 
-Since this skeleton is a starting point for your application and various files
-would have been modified as per your needs, there isn't a way to provide
-automated upgrades, so you have to do any updates manually.
+| Resource | Description |
+|----------|-------------|
+| **Badges** | Scout badge catalogue with stock levels (`on_hand_quantity`, `pending_quantity`, `receipted_quantity`) |
+| **Groups** | Scout groups that hold accounts |
+| **Accounts** | A purchasing account within a group |
+| **Orders** | An order placed by an account for one or more badges |
+| **Order Lines** | Individual badge line items within an order |
+| **Invoices** | Invoices raised against an account |
+| **Fulfilments** | Records that a batch of stock has been dispatched |
+| **Replenishments** | Records of stock received into the warehouse |
+| **Stock Transactions** | Immutable ledger entries that track every stock movement |
+| **Audits** | Periodic physical stock-count events |
+| **Users** | Staff users who operate the system |
 
-## Configuration
+## Running Tests
 
-Read and edit the environment specific `config/app_local.php` and set up the
-`'Datasources'` and any other configuration relevant for your application.
-Other environment agnostic settings can be changed in `config/app.php`.
+```bash
+composer test
+```
 
-## Layout
+Or directly with PHPUnit:
 
-The app skeleton uses [Milligram](https://milligram.io/) (v1.3) minimalist CSS
-framework by default. You can, however, replace it with any other library or
-custom styles.
+```bash
+vendor/bin/phpunit --colors=always
+```
+
+## Code Quality
+
+Check coding standards (CakePHP CS rules via PHP_CodeSniffer):
+
+```bash
+composer cs-check
+```
+
+Auto-fix fixable violations:
+
+```bash
+composer cs-fix
+```
+
+Static analysis (PHPStan at level 8):
+
+```bash
+vendor/bin/phpstan analyse
+```
+
+## Configuration Reference
+
+| File | Purpose |
+|------|---------|
+| `config/app.php` | Application-wide defaults (encoding, locale, timezone, cache, email) |
+| `config/app_local.php` | Environment-specific overrides – **not committed to source control** |
+| `config/.env` | Environment variables loaded in development – **not committed to source control** |
+| `phpcs.xml` | PHP_CodeSniffer ruleset |
+| `phpstan.neon` | PHPStan configuration |
+| `phpunit.xml.dist` | PHPUnit test configuration |
