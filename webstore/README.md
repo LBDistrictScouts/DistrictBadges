@@ -1,73 +1,104 @@
-# React + TypeScript + Vite
+# District Badges – Webstore
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The webstore is the customer-facing front end for the District Badges system. It is built with [React 19](https://react.dev), [TypeScript](https://www.typescriptlang.org) and [Vite](https://vite.dev), and uses [React Bootstrap](https://react-bootstrap.github.io) for UI components.
 
-Currently, two official plugins are available:
+Scout group administrators use the webstore to browse available badges, place orders and view their account history.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Requirements
 
-## React Compiler
+| Dependency | Version |
+|------------|---------|
+| [Node.js](https://nodejs.org) | LTS (≥ 20) |
+| [Yarn](https://yarnpkg.com)   | ≥ 1.x      |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+> npm can be used in place of Yarn if preferred.
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 1. Install dependencies
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+yarn install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Start the development server
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+yarn dev
 ```
+
+The application will be available at [http://localhost:5173](http://localhost:5173) (or the next available port) with Hot Module Replacement enabled.
+
+### 3. Build for production
+
+```bash
+yarn build
+```
+
+The compiled output is written to the `dist/` directory and is ready to be served as a static site or deployed to a CDN / web server.
+
+### 4. Preview the production build locally
+
+```bash
+yarn preview
+```
+
+## Project Structure
+
+```
+webstore/
+├── public/          # Static assets copied verbatim to dist/
+├── src/
+│   ├── assets/      # Images and other imported assets
+│   ├── App.tsx      # Root application component
+│   ├── App.css      # Root-level styles
+│   ├── index.css    # Global CSS (resets, variables)
+│   └── main.tsx     # Application entry point
+├── index.html       # HTML template
+├── vite.config.ts   # Vite build configuration
+├── tsconfig.json    # TypeScript project references
+├── tsconfig.app.json    # TypeScript config for application code
+├── tsconfig.node.json   # TypeScript config for Node/Vite tooling
+├── eslint.config.js     # ESLint flat config
+└── package.json     # Dependencies and scripts
+```
+
+## Key Technologies
+
+| Library | Purpose |
+|---------|---------|
+| [React 19](https://react.dev) | UI component framework |
+| [React Router 7](https://reactrouter.com) | Client-side routing |
+| [Bootstrap 5](https://getbootstrap.com) | CSS design system |
+| [React Bootstrap](https://react-bootstrap.github.io) | Bootstrap components as React elements |
+| [Vite 8](https://vite.dev) | Dev server and production bundler |
+| [TypeScript 5](https://www.typescriptlang.org) | Static typing |
+
+## Linting
+
+Run ESLint across the project:
+
+```bash
+yarn lint
+```
+
+The project uses the TypeScript-aware ESLint flat config defined in `eslint.config.js`.
+
+## Connecting to the Backend
+
+During development the webstore communicates with the [backend](../backend/README.md) CakePHP API. Configure the backend base URL by creating a `.env.local` file in this directory:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8765
+```
+
+> Vite only exposes variables prefixed with `VITE_` to client-side code.
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `yarn dev` | Start the Vite development server with HMR |
+| `yarn build` | Type-check and build for production |
+| `yarn preview` | Serve the production build locally |
+| `yarn lint` | Run ESLint |
