@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Controller\StockTransactionsController;
-use App\Model\Enum\TransactionType;
+use App\Model\Entity\StockTransaction;
+use Cake\Controller\Exception\MissingActionException;
 use Cake\I18n\FrozenTime;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
@@ -24,9 +24,14 @@ class StockTransactionsControllerTest extends TestCase
      * @var array<string>
      */
     protected array $fixtures = [
-        'app.StockTransactions',
+        'app.Groups',
+        'app.Accounts',
+        'app.Users',
+        'app.Audits',
         'app.Badges',
         'app.Fulfilments',
+        'app.Replenishments',
+        'app.StockTransactions',
     ];
 
     /**
@@ -39,6 +44,7 @@ class StockTransactionsControllerTest extends TestCase
     {
         $this->get('/stock-transactions');
         $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -49,8 +55,9 @@ class StockTransactionsControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $this->get('/stock-transactions/view/ec3a656c-e83b-497d-86d3-b0b0604e2ee7');
+        $this->get('/stock-transactions/view/bad57a31-305f-4398-87d6-8fcfe4600793');
         $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
 
     /**
@@ -63,16 +70,19 @@ class StockTransactionsControllerTest extends TestCase
     {
         $transactions = $this->getTableLocator()->get('StockTransactions');
         $before = $transactions->find()->count();
-        $now = new FrozenTime('2025-07-01 12:00:00');
+        $now = new FrozenTime('2026-02-22 09:00:00');
         FrozenTime::setTestNow($now);
 
         $this->enableCsrfToken();
         $this->post('/stock-transactions/add', [
-            'transaction_type' => 'AUDIT',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
-            'change_amount' => 2,
-            'audit_hash' => str_repeat('a', 64),
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
+            'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
+            'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'on_hand_quantity_change' => 1,
+            'receipted_quantity_change' => 2,
+            'pending_quantity_change' => 3,
+            'transaction_type' => 1,
         ]);
 
         $this->assertRedirect(['controller' => 'StockTransactions', 'action' => 'index']);
@@ -80,12 +90,15 @@ class StockTransactionsControllerTest extends TestCase
         $this->assertSame($before + 1, $transactions->find()->count());
 
         $saved = $transactions->find()
-            ->where(['audit_hash' => str_repeat('a', 64)])
+            ->where([
+                'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                'transaction_type' => 1,
+            ])
             ->firstOrFail();
-        $this->assertSame(TransactionType::AUDIT, $saved->transaction_type);
         $this->assertSame($now->format('Y-m-d H:i:s'), $saved->transaction_timestamp->format('Y-m-d H:i:s'));
-        $this->assertSame('f525eb6d-021c-4ef2-811f-feac8db8d35d', $saved->badge_id);
-        $this->assertSame('be5a0a9f-9d87-4191-b819-b7e1c1c50a3a', $saved->fulfilment_id);
+        $this->assertSame(1, (int)$saved->on_hand_quantity_change);
+        $this->assertNotEmpty($saved->audit_hash);
+        $this->assertSame(64, strlen($saved->audit_hash));
         FrozenTime::setTestNow(null);
     }
 
@@ -98,57 +111,41 @@ class StockTransactionsControllerTest extends TestCase
     public function testEdit(): void
     {
         $transactions = $this->getTableLocator()->get('StockTransactions');
-        $id = 'ec3a656c-e83b-497d-86d3-b0b0604e2ee7';
-        $beforeTimestamp = $transactions->get($id)->transaction_timestamp;
+        $id = 'bad57a31-305f-4398-87d6-8fcfe4600793';
+        /** @var $original StockTransaction */
+        $original = $transactions->get($id);
 
         $this->enableCsrfToken();
         $this->put("/stock-transactions/edit/{$id}", [
-            'transaction_type' => 'FULFILMENT',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
-            'change_amount' => 4,
-            'audit_hash' => str_repeat('b', 64),
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
+            'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
+            'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'on_hand_quantity_change' => 4,
+            'receipted_quantity_change' => 5,
+            'pending_quantity_change' => 6,
+            'transaction_type' => 2,
         ]);
 
         $this->assertRedirect(['controller' => 'StockTransactions', 'action' => 'index']);
         $this->assertFlashMessage('The stock transaction has been saved.');
 
+        /** @var $updated StockTransaction */
         $updated = $transactions->get($id);
-        $this->assertSame(4, (int)$updated->change_amount);
-        $this->assertSame(str_repeat('b', 64), $updated->audit_hash);
-        $this->assertSame(
-            $beforeTimestamp->format('Y-m-d H:i:s'),
-            $updated->transaction_timestamp->format('Y-m-d H:i:s')
-        );
+        $this->assertSame(4, (int)$updated->on_hand_quantity_change);
+        $this->assertSame($original->audit_hash, $updated->audit_hash);
     }
 
     /**
      * Test delete method
      *
      * @return void
-     * @link \App\Controller\StockTransactionsController::delete()
      */
     public function testDelete(): void
     {
-        $transactions = $this->getTableLocator()->get('StockTransactions');
-        $entity = $transactions->newEntity([
-            'transaction_type' => 'REPLENISHMENT',
-            'transaction_timestamp' => '2025-07-03 12:00:00',
-            'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
-            'change_amount' => 1,
-            'audit_hash' => str_repeat('c', 64),
-            'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
-        ]);
-        $transactions->saveOrFail($entity);
-        $id = $entity->id;
-        $before = $transactions->find()->count();
-
         $this->enableCsrfToken();
-        $this->post("/stock-transactions/delete/{$id}");
-
-        $this->assertRedirect(['controller' => 'StockTransactions', 'action' => 'index']);
-        $this->assertFlashMessage('The stock transaction has been deleted.');
-        $this->assertSame($before - 1, $transactions->find()->count());
-        $this->assertFalse($transactions->exists(['id' => $id]));
+        $this->disableErrorHandlerMiddleware();
+        $this->expectException(MissingActionException::class);
+        $this->post('/stock-transactions/delete/bad57a31-305f-4398-87d6-8fcfe4600793');
     }
 }

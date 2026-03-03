@@ -24,6 +24,11 @@ class BadgesFixture extends TestFixture
                 'national_product_code' => 1,
                 'national_data' => '',
                 'stocked' => 1,
+                'on_hand_quantity' => 1,
+                'receipted_quantity' => 1,
+                'pending_quantity' => 1,
+                'latest_hash' => 'Lorem ipsum dolor sit amet',
+                'price' => 1.5,
             ],
         ];
         parent::init();

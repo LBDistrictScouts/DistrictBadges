@@ -200,12 +200,214 @@
           "body": "{\n    \"result\": [\n        {\n            \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\",\n            \"id\": 25277,\n            \"sku\": \"113257\",\n            \"name\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n            \"visibility\": {\n                \"catalog\": true,\n                \"search\": true\n            },\n            \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n            \"price\": 0.9,\n            \"max_price\": 0.9,\n            \"verbosity\": 3,\n            \"breadcrumbs\": [\n                {\n                    \"label\": \"Scouts Badges\",\n                    \"url\": \"/scouts-badges\"\n                },\n                {\n                    \"label\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n                    \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\"\n                }\n            ],\n            \"category_path\": \"Scouts Badges\",\n            \"type_id\": \"configurable\",\n            \"created_at\": \"2024-02-23T14:51:23+00:00\",\n            \"media\": [\n                {\n                    \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                    \"position\": 1,\n                    \"labels\": [\n                        \"base\",\n                        \"small\",\n                        \"thumbnail\",\n                        \"alternative\"\n                    ]\n                }\n            ],\n            \"options\": {\n                \"configurable\": {\n                    \"size\": {\n                        \"719\": [\n                            25276\n                        ]\n                    },\n                    \"color\": {\n                        \"34\": [\n                            25276\n                        ]\n                    }\n                }\n            },\n            \"product_cat\": [\n                6860\n            ],\n            \"logo_for_personalisation\": 935,\n            \"type_filter\": [\n                7075\n            ],\n            \"product_summary\": \"<ul>\\r\\n<li>Size: 40mm diameter</li>\\r\\n<li>Type: Woven badge with merrow border</li>\\r\\n</ul>\",\n            \"section\": [\n                6575\n            ],\n            \"age\": [\n                1019\n            ],\n            \"listing_label_background_color\": 927,\n            \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n            \"brand\": [\n                6919\n            ],\n            \"item_group_name\": 939,\n            \"badge_type\": [\n                992\n            ],\n            \"color\": [\n                34\n            ],\n            \"size\": [\n                719\n            ],\n            \"short_description\": \"<p><span class=\\\"col-2 fw-bold\\\">To purchase this badge, you need to be a member of a Leadership Team or Support Team.​\\r\\nYou’ll need to sign in and enter your details, plus your membership number in the Scout ID box. </span></p>\",\n            \"mi_alternative\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n            \"product_tag\": 6761,\n            \"primary_category\": 1787,\n            \"first_simple_sku\": \"113257-NULL-NULL\",\n            \"familySkus\": \"113257-NULL-NULL\",\n            \"swatchMap\": {\n                \"34\": {\n                    \"price\": 0.9,\n                    \"max_price\": 0.9,\n                    \"is_from_price\": false,\n                    \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                    \"img_alternative\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\"\n                }\n            },\n            \"fallbackUrl\": \"squirrel-scout-space-activity-badge-uk-space-agency\",\n            \"link\": {\n                \"upSell\": [\n                    19719,\n                    17347,\n                    17034\n                ]\n            },\n            \"meta\": {\n                \"description\": \"The UK Space Agency has partnered with the Scouts to help inspire the next generation of UK scientists and engineers by supporting our space-themed badges. Fly a rocket into the stars like an astronaut and discover things about different planets and our moon.\",\n                \"title\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"ogtype\": \"product\",\n                \"availability\": \"in_stock\",\n                \"canonical\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\",\n                \"ogimage\": \"/static/media/catalog/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\"\n            },\n            \"categories\": {\n                \"last\": 1787\n            },\n            \"category_ids\": [\n                2,\n                824,\n                1019,\n                1225,\n                304,\n                585,\n                996,\n                1661,\n                1571,\n                1570,\n                1787,\n                1797,\n                1949\n            ],\n            \"attribute_set\": 9,\n            \"delivery_block\": 7425,\n            \"age_list_filter\": [\n                6933\n            ],\n            \"weight\": 0.01,\n            \"description\": \"<p><strong>Squirrel Scout Space Activity Badge (UK Space Agency)</strong></p>\\r\\n<p>The UK Space Agency has partnered with the Scouts to help inspire the next generation of UK scientists and engineers by supporting our space-themed badges.</p>\\r\\n<p>Fly a rocket into the stars like an astronaut and discover things about different planets and our moon.</p>\\r\\n<p><strong>How to earn your badge:</strong></p>\\r\\n<p><strong>We live on a planet called Earth. work together to find out more about what planets are.</strong></p>\\r\\n<ul>\\r\\n<li>You could explore what Earth looks like from space, play a planet game or share what you know with a friend.\\u202f</li>\\r\\n</ul>\\r\\n<p><strong>Have you ever spotted the moon in the sky? Explore what the moon looks like and how it changes over time.</strong></p>\\r\\n<ul>\\r\\n<li>You can find out how the moon changes during a month, explore pictures of the moon or create your moon crater artwork.\\u202f</li>\\r\\n</ul>\\r\\n<p><strong>Lots of brave explorers (called astronauts) have travelled to space. Try some activities to discover what their journeys are like. What would you like to know about astronauts? </strong></p>\\r\\n<ul>\\r\\n<li>You could build your own rocket, eat space food or dress up as an astronaut.\\u202f</li>\\r\\n</ul>\",\n            \"next_day_delivery\": 1,\n            \"oosVisible\": 1,\n            \"type\": \"product\",\n            \"_updated_at\": \"2026-02-18 08:47:11\",\n            \"store\": 1,\n            \"stockMap\": {\n                \"size\": {\n                    \"719\": [\n                        25276\n                    ]\n                },\n                \"color\": {\n                    \"34\": [\n                        25276\n                    ]\n                }\n            },\n            \"directChildrenIds\": [\n                25276\n            ],\n            \"indirectChildren\": {},\n            \"is_from_price\": false\n        }\n    ],\n    \"catalog\": [\n        {\n            \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency\",\n            \"id\": 25276,\n            \"sku\": \"113257-NULL-NULL\",\n            \"name\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n            \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n            \"price\": 0.9,\n            \"verbosity\": 3,\n            \"breadcrumbs\": [\n                {\n                    \"label\": \"Scouts Badges\",\n                    \"url\": \"/scouts-badges\"\n                },\n                {\n                    \"label\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n                    \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency\"\n                }\n            ],\n            \"category_path\": \"Scouts Badges\",\n            \"parent\": 25277,\n            \"created_at\": \"2024-02-23T14:51:23+00:00\",\n            \"logo_for_personalisation\": 935,\n            \"listing_label_background_color\": 927,\n            \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n            \"item_group_name\": 939,\n            \"color\": 34,\n            \"size\": 719,\n            \"product_tag\": 6761,\n            \"primary_category\": 2,\n            \"prevent_buy_rules\": [\n                6\n            ],\n            \"fallbackUrl\": \"squirrel-scout-space-activity-badge-uk-space-agency\",\n            \"meta\": {\n                \"description\": \"The UK Space Agency has partnered with the Scouts to help inspire the next generation of UK scientists and engineers by supporting our space-themed badges. Fly a rocket into the stars like an astronaut and discover things about different planets and our moon.\",\n                \"title\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"ogtype\": \"product\",\n                \"availability\": \"in_stock\",\n                \"canonical\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\",\n                \"ogimage\": \"/static/media/catalog/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\"\n            },\n            \"categories\": {\n                \"last\": 1787\n            },\n            \"category_ids\": [\n                2,\n                824,\n                304,\n                585,\n                1019,\n                1571,\n                1787,\n                1797,\n                1949\n            ],\n            \"attribute_set\": 9,\n            \"weight\": 0.01,\n            \"oosVisible\": 1,\n            \"type\": \"product\",\n            \"_updated_at\": \"2026-02-11 09:13:56\",\n            \"store\": 1\n        }\n    ]\n}"
         }
       ]
+    },
+    {
+      "name": "Category Information",
+      "id": "a38d64cc-a667-4503-9802-a24dea71aa5a",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://shop.scouts.org.uk/api/n/load?type=product&verbosity=3&ids={{ProductID}}&pushDeps=true",
+          "protocol": "https",
+          "host": [
+            "shop",
+            "scouts",
+            "org",
+            "uk"
+          ],
+          "path": [
+            "api",
+            "n",
+            "load"
+          ],
+          "query": [
+            {
+              "key": "type",
+              "value": "product"
+            },
+            {
+              "key": "verbosity",
+              "value": "3"
+            },
+            {
+              "key": "ids",
+              "value": "{{ProductID}}"
+            },
+            {
+              "key": "pushDeps",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "id": "d0f3b6c8-8554-4c9d-b60f-d70d38155b3a",
+          "name": "Squirrel Badge [Catalog]",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://shop.scouts.org.uk/api/n/load?type=product&verbosity=3&ids={{ProductID}}&pushDeps=true",
+              "protocol": "https",
+              "host": [
+                "shop",
+                "scouts",
+                "org",
+                "uk"
+              ],
+              "path": [
+                "api",
+                "n",
+                "load"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "product"
+                },
+                {
+                  "key": "verbosity",
+                  "value": "3"
+                },
+                {
+                  "key": "ids",
+                  "value": "{{ProductID}}"
+                },
+                {
+                  "key": "pushDeps",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Date",
+              "value": "Sat, 21 Feb 2026 12:45:39 GMT"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json;charset=utf8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "1673"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "access-control-allow-credentials",
+              "value": "true"
+            },
+            {
+              "key": "access-control-allow-headers",
+              "value": "Origin, Content-Type, Accept, Authorization, X-Authorization, X-App-Id, X-Store-Id, X-Cache-Control, Cache-Control"
+            },
+            {
+              "key": "access-control-allow-methods",
+              "value": "GET, POST, OPTIONS"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=900, stale-while-revalidate=3600"
+            },
+            {
+              "key": "Content-Encoding",
+              "value": "br"
+            },
+            {
+              "key": "content-security-policy-report-only",
+              "value": "default-src 'self' ; style-src 'self' 'unsafe-inline' optimize.google.com www.googletagmanager.com fonts.googleapis.com *.typekit.net *.yotpo.com *.myfonts.net *.cloudfront.net; font-src 'self' data: optimize.google.com fonts.gstatic.com *.abtasty.com *.dwin1.com *.typekit.net *.livechatinc.com snap.licdn.com *.tiktok.com static.ads-twitter.com ct.pinterest.com *.yotpo.com *.addthis.com *.moatads.com *.curalate.com *.cloudflare.com *.cloudfront.net; img-src 'self' data: *; base-uri 'self' ;  form-action *; frame-ancestors 'self' ; script-src 'self' 'unsafe-inline' 'unsafe-eval' optimize.google.com www.googletagmanager.com www.googleanalytics.com www.google-analytics.com www.googleoptimize.com www.googleadservices.com maps.googleapis.com polyfill.io player.vimeo.com connect.facebook.net *.klevu.com api.exponea.com s.pinimg.com intljs.rmtag.com assistjs.skimresources.com googleads.g.doubleclick.net bat.bing.com t.contentsquare.net track.sweetanalytics.com *.yotpo.com snap.licdn.com static.ads-twitter.com *.tiktok.com *.abtasty.com *.dwin1.com *.livechatinc.com *.voyado.com *.ksearchnet.com *.hotjar.com *.veinteractive.com *.mouseflow.com *.sleeknote.com *.stripe.com *.zdassets.com *.trustpilot.com *.clarity.ms *.addthis.com *.addthisedge.com *.moatads.com *.clearpay.co.uk *.amplitude.com *.sagepay.com snapppt.com *.snapppt.com; connect-src 'self' mage.shop.scouts.org.uk *.google-analytics.com *.klevu.com api.exponea.com ct.pinterest.com *.abtasty.com *.tiktok.com *.yotpo.com maps.googleapis.com vimeo.com *.addthis.com *.moatads.com *.dwin1.com *.54proxy.com *.ksearchnet.com *.hotjar.com *.hotjar.io *.zdassets.com *.clarity.ms *.amplitude.com *.sweetanalytics.com snapppt.com *.snapppt.com; frame-src 'self' player.vimeo.com *.fls.doubleclick.net ct.pinterest.com vimeo.com secure.livechatinc.com *.addthis.com *.curalate.com *.54proxy.com *.hotjar.com *.stripe.com *.trustpilot.com *.paypal.com;"
+            },
+            {
+              "key": "etag",
+              "value": "W/\"1862-bJn3yR4cBod+X3P+zeTepJvBCdw\""
+            },
+            {
+              "key": "permissions-policy",
+              "value": "geolocation=self, microphone=self, autoplay=self"
+            },
+            {
+              "key": "referrer-policy",
+              "value": "no-referrer-when-downgrade"
+            },
+            {
+              "key": "Server",
+              "value": "cloudflare"
+            },
+            {
+              "key": "strict-transport-security",
+              "value": "max-age=31536000; includeSubDomains; preload"
+            },
+            {
+              "key": "vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "key": "vary",
+              "value": "Origin"
+            },
+            {
+              "key": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "key": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "x-store-id",
+              "value": "1"
+            },
+            {
+              "key": "x-xss-protection",
+              "value": "1; mode=block"
+            },
+            {
+              "key": "via",
+              "value": "1.1 google"
+            },
+            {
+              "key": "alt-svc",
+              "value": "h3=\":443\"; ma=86400"
+            },
+            {
+              "key": "cf-cache-status",
+              "value": "DYNAMIC"
+            },
+            {
+              "key": "CF-RAY",
+              "value": "9d16578eff993052-LHR"
+            }
+          ],
+          "cookie": [],
+          "responseTime": "2026-02-21T12:45:41.275Z",
+          "body": "{\n    \"result\": [\n        {\n            \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\",\n            \"id\": 25277,\n            \"sku\": \"113257\",\n            \"name\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n            \"visibility\": {\n                \"catalog\": true,\n                \"search\": true\n            },\n            \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n            \"price\": 0.9,\n            \"max_price\": 0.9,\n            \"verbosity\": 3,\n            \"breadcrumbs\": [\n                {\n                    \"label\": \"Scouts Badges\",\n                    \"url\": \"/scouts-badges\"\n                },\n                {\n                    \"label\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n                    \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\"\n                }\n            ],\n            \"category_path\": \"Scouts Badges\",\n            \"type_id\": \"configurable\",\n            \"created_at\": \"2024-02-23T14:51:23+00:00\",\n            \"media\": [\n                {\n                    \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                    \"position\": 1,\n                    \"labels\": [\n                        \"base\",\n                        \"small\",\n                        \"thumbnail\",\n                        \"alternative\"\n                    ]\n                }\n            ],\n            \"options\": {\n                \"configurable\": {\n                    \"size\": {\n                        \"719\": [\n                            25276\n                        ]\n                    },\n                    \"color\": {\n                        \"34\": [\n                            25276\n                        ]\n                    }\n                }\n            },\n            \"product_cat\": [\n                6860\n            ],\n            \"logo_for_personalisation\": 935,\n            \"type_filter\": [\n                7075\n            ],\n            \"product_summary\": \"<ul>\\r\\n<li>Size: 40mm diameter</li>\\r\\n<li>Type: Woven badge with merrow border</li>\\r\\n</ul>\",\n            \"section\": [\n                6575\n            ],\n            \"age\": [\n                1019\n            ],\n            \"listing_label_background_color\": 927,\n            \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n            \"brand\": [\n                6919\n            ],\n            \"item_group_name\": 939,\n            \"badge_type\": [\n                992\n            ],\n            \"color\": [\n                34\n            ],\n            \"size\": [\n                719\n            ],\n            \"short_description\": \"<p><span class=\\\"col-2 fw-bold\\\">To purchase this badge, you need to be a member of a Leadership Team or Support Team.​\\r\\nYou’ll need to sign in and enter your details, plus your membership number in the Scout ID box. </span></p>\",\n            \"mi_alternative\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n            \"product_tag\": 6761,\n            \"primary_category\": 1787,\n            \"first_simple_sku\": \"113257-NULL-NULL\",\n            \"familySkus\": \"113257-NULL-NULL\",\n            \"swatchMap\": {\n                \"34\": {\n                    \"price\": 0.9,\n                    \"max_price\": 0.9,\n                    \"is_from_price\": false,\n                    \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                    \"img_alternative\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\"\n                }\n            },\n            \"fallbackUrl\": \"squirrel-scout-space-activity-badge-uk-space-agency\",\n            \"link\": {\n                \"upSell\": [\n                    19719,\n                    17347,\n                    17034\n                ]\n            },\n            \"meta\": {\n                \"description\": \"The UK Space Agency has partnered with the Scouts to help inspire the next generation of UK scientists and engineers by supporting our space-themed badges. Fly a rocket into the stars like an astronaut and discover things about different planets and our moon.\",\n                \"title\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"ogtype\": \"product\",\n                \"availability\": \"in_stock\",\n                \"canonical\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\",\n                \"ogimage\": \"/static/media/catalog/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\"\n            },\n            \"categories\": {\n                \"last\": 1787\n            },\n            \"category_ids\": [\n                2,\n                824,\n                1019,\n                1225,\n                304,\n                585,\n                996,\n                1661,\n                1571,\n                1570,\n                1787,\n                1797,\n                1949\n            ],\n            \"attribute_set\": 9,\n            \"delivery_block\": 7425,\n            \"age_list_filter\": [\n                6933\n            ],\n            \"weight\": 0.01,\n            \"description\": \"<p><strong>Squirrel Scout Space Activity Badge (UK Space Agency)</strong></p>\\r\\n<p>The UK Space Agency has partnered with the Scouts to help inspire the next generation of UK scientists and engineers by supporting our space-themed badges.</p>\\r\\n<p>Fly a rocket into the stars like an astronaut and discover things about different planets and our moon.</p>\\r\\n<p><strong>How to earn your badge:</strong></p>\\r\\n<p><strong>We live on a planet called Earth. work together to find out more about what planets are.</strong></p>\\r\\n<ul>\\r\\n<li>You could explore what Earth looks like from space, play a planet game or share what you know with a friend.\\u202f</li>\\r\\n</ul>\\r\\n<p><strong>Have you ever spotted the moon in the sky? Explore what the moon looks like and how it changes over time.</strong></p>\\r\\n<ul>\\r\\n<li>You can find out how the moon changes during a month, explore pictures of the moon or create your moon crater artwork.\\u202f</li>\\r\\n</ul>\\r\\n<p><strong>Lots of brave explorers (called astronauts) have travelled to space. Try some activities to discover what their journeys are like. What would you like to know about astronauts? </strong></p>\\r\\n<ul>\\r\\n<li>You could build your own rocket, eat space food or dress up as an astronaut.\\u202f</li>\\r\\n</ul>\",\n            \"next_day_delivery\": 1,\n            \"oosVisible\": 1,\n            \"type\": \"product\",\n            \"_updated_at\": \"2026-02-18 08:47:11\",\n            \"store\": 1,\n            \"stockMap\": {\n                \"size\": {\n                    \"719\": [\n                        25276\n                    ]\n                },\n                \"color\": {\n                    \"34\": [\n                        25276\n                    ]\n                }\n            },\n            \"directChildrenIds\": [\n                25276\n            ],\n            \"indirectChildren\": {},\n            \"is_from_price\": false\n        }\n    ],\n    \"catalog\": [\n        {\n            \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency\",\n            \"id\": 25276,\n            \"sku\": \"113257-NULL-NULL\",\n            \"name\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n            \"image\": \"/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n            \"price\": 0.9,\n            \"verbosity\": 3,\n            \"breadcrumbs\": [\n                {\n                    \"label\": \"Scouts Badges\",\n                    \"url\": \"/scouts-badges\"\n                },\n                {\n                    \"label\": \"Squirrels Space Activity Badge (UK Space Agency)\",\n                    \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency\"\n                }\n            ],\n            \"category_path\": \"Scouts Badges\",\n            \"parent\": 25277,\n            \"created_at\": \"2024-02-23T14:51:23+00:00\",\n            \"logo_for_personalisation\": 935,\n            \"listing_label_background_color\": 927,\n            \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n            \"item_group_name\": 939,\n            \"color\": 34,\n            \"size\": 719,\n            \"product_tag\": 6761,\n            \"primary_category\": 2,\n            \"prevent_buy_rules\": [\n                6\n            ],\n            \"fallbackUrl\": \"squirrel-scout-space-activity-badge-uk-space-agency\",\n            \"meta\": {\n                \"description\": \"The UK Space Agency has partnered with the Scouts to help inspire the next generation of UK scientists and engineers by supporting our space-themed badges. Fly a rocket into the stars like an astronaut and discover things about different planets and our moon.\",\n                \"title\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"ogtype\": \"product\",\n                \"availability\": \"in_stock\",\n                \"canonical\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\",\n                \"ogimage\": \"/static/media/catalog/product/1/1/113257-squirrel-scout-space-activity-badge.jpg\",\n                \"h1_tag\": \"Squirrel Scout Space Activity Badge (UK Space Agency)\",\n                \"url\": \"/scouts-badges/squirrel-scout-space-activity-badge-uk-space-agency-25277\"\n            },\n            \"categories\": {\n                \"last\": 1787\n            },\n            \"category_ids\": [\n                2,\n                824,\n                304,\n                585,\n                1019,\n                1571,\n                1787,\n                1797,\n                1949\n            ],\n            \"attribute_set\": 9,\n            \"weight\": 0.01,\n            \"oosVisible\": 1,\n            \"type\": \"product\",\n            \"_updated_at\": \"2026-02-11 09:13:56\",\n            \"store\": 1\n        }\n    ]\n}"
+        }
+      ]
     }
   ],
   "variable": [
     {
-      "id": "ed8b6b8b-6a33-4333-874b-b797c4a822aa",
+      "id": "498d9e96-64cf-4ab9-9194-ce460bbb850d",
       "key": "ProductID",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "id": "97fe87b7-6a06-4e13-8f36-aa0c57dd65a2",
+      "key": "CategoryID",
       "value": "",
       "type": "default"
     }

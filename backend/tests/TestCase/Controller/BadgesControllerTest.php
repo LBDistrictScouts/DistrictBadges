@@ -46,7 +46,10 @@ class BadgesControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $this->get('/badges/view/f525eb6d-021c-4ef2-811f-feac8db8d35d');
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = $badges->find()->select(['id'])->firstOrFail()->id;
+
+        $this->get("/badges/view/{$id}");
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
     }
@@ -91,7 +94,7 @@ class BadgesControllerTest extends TestCase
     public function testEdit(): void
     {
         $badges = $this->getTableLocator()->get('Badges');
-        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+        $id = $badges->find()->select(['id'])->firstOrFail()->id;
 
         $this->enableCsrfToken();
         $this->put("/badges/edit/{$id}", [

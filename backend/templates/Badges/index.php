@@ -11,20 +11,24 @@
         <table>
             <thead>
                 <tr>
+                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('badge_name') ?></th>
                     <th><?= $this->Paginator->sort('national_product_code') ?></th>
                     <th><?= $this->Paginator->sort('stocked') ?></th>
-                    <th><?= $this->Paginator->sort('national_data') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($badges as $badge): ?>
                 <tr>
+                    <td>
+                        <?php if (!is_null($badge->image_large_url)) : ?>
+                            <img src="<?= $badge->image_large_url ?>" alt="<?= $badge->badge_name ?>" width="100" height="100" style="max-width: 100px;" />
+                        <?php endif; ?>
+                    </td>
                     <td><?= h($badge->badge_name) ?></td>
                     <td><?= $badge->national_product_code === null ? '' : h((string)$badge->national_product_code) ?></td>
                     <td><?= $badge->stocked ? __('Yes') : __('No') ?></td>
-                    <td><?= h($badge->national_data) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $badge->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $badge->id]) ?>

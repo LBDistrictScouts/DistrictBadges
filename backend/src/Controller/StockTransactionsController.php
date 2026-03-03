@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Model\Enum\TransactionType;
-
 /**
  * StockTransactions Controller
  *
@@ -58,11 +56,7 @@ class StockTransactionsController extends AppController
         }
         $badges = $this->StockTransactions->Badges->find('list', limit: 200)->all();
         $fulfilments = $this->StockTransactions->Fulfilments->find('list', limit: 200)->all();
-        $transactionTypes = [];
-        foreach (TransactionType::cases() as $type) {
-            $transactionTypes[$type->value] = $type->label();
-        }
-        $this->set(compact('stockTransaction', 'badges', 'fulfilments', 'transactionTypes'));
+        $this->set(compact('stockTransaction', 'badges', 'fulfilments'));
     }
 
     /**
@@ -86,30 +80,6 @@ class StockTransactionsController extends AppController
         }
         $badges = $this->StockTransactions->Badges->find('list', limit: 200)->all();
         $fulfilments = $this->StockTransactions->Fulfilments->find('list', limit: 200)->all();
-        $transactionTypes = [];
-        foreach (TransactionType::cases() as $type) {
-            $transactionTypes[$type->value] = $type->label();
-        }
-        $this->set(compact('stockTransaction', 'badges', 'fulfilments', 'transactionTypes'));
-    }
-
-    /**
-     * Delete method
-     *
-     * @param string|null $id Stock Transaction id.
-     * @return \Cake\Http\Response|null Redirects to index.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
-    public function delete($id = null)
-    {
-        $this->request->allowMethod(['post', 'delete']);
-        $stockTransaction = $this->StockTransactions->get($id);
-        if ($this->StockTransactions->delete($stockTransaction)) {
-            $this->Flash->success(__('The stock transaction has been deleted.'));
-        } else {
-            $this->Flash->error(__('The stock transaction could not be deleted. Please, try again.'));
-        }
-
-        return $this->redirect(['action' => 'index']);
+        $this->set(compact('stockTransaction', 'badges', 'fulfilments'));
     }
 }

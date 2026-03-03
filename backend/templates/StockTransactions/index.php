@@ -11,24 +11,34 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('transaction_type') ?></th>
+                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('transaction_timestamp') ?></th>
-                    <th><?= $this->Paginator->sort('badge_id', __('Badge')) ?></th>
-                    <th><?= $this->Paginator->sort('change_amount') ?></th>
+                    <th><?= $this->Paginator->sort('badge_id') ?></th>
                     <th><?= $this->Paginator->sort('audit_hash') ?></th>
-                    <th><?= $this->Paginator->sort('fulfilment_id', __('Fulfilment')) ?></th>
+                    <th><?= $this->Paginator->sort('fulfilment_id') ?></th>
+                    <th><?= $this->Paginator->sort('audit_id') ?></th>
+                    <th><?= $this->Paginator->sort('replenishment_id') ?></th>
+                    <th><?= $this->Paginator->sort('on_hand_quantity_change') ?></th>
+                    <th><?= $this->Paginator->sort('receipted_quantity_change') ?></th>
+                    <th><?= $this->Paginator->sort('pending_quantity_change') ?></th>
+                    <th><?= $this->Paginator->sort('transaction_type') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($stockTransactions as $stockTransaction): ?>
                 <tr>
-                    <td><?= h($stockTransaction->transaction_type) ?></td>
+                    <td><?= h($stockTransaction->id) ?></td>
                     <td><?= h($stockTransaction->transaction_timestamp) ?></td>
                     <td><?= $stockTransaction->hasValue('badge') ? $this->Html->link($stockTransaction->badge->badge_name, ['controller' => 'Badges', 'action' => 'view', $stockTransaction->badge->id]) : '' ?></td>
-                    <td><?= $this->Number->format($stockTransaction->change_amount) ?></td>
                     <td><?= h($stockTransaction->audit_hash) ?></td>
                     <td><?= $stockTransaction->hasValue('fulfilment') ? $this->Html->link($stockTransaction->fulfilment->fulfilment_number, ['controller' => 'Fulfilments', 'action' => 'view', $stockTransaction->fulfilment->id]) : '' ?></td>
+                    <td><?= h($stockTransaction->audit_id) ?></td>
+                    <td><?= h($stockTransaction->replenishment_id) ?></td>
+                    <td><?= $this->Number->format($stockTransaction->on_hand_quantity_change) ?></td>
+                    <td><?= $this->Number->format($stockTransaction->receipted_quantity_change) ?></td>
+                    <td><?= $this->Number->format($stockTransaction->pending_quantity_change) ?></td>
+                    <td><?= $stockTransaction->transaction_type === null ? '' : h($stockTransaction->transaction_type->label()) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $stockTransaction->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $stockTransaction->id]) ?>
@@ -37,7 +47,7 @@
                             ['action' => 'delete', $stockTransaction->id],
                             [
                                 'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete this stock transaction?'),
+                                'confirm' => __('Are you sure you want to delete # {0}?', $stockTransaction->id),
                             ]
                         ) ?>
                     </td>

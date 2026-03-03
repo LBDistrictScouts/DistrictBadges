@@ -23,8 +23,8 @@
                     <td><?= h($badge->badge_name) ?></td>
                 </tr>
                 <tr>
-                    <th><?= __('National Data') ?></th>
-                    <td><?= h($badge->national_data) ?></td>
+                    <th><?= __('Image') ?></th>
+                    <td><img src="<?= $badge->image_large_url ?>" alt="<?= h($badge->badge_name) ?>"></td>
                 </tr>
                 <tr>
                     <th><?= __('National Product Code') ?></th>

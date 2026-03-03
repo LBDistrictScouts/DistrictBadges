@@ -4,7 +4,6 @@
  * @var \App\Model\Entity\StockTransaction $stockTransaction
  * @var \Cake\Collection\CollectionInterface|string[] $badges
  * @var \Cake\Collection\CollectionInterface|string[] $fulfilments
- * @var array<string, string> $transactionTypes
  */
 ?>
 <div class="row">
@@ -20,10 +19,11 @@
             <fieldset>
                 <legend><?= __('Add Stock Transaction') ?></legend>
                 <?php
-                    echo $this->Form->control('transaction_type', ['options' => $transactionTypes]);
                     echo $this->Form->control('badge_id', ['options' => $badges]);
-                    echo $this->Form->control('change_amount');
-                    echo $this->Form->control('audit_hash');
+                    echo $this->Form->control('on_hand_quantity_change');
+                    echo $this->Form->control('receipted_quantity_change');
+                    echo $this->Form->control('pending_quantity_change');
+                    echo $this->Form->control('transaction_type');
                 ?>
             </fieldset>
             <?= $this->Form->button(__('Submit')) ?>
