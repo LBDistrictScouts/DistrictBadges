@@ -24,9 +24,9 @@ class EntityNumberBehavior extends Behavior
     private ?DateTime $date = null;
 
     /**
-     * @param EventInterface $event Event.
-     * @param EntityInterface $entity Entity.
-     * @param ArrayObject $options Options.
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
      * @return void
      */
     public function beforeSave(
@@ -67,10 +67,10 @@ class EntityNumberBehavior extends Behavior
     /**
      * Set a fixed generation date, primarily for deterministic batch operations and tests.
      *
-     * @param DateTimeInterface|null $date Date, or null to use the current time.
+     * @param \DateTimeInterface|null $date Date, or null to use the current time.
      * @return $this
      */
-    public function setDate(?DateTimeInterface $date): static
+    public function setDate(?DateTimeInterface $date)
     {
         $this->date = $date === null ? null : new DateTime($date);
 

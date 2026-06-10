@@ -1,13 +1,13 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Event;
 
 use App\Model\Entity\FulfilmentLine;
-use App\Model\Table\FulfilmentLinesTable;
-use App\Model\Table\StockTransactionsTable;
 use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
+use UnexpectedValueException;
 
 class FulfilmentListener implements EventListenerInterface
 {
@@ -23,19 +23,23 @@ class FulfilmentListener implements EventListenerInterface
         ];
     }
 
+    /**
+     * Process a newly fulfilled line.
+     *
+     * @param \Cake\Event\EventInterface $event Event.
+     * @return void
+     */
     public function processFulfilmentLine(EventInterface $event): void
     {
         /**
-         * @var FulfilmentLinesTable $fulfilmentLines
-         * @var StockTransactionsTable $stockTransactions
+         * @var \App\Model\Table\StockTransactionsTable $stockTransactions
          */
-        $fulfilmentLines = $this->fetchModel('FulfilmentLines');
         $stockTransactions = $this->fetchModel('StockTransactions');
 
         $fulfilmentLine = $event->getSubject();
 
         if (!$fulfilmentLine instanceof FulfilmentLine) {
-            throw new \UnexpectedValueException(sprintf(
+            throw new UnexpectedValueException(sprintf(
                 'Expected event subject to be an instance of %s, got %s.',
                 FulfilmentLine::class,
                 get_debug_type($fulfilmentLine),
