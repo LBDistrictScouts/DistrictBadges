@@ -60,4 +60,26 @@ class OrderLine extends Entity
     {
         return max(0, (int)$this->quantity - (int)$this->fulfilled_quantity);
     }
+
+    /**
+     * Normalise unit prices to currency precision.
+     *
+     * @param string|float|int $unitPrice Unit price.
+     * @return string
+     */
+    protected function _setUnitPrice(float|int|string $unitPrice): string
+    {
+        return number_format((float)$unitPrice, 2, '.', '');
+    }
+
+    /**
+     * Normalise line amounts to currency precision.
+     *
+     * @param string|float|int $amount Line amount.
+     * @return string
+     */
+    protected function _setAmount(float|int|string $amount): string
+    {
+        return number_format((float)$amount, 2, '.', '');
+    }
 }

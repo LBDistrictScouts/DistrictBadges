@@ -146,7 +146,7 @@ class OrderLinesTableTest extends TestCase
         $order = $this->OrderLines->Orders->get($saved->order_id);
         $this->assertSame('14.25', (string)$order->total_ordered_amount);
         $this->assertSame(3, (int)$order->total_ordered_quantity);
-        $this->assertSame('0.00', (string)$order->total_fulfilled_amount);
+        $this->assertEquals(0.0, (float)$order->total_fulfilled_amount);
         $this->assertSame(0, (int)$order->total_fulfilled_quantity);
     }
 
@@ -162,7 +162,7 @@ class OrderLinesTableTest extends TestCase
         $this->assertTrue($this->OrderLines->delete($line));
 
         $order = $this->OrderLines->Orders->get('dd7b14cc-abe6-4e58-b63d-070678d78644');
-        $this->assertSame('0.00', (string)$order->total_ordered_amount);
+        $this->assertEquals(0.0, (float)$order->total_ordered_amount);
         $this->assertSame(0, (int)$order->total_ordered_quantity);
     }
 }
