@@ -10,9 +10,14 @@ use Cake\ORM\Entity;
  *
  * @property string $id
  * @property \Cake\I18n\DateTime $fulfilment_date
+ * @property \Cake\I18n\DateTime|null $dispatched_date
  * @property string $fulfilment_number
+ * @property \App\Model\Enum\FulfilmentStatus $status
+ * @property string $total_amount
+ * @property int $total_quantity
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
+ * @property \App\Model\Entity\FulfilmentLine[] $fulfilment_lines
  */
 class Fulfilment extends Entity
 {
@@ -26,8 +31,9 @@ class Fulfilment extends Entity
      * @var array<string, bool>
      */
     protected array $_accessible = [
-        'fulfilment_date' => true,
-        'fulfilment_number' => true,
+        'total_amount' => true,
+        'total_quantity' => true,
         'stock_transactions' => true,
+        'fulfilment_lines' => true,
     ];
 }

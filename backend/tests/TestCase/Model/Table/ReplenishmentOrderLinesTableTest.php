@@ -81,6 +81,62 @@ class ReplenishmentOrderLinesTableTest extends TestCase
         $this->assertCount(1, $results);
     }
 
+    public function testGetTotalAmountForReplenishment(): void
+    {
+        $total = $this->ReplenishmentOrderLines->getBehavior('LineTotals')->getTotalAmountForParent(
+            'f6d1f429-877b-4d92-83a0-cb305d853da7',
+        );
+
+        $this->assertSame('4.50', $total);
+    }
+
+    public function testGetTotalQuantityForReplenishment(): void
+    {
+        $total = $this->ReplenishmentOrderLines->getBehavior('LineTotals')->getTotalQuantityForParent(
+            'f6d1f429-877b-4d92-83a0-cb305d853da7',
+        );
+
+        $this->assertSame(3, $total);
+    }
+
+    public function testCounterCacheUpdatesReplenishmentTotals(): void
+    {
+        $entity = $this->ReplenishmentOrderLines->newEntity([
+            'transaction_timestamp' => new FrozenTime('2026-02-24 00:00:00'),
+            'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+            'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'on_hand_quantity_change' => 0,
+            'receipted_quantity_change' => 0,
+            'pending_quantity_change' => 4,
+            'monetary_amount' => '6.25',
+        ]);
+
+        $this->ReplenishmentOrderLines->saveOrFail($entity);
+
+        $replenishment = $this->ReplenishmentOrderLines->Replenishments->get(
+            'f6d1f429-877b-4d92-83a0-cb305d853da7',
+        );
+        $this->assertSame(10.75, (float)$replenishment->get('total_ordered_amount'));
+        $this->assertSame(7, $replenishment->get('total_ordered_quantity'));
+        $this->assertSame(0.0, (float)$replenishment->get('total_received_amount'));
+        $this->assertSame(0, $replenishment->get('total_received_quantity'));
+    }
+
+    public function testDeletingLineUpdatesReplenishmentTotals(): void
+    {
+        $line = $this->ReplenishmentOrderLines->get(
+            '3f1d54b4-2ef6-4dd4-9b8d-6fb7b3b5f2ad',
+        );
+
+        $this->ReplenishmentOrderLines->deleteOrFail($line);
+
+        $replenishment = $this->ReplenishmentOrderLines->Replenishments->get(
+            'f6d1f429-877b-4d92-83a0-cb305d853da7',
+        );
+        $this->assertSame(0.0, (float)$replenishment->get('total_ordered_amount'));
+        $this->assertSame(0, $replenishment->get('total_ordered_quantity'));
+    }
+
     public function testAfterSaveUpdatesBadgeTotalsAndLatestHash(): void
     {
         $entity = $this->ReplenishmentOrderLines->newEntity([

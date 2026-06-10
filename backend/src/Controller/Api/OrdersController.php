@@ -121,16 +121,19 @@ class OrdersController extends AppController
             $errors['user_id'] = 'User ID must be a valid UUID.';
         }
 
-        if (!isset($data['total_amount']) || !is_numeric($data['total_amount'])) {
-            $errors['total_amount'] = 'Total amount must be numeric.';
+        if (
+            !isset($data['total_ordered_amount'])
+            || !is_numeric($data['total_ordered_amount'])
+        ) {
+            $errors['total_ordered_amount'] = 'Total ordered amount must be numeric.';
         }
 
         if (
-            !isset($data['total_quantity'])
-            || !is_numeric($data['total_quantity'])
-            || (int)$data['total_quantity'] <= 0
+            !isset($data['total_ordered_quantity'])
+            || !is_numeric($data['total_ordered_quantity'])
+            || (int)$data['total_ordered_quantity'] <= 0
         ) {
-            $errors['total_quantity'] = 'Total quantity must be a positive integer.';
+            $errors['total_ordered_quantity'] = 'Total ordered quantity must be a positive integer.';
         }
 
         if (!isset($data['lines']) || !is_array($data['lines']) || $data['lines'] === []) {

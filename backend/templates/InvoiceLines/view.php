@@ -42,6 +42,10 @@
                     <th><?= __('Unit Price') ?></th>
                     <td><?= $this->Number->format($invoiceLine->unit_price) ?></td>
                 </tr>
+                <tr>
+                    <th><?= __('Line Amount') ?></th>
+                    <td><?= $this->Number->format($invoiceLine->line_amount) ?></td>
+                </tr>
             </table>
         </div>
     </div>

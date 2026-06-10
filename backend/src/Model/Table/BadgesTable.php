@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Enum\BadgeStatus;
+use App\Model\Enum\OrderStatus;
 use App\Service\AlgoliaService;
 use App\Service\NationalShopService;
 use ArrayObject;
+use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\Log\Log;
@@ -16,6 +19,9 @@ use RuntimeException;
 /**
  * Badges Model
  *
+ * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
+ * @property \App\Model\Table\InvoiceLinesTable&\Cake\ORM\Association\HasMany $InvoiceLines
+ * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\HasMany $OrderLines
  * @method \App\Model\Entity\Badge newEmptyEntity()
  * @method \App\Model\Entity\Badge newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Badge> newEntities(array $data, array $options = [])
@@ -33,6 +39,54 @@ use RuntimeException;
 class BadgesTable extends Table
 {
     /**
+     * Calculate positive replenishment requirements for actively stocked badges.
+     *
+     * @return array<string, array{badge: \App\Model\Entity\Badge, quantity: int}>
+     */
+    public function getReplenishmentRequirements(): array
+    {
+        $outstandingByBadge = [];
+        $orderLines = $this->OrderLines->find()
+            ->select(['badge_id', 'quantity', 'fulfilled_quantity'])
+            ->innerJoinWith('Orders', function ($query) {
+                return $query->where([
+                    'Orders.status IN' => [
+                        OrderStatus::Placed->value,
+                        OrderStatus::PartiallyFulfilled->value,
+                    ],
+                ]);
+            })
+            ->all();
+
+        foreach ($orderLines as $orderLine) {
+            $badgeId = (string)$orderLine->badge_id;
+            $outstanding = max(
+                0,
+                (int)$orderLine->quantity - (int)$orderLine->fulfilled_quantity,
+            );
+            $outstandingByBadge[$badgeId] = ($outstandingByBadge[$badgeId] ?? 0) + $outstanding;
+        }
+
+        $requirements = [];
+        foreach ($this->find()->where(['stocked' => true])->orderBy(['badge_name' => 'ASC']) as $badge) {
+            $required = (int)($outstandingByBadge[$badge->id] ?? 0)
+                - (int)$badge->on_hand_quantity
+                - (int)$badge->pending_quantity
+                + (int)$badge->reserve_quantity;
+            if ($required <= 0) {
+                continue;
+            }
+
+            $requirements[(string)$badge->id] = [
+                'badge' => $badge,
+                'quantity' => $required,
+            ];
+        }
+
+        return $requirements;
+    }
+
+    /**
      * Initialize method
      *
      * @param array<string, mixed> $config The configuration for the Table.
@@ -45,6 +99,17 @@ class BadgesTable extends Table
         $this->setTable('badges');
         $this->setDisplayField('badge_name');
         $this->setPrimaryKey('id');
+        $this->getSchema()->setColumnType('status', EnumType::from(BadgeStatus::class));
+
+        $this->hasMany('StockTransactions', [
+            'foreignKey' => 'badge_id',
+        ]);
+        $this->hasMany('InvoiceLines', [
+            'foreignKey' => 'badge_id',
+        ]);
+        $this->hasMany('OrderLines', [
+            'foreignKey' => 'badge_id',
+        ]);
     }
 
     /**
@@ -73,6 +138,24 @@ class BadgesTable extends Table
             ->requirePresence('stocked', 'create')
             ->notEmptyString('stocked');
 
+        $validator
+            ->integer('status')
+            ->inList('status', array_column(BadgeStatus::cases(), 'value'))
+            ->allowEmptyString('status');
+
+        $validator
+            ->integer('fulfilled_quantity')
+            ->notEmptyString('fulfilled_quantity');
+
+        $validator
+            ->integer('reserve_quantity')
+            ->greaterThanOrEqual('reserve_quantity', 0)
+            ->notEmptyString('reserve_quantity');
+
+        $validator
+            ->decimal('replenishment_price')
+            ->allowEmptyString('replenishment_price');
+
         return $validator;
     }
 
@@ -87,6 +170,12 @@ class BadgesTable extends Table
         EntityInterface $entity,
         ArrayObject $options,
     ): void {
+        $entity->set('status', $this->statusFromStock(
+            (bool)$entity->get('stocked'),
+            (int)$entity->get('on_hand_quantity'),
+            (int)$entity->get('pending_quantity'),
+        ));
+
         if (!empty($options['skipNationalData'])) {
             return;
         }
@@ -96,6 +185,26 @@ class BadgesTable extends Table
         }
 
         $this->populateNationalData($entity);
+    }
+
+    /**
+     * @param bool $stocked Whether the badge is actively stocked.
+     * @param int $onHandQuantity Current on-hand quantity.
+     * @param int $pendingQuantity Current pending quantity.
+     * @return \App\Model\Enum\BadgeStatus
+     */
+    private function statusFromStock(
+        bool $stocked,
+        int $onHandQuantity,
+        int $pendingQuantity,
+    ): BadgeStatus {
+        return match (true) {
+            !$stocked && $onHandQuantity <= 0 && $pendingQuantity <= 0 => BadgeStatus::Unstocked,
+            !$stocked && ($onHandQuantity > 0 || $pendingQuantity > 0) => BadgeStatus::Deprecated,
+            $onHandQuantity > 0 => BadgeStatus::Available,
+            $pendingQuantity > 0 => BadgeStatus::OnBackOrder,
+            default => BadgeStatus::Unavailable,
+        };
     }
 
     /**

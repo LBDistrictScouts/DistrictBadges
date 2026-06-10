@@ -12,11 +12,15 @@ use Cake\ORM\Entity;
  * @property string $order_id
  * @property string $badge_id
  * @property int $quantity
+ * @property string $unit_price
  * @property string $amount
+ * @property int $fulfilled_quantity
+ * @property int $remaining_quantity
  * @property bool $fulfilled
  *
  * @property \App\Model\Entity\Order $order
  * @property \App\Model\Entity\Badge $badge
+ * @property \App\Model\Entity\StockTransaction[] $stock_transactions
  */
 class OrderLine extends Entity
 {
@@ -33,9 +37,27 @@ class OrderLine extends Entity
         'order_id' => true,
         'badge_id' => true,
         'quantity' => true,
+        'unit_price' => true,
         'amount' => true,
+        'fulfilled_quantity' => false,
         'fulfilled' => true,
         'order' => true,
         'badge' => true,
+        'stock_transactions' => true,
     ];
+
+    /**
+     * @var array<string>
+     */
+    protected array $_virtual = [
+        'remaining_quantity',
+    ];
+
+    /**
+     * @return int
+     */
+    protected function _getRemainingQuantity(): int
+    {
+        return max(0, (int)$this->quantity - (int)$this->fulfilled_quantity);
+    }
 }

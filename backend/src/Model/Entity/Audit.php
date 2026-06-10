@@ -15,6 +15,7 @@ use Cake\ORM\Entity;
  *
  * @property \App\Model\Entity\User $user
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
+ * @property \App\Model\Entity\AuditLine[] $audit_lines
  */
 class Audit extends Entity
 {
@@ -33,5 +34,6 @@ class Audit extends Entity
         'audit_completed' => true,
         'user' => true,
         'stock_transactions' => true,
+        'audit_lines' => true,
     ];
 }

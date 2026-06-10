@@ -64,12 +64,14 @@ class FulfilmentLinesController extends AppController
         $fulfilments = $this->FulfilmentLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->FulfilmentLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->FulfilmentLines->Replenishments->find('list', limit: 200)->all();
+        $orderLines = $this->orderLineOptions();
         $this->set(compact(
             'fulfilmentLine',
             'badges',
             'fulfilments',
             'audits',
             'replenishments',
+            'orderLines',
         ));
     }
 
@@ -99,13 +101,39 @@ class FulfilmentLinesController extends AppController
         $fulfilments = $this->FulfilmentLines->Fulfilments->find('list', limit: 200)->all();
         $audits = $this->FulfilmentLines->Audits->find('list', limit: 200)->all();
         $replenishments = $this->FulfilmentLines->Replenishments->find('list', limit: 200)->all();
+        $orderLines = $this->orderLineOptions();
         $this->set(compact(
             'fulfilmentLine',
             'badges',
             'fulfilments',
             'audits',
             'replenishments',
+            'orderLines',
         ));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function orderLineOptions(): array
+    {
+        $options = [];
+        $orderLines = $this->FulfilmentLines->OrderLines
+            ->find()
+            ->contain(['Orders', 'Badges'])
+            ->orderBy(['Orders.order_number' => 'ASC', 'Badges.badge_name' => 'ASC'])
+            ->all();
+
+        foreach ($orderLines as $orderLine) {
+            $options[(string)$orderLine->id] = sprintf(
+                '%s - %s (quantity %d)',
+                $orderLine->order->order_number,
+                $orderLine->badge->badge_name,
+                $orderLine->quantity,
+            );
+        }
+
+        return $options;
     }
 
     /**

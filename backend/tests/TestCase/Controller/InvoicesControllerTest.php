@@ -77,8 +77,9 @@ class InvoicesControllerTest extends TestCase
         $this->assertSame($before + 1, $invoices->find()->count());
 
         $saved = $invoices->find()
-            ->where(['invoice_number' => 'INV-NEW'])
+            ->where(['invoice_date' => '2025-05-01 09:00:00'])
             ->firstOrFail();
+        $this->assertMatchesRegularExpression('/^INV-\d{4}-\d{2}-\d+$/', $saved->invoice_number);
         $this->assertSame('2025-05-01 09:00:00', $saved->invoice_date->format('Y-m-d H:i:s'));
         $this->assertSame('2025-05-10 09:00:00', $saved->due_date->format('Y-m-d H:i:s'));
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
@@ -94,6 +95,7 @@ class InvoicesControllerTest extends TestCase
     {
         $invoices = $this->getTableLocator()->get('Invoices');
         $id = 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138';
+        $originalNumber = $invoices->get($id)->invoice_number;
 
         $this->enableCsrfToken();
         $this->put("/invoices/edit/{$id}", [
@@ -107,7 +109,7 @@ class InvoicesControllerTest extends TestCase
         $this->assertFlashMessage('The invoice has been saved.');
 
         $updated = $invoices->get($id);
-        $this->assertSame('INV-UPDATED', $updated->invoice_number);
+        $this->assertSame($originalNumber, $updated->invoice_number);
     }
 
     /**

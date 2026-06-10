@@ -20,6 +20,7 @@
                     <th><?= $this->Paginator->sort('on_hand_quantity_change', 'OH±') ?></th>
                     <th><?= $this->Paginator->sort('receipted_quantity_change', 'RC±') ?></th>
                     <th><?= $this->Paginator->sort('pending_quantity_change', 'PN±') ?></th>
+                    <th><?= $this->Paginator->sort('unit_price') ?></th>
 
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
@@ -36,6 +37,7 @@
                     <td><?= $this->Number->format($stockTransaction->on_hand_quantity_change) ?></td>
                     <td><?= $this->Number->format($stockTransaction->receipted_quantity_change) ?></td>
                     <td><?= $this->Number->format($stockTransaction->pending_quantity_change) ?></td>
+                    <td><?= $this->Number->currency($stockTransaction->unit_price) ?></td>
 
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $stockTransaction->id]) ?>

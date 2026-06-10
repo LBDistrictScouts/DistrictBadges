@@ -2,19 +2,38 @@
 /**
  * @var \App\View\AppView $this
  * @var iterable<\App\Model\Entity\Badge> $badges
+ * @var array<string, string> $filters
+ * @var array<int, string> $statusOptions
  */
 ?>
 <div class="badges index content">
     <?= $this->Html->link(__('New Badge'), ['action' => 'add'], ['class' => 'button float-right']) ?>
     <h3><?= __('Badges') ?></h3>
+    <?= $this->Form->create(null, ['type' => 'get', 'class' => 'index-filters']) ?>
+    <div class="index-filters__row">
+        <?= $this->Form->control('name', [
+            'label' => __('Name'),
+            'value' => $filters['name'],
+        ]) ?>
+        <?= $this->Form->control('status', [
+            'label' => __('Status'),
+            'options' => $statusOptions,
+            'empty' => __('All statuses'),
+            'value' => $filters['status'],
+        ]) ?>
+    </div>
+    <div class="index-filters__actions">
+        <?= $this->Form->button(__('Filter')) ?>
+        <?= $this->Html->link(__('Clear'), ['action' => 'index'], ['class' => 'button button-outline']) ?>
+    </div>
+    <?= $this->Form->end() ?>
     <div class="table-responsive">
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
+                    <th><?= __('Image') ?></th>
                     <th><?= $this->Paginator->sort('badge_name') ?></th>
-                    <th><?= $this->Paginator->sort('national_product_code') ?></th>
-                    <th><?= $this->Paginator->sort('stocked') ?></th>
+                    <th><?= $this->Paginator->sort('status') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
@@ -27,8 +46,7 @@
                         <?php endif; ?>
                     </td>
                     <td><?= h($badge->badge_name) ?></td>
-                    <td><?= $badge->national_product_code === null ? '' : h((string)$badge->national_product_code) ?></td>
-                    <td><?= $badge->stocked ? __('Yes') : __('No') ?></td>
+                    <td><?= h($badge->status->label()) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $badge->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $badge->id]) ?>

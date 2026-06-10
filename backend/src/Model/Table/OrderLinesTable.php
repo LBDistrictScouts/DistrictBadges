@@ -12,6 +12,7 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\OrdersTable&\Cake\ORM\Association\BelongsTo $Orders
  * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsTo $Badges
+ * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
  * @method \App\Model\Entity\OrderLine newEmptyEntity()
  * @method \App\Model\Entity\OrderLine newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\OrderLine> newEntities(array $data, array $options = [])
@@ -50,6 +51,18 @@ class OrderLinesTable extends Table
             'foreignKey' => 'badge_id',
             'joinType' => 'INNER',
         ]);
+        $this->hasMany('StockTransactions', [
+            'foreignKey' => 'order_line_id',
+        ]);
+
+        $this->addBehavior('LineTotals', [
+            'association' => 'Orders',
+            'foreignKey' => 'order_id',
+            'amountField' => 'amount',
+            'quantityField' => 'quantity',
+            'targetAmountField' => 'total_ordered_amount',
+            'targetQuantityField' => 'total_ordered_quantity',
+        ]);
     }
 
     /**
@@ -74,6 +87,11 @@ class OrderLinesTable extends Table
             ->notEmptyString('quantity');
 
         $validator
+            ->decimal('unit_price')
+            ->requirePresence('unit_price', 'create')
+            ->notEmptyString('unit_price');
+
+        $validator
             ->decimal('amount')
             ->requirePresence('amount', 'create')
             ->notEmptyString('amount');
@@ -81,6 +99,11 @@ class OrderLinesTable extends Table
         $validator
             ->boolean('fulfilled')
             ->notEmptyString('fulfilled');
+
+        $validator
+            ->integer('fulfilled_quantity')
+            ->greaterThanOrEqual('fulfilled_quantity', 0)
+            ->allowEmptyString('fulfilled_quantity');
 
         return $validator;
     }

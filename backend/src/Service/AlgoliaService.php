@@ -32,7 +32,15 @@ class AlgoliaService
         $this->apiKey = (string)($config['apiKey'] ?? '');
         $this->indexName = (string)($config['indexName'] ?? '');
 
-        $this->client = $client ?? $this->initClient();
+        $clientOverride = $client ?? ($config['client'] ?? null);
+
+        if ($clientOverride instanceof SearchClient) {
+            $this->client = $clientOverride;
+        } elseif ($this->enabled) {
+            $this->client = $this->initClient();
+        } else {
+            $this->client = null;
+        }
     }
 
     /**
@@ -48,10 +56,6 @@ class AlgoliaService
         $objectId = (string)$badge->get('id');
         if ($objectId === '') {
             throw new RuntimeException('Algolia badge sync failed: badge id missing.');
-        }
-
-        if (!(bool)$badge->get('stocked')) {
-            return;
         }
 
         $payload = $this->resolveBadgePayload($badge);

@@ -22,12 +22,11 @@
                 <?php foreach ($audits as $audit): ?>
                 <tr>
                     <td><?= h($audit->id) ?></td>
-                    <td><?= $audit->hasValue('user') ? $this->Html->link($audit->user->first_name, ['controller' => 'Users', 'action' => 'view', $audit->user->id]) : '' ?></td>
+                    <td><?= $audit->hasValue('user') ? $this->Html->link($audit->user->full_name, ['controller' => 'Users', 'action' => 'view', $audit->user->id]) : '' ?></td>
                     <td><?= h($audit->audit_timestamp) ?></td>
                     <td><?= h($audit->audit_completed) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $audit->id]) ?>
-                        <?= $this->Html->link(__('Edit'), ['action' => 'edit', $audit->id]) ?>
                         <?= $this->Form->postLink(
                             __('Delete'),
                             ['action' => 'delete', $audit->id],

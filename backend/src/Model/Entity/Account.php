@@ -15,6 +15,7 @@ use Cake\ORM\Entity;
  * @property \App\Model\Entity\Group $group
  * @property \App\Model\Entity\Invoice[] $invoices
  * @property \App\Model\Entity\Order[] $orders
+ * @property \App\Model\Entity\User[] $users
  */
 class Account extends Entity
 {
@@ -33,5 +34,6 @@ class Account extends Entity
         'group' => true,
         'invoices' => true,
         'orders' => true,
+        'users' => true,
     ];
 }

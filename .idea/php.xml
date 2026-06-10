@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="MessDetector">
+    <phpmd_settings>
+      <phpmd_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" timeout="30000" />
+    </phpmd_settings>
+  </component>
   <component name="MessDetectorOptionsConfiguration">
     <option name="transferred" value="true" />
   </component>
@@ -22,7 +27,7 @@
   <component name="PhpCodeSniffer">
     <phpcs_settings>
       <PhpCSConfiguration beautifier_path="$PROJECT_DIR$/backend/vendor/bin/phpcbf" tool_path="$PROJECT_DIR$/backend/vendor/bin/phpcs" />
-      <phpcs_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" standards="CakePHP;PEAR;PSR1;PSR12;PSR2;Squiz;Zend" tool_path="/Users/jacob/Development/DistrictBadges/backend/vendor/bin/phpcs" timeout="30000" />
+      <phpcs_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" beautifier_path="$PROJECT_DIR$/backend/vendor/bin/phpcbf" tool_path="/Users/jacob/Development/DistrictBadges/backend/vendor/bin/phpcs" timeout="30000" />
     </phpcs_settings>
   </component>
   <component name="PhpExternalFormatter">
@@ -30,6 +35,9 @@
   </component>
   <component name="PhpIncludePathManager">
     <include_path>
+      <path value="$PROJECT_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
+      <path value="$PROJECT_DIR$/backend/vendor/aws/aws-crt-php" />
+      <path value="$PROJECT_DIR$/backend/vendor/aws/aws-sdk-php" />
       <path value="$PROJECT_DIR$/backend/vendor/brick/varexporter" />
       <path value="$PROJECT_DIR$/backend/vendor/cakephp/bake" />
       <path value="$PROJECT_DIR$/backend/vendor/cakephp/cakephp" />
@@ -42,6 +50,9 @@
       <path value="$PROJECT_DIR$/backend/vendor/composer" />
       <path value="$PROJECT_DIR$/backend/vendor/dealerdirect/phpcodesniffer-composer-installer" />
       <path value="$PROJECT_DIR$/backend/vendor/doctrine/sql-formatter" />
+      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/guzzle" />
+      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/promises" />
+      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/psr7" />
       <path value="$PROJECT_DIR$/backend/vendor/jasny/twig-extensions" />
       <path value="$PROJECT_DIR$/backend/vendor/josegonzalez/dotenv" />
       <path value="$PROJECT_DIR$/backend/vendor/justinrainbow/json-schema" />
@@ -51,6 +62,7 @@
       <path value="$PROJECT_DIR$/backend/vendor/m1/env" />
       <path value="$PROJECT_DIR$/backend/vendor/marc-mabe/php-enum" />
       <path value="$PROJECT_DIR$/backend/vendor/mobiledetect/mobiledetectlib" />
+      <path value="$PROJECT_DIR$/backend/vendor/mtdowling/jmespath.php" />
       <path value="$PROJECT_DIR$/backend/vendor/myclabs/deep-copy" />
       <path value="$PROJECT_DIR$/backend/vendor/nikic/php-parser" />
       <path value="$PROJECT_DIR$/backend/vendor/phar-io/manifest" />
@@ -71,6 +83,7 @@
       <path value="$PROJECT_DIR$/backend/vendor/psr/http-server-middleware" />
       <path value="$PROJECT_DIR$/backend/vendor/psr/log" />
       <path value="$PROJECT_DIR$/backend/vendor/psr/simple-cache" />
+      <path value="$PROJECT_DIR$/backend/vendor/ralouphie/getallheaders" />
       <path value="$PROJECT_DIR$/backend/vendor/react/promise" />
       <path value="$PROJECT_DIR$/backend/vendor/sebastian/cli-parser" />
       <path value="$PROJECT_DIR$/backend/vendor/sebastian/comparator" />
@@ -109,18 +122,107 @@
       <path value="$PROJECT_DIR$/backend/vendor/theseer/tokenizer" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/markdown-extra" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/twig" />
-      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/psr7" />
-      <path value="$PROJECT_DIR$/backend/vendor/ralouphie/getallheaders" />
-      <path value="$PROJECT_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
-      <path value="$PROJECT_DIR$/backend/vendor/mtdowling/jmespath.php" />
-      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/guzzle" />
-      <path value="$PROJECT_DIR$/backend/vendor/guzzlehttp/promises" />
-      <path value="$PROJECT_DIR$/backend/vendor/aws/aws-crt-php" />
-      <path value="$PROJECT_DIR$/backend/vendor/aws/aws-sdk-php" />
+      <path value="$PROJECT_DIR$/backend/vendor/enqueue/enqueue" />
+      <path value="$PROJECT_DIR$/backend/vendor/enqueue/simple-client" />
+      <path value="$PROJECT_DIR$/backend/vendor/enqueue/dsn" />
+      <path value="$PROJECT_DIR$/backend/vendor/enqueue/null" />
+      <path value="$PROJECT_DIR$/backend/vendor/brick/math" />
+      <path value="$PROJECT_DIR$/backend/vendor/cakephp/queue" />
+      <path value="$PROJECT_DIR$/backend/vendor/symfony/config" />
+      <path value="$PROJECT_DIR$/backend/vendor/queue-interop/queue-interop" />
+      <path value="$PROJECT_DIR$/backend/vendor/queue-interop/amqp-interop" />
+      <path value="$PROJECT_DIR$/backend/vendor/ramsey/collection" />
+      <path value="$PROJECT_DIR$/backend/vendor/ramsey/uuid" />
     </include_path>
   </component>
-  <component name="PhpProjectSharedConfiguration" php_language_level="8.2">
+  <component name="PhpProjectSharedConfiguration" php_language_level="8.5">
     <option name="suggestChangeDefaultLanguageLevel" value="false" />
+  </component>
+  <component name="PhpRuntimeConfiguration">
+    <extensions>
+      <extension name="Ev" enabled="false" />
+      <extension name="FFI" enabled="true" />
+      <extension name="SQLite" enabled="false" />
+      <extension name="SplType" enabled="false" />
+      <extension name="ZendDebugger" enabled="false" />
+      <extension name="ZendUtils" enabled="false" />
+      <extension name="amqp" enabled="false" />
+      <extension name="apache" enabled="false" />
+      <extension name="apcu" enabled="false" />
+      <extension name="brotli" enabled="false" />
+      <extension name="cassandra" enabled="false" />
+      <extension name="couchbase" enabled="false" />
+      <extension name="cubrid" enabled="false" />
+      <extension name="ddtrace" enabled="false" />
+      <extension name="decimal" enabled="false" />
+      <extension name="dio" enabled="false" />
+      <extension name="elastic_apm" enabled="false" />
+      <extension name="enchant" enabled="false" />
+      <extension name="excimer" enabled="false" />
+      <extension name="fann" enabled="false" />
+      <extension name="ffmpeg" enabled="false" />
+      <extension name="frankenphp" enabled="false" />
+      <extension name="gearman" enabled="false" />
+      <extension name="geoip" enabled="false" />
+      <extension name="geos" enabled="false" />
+      <extension name="gmagick" enabled="false" />
+      <extension name="gnupg" enabled="false" />
+      <extension name="grpc" enabled="false" />
+      <extension name="http" enabled="false" />
+      <extension name="ibm_db2" enabled="false" />
+      <extension name="igbinary" enabled="false" />
+      <extension name="imagick" enabled="false" />
+      <extension name="imap" enabled="false" />
+      <extension name="inotify" enabled="false" />
+      <extension name="interbase" enabled="false" />
+      <extension name="jsonpath" enabled="false" />
+      <extension name="judy" enabled="false" />
+      <extension name="libevent" enabled="false" />
+      <extension name="libsodium" enabled="false" />
+      <extension name="litespeed" enabled="false" />
+      <extension name="mailparse" enabled="false" />
+      <extension name="maxminddb" enabled="false" />
+      <extension name="mcrypt" enabled="false" />
+      <extension name="memcache" enabled="false" />
+      <extension name="memcached" enabled="false" />
+      <extension name="ming" enabled="false" />
+      <extension name="mongo" enabled="false" />
+      <extension name="mongodb" enabled="false" />
+      <extension name="mosquitto-php" enabled="false" />
+      <extension name="mqseries" enabled="false" />
+      <extension name="mssql" enabled="false" />
+      <extension name="mysql" enabled="false" />
+      <extension name="mysql_xdevapi" enabled="false" />
+      <extension name="ncurses" enabled="false" />
+      <extension name="newrelic" enabled="false" />
+      <extension name="oauth" enabled="false" />
+      <extension name="oci8" enabled="false" />
+      <extension name="opentelemetry" enabled="false" />
+      <extension name="pdflib" enabled="false" />
+      <extension name="pspell" enabled="false" />
+      <extension name="pthreads" enabled="false" />
+      <extension name="rar" enabled="false" />
+      <extension name="recode" enabled="false" />
+      <extension name="redis" enabled="false" />
+      <extension name="relay" enabled="false" />
+      <extension name="rrd" enabled="false" />
+      <extension name="snappy" enabled="false" />
+      <extension name="sqlsrv" enabled="false" />
+      <extension name="ssh2" enabled="false" />
+      <extension name="suhosin" enabled="false" />
+      <extension name="svn" enabled="false" />
+      <extension name="sybase" enabled="false" />
+      <extension name="v8js" enabled="false" />
+      <extension name="wddx" enabled="false" />
+      <extension name="win32service" enabled="false" />
+      <extension name="wincache" enabled="false" />
+      <extension name="xhprof" enabled="false" />
+      <extension name="xlswriter" enabled="false" />
+      <extension name="xmlrpc" enabled="false" />
+      <extension name="yaml" enabled="false" />
+      <extension name="zend" enabled="false" />
+      <extension name="zmq" enabled="false" />
+    </extensions>
   </component>
   <component name="PhpStan">
     <PhpStan_settings>
@@ -132,7 +234,7 @@
   </component>
   <component name="PhpUnit">
     <phpunit_settings>
-      <PhpUnitSettings configuration_file_path="$PROJECT_DIR$/backend/phpunit.xml.dist" custom_loader_path="$PROJECT_DIR$/backend/vendor/autoload.php" use_configuration_file="true" />
+      <PhpUnitSettings configuration_file_path="$PROJECT_DIR$/backend/phpunit.xml.dist" custom_loader_path="$PROJECT_DIR$/backend/vendor/autoload.php" phpunit_phar_path="" use_configuration_file="true" />
     </phpunit_settings>
   </component>
   <component name="Psalm">

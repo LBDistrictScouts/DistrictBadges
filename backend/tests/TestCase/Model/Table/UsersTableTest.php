@@ -89,6 +89,8 @@ class UsersTableTest extends TestCase
             'can_login' => true,
         ]);
         $this->assertSame([], $valid->getErrors());
+        $this->assertSame('Test User', $valid->full_name);
+        $this->assertSame('full_name', $this->Users->getDisplayField());
     }
 
     /**
@@ -139,6 +141,7 @@ class UsersTableTest extends TestCase
         $saved = $this->Users->get($result->id);
         $this->assertSame('New', $saved->first_name);
         $this->assertSame('User', $saved->last_name);
+        $this->assertSame('New User', $saved->full_name);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
         $this->assertSame('new.user@example.com', $saved->email);
         $this->assertSame('new.user', $saved->login);

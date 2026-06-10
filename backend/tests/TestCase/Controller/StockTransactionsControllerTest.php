@@ -81,6 +81,7 @@ class StockTransactionsControllerTest extends TestCase
             'on_hand_quantity_change' => 1,
             'receipted_quantity_change' => 2,
             'pending_quantity_change' => 3,
+            'unit_price' => '2.50',
             'transaction_type' => 1,
         ]);
 
@@ -96,6 +97,7 @@ class StockTransactionsControllerTest extends TestCase
             ->firstOrFail();
         $this->assertSame($now->format('Y-m-d H:i:s'), $saved->transaction_timestamp->format('Y-m-d H:i:s'));
         $this->assertSame(1, (int)$saved->on_hand_quantity_change);
+        $this->assertSame(2.5, (float)$saved->unit_price);
         $this->assertNotEmpty($saved->audit_hash);
         $this->assertSame(64, strlen($saved->audit_hash));
         FrozenTime::setTestNow(null);
@@ -123,6 +125,7 @@ class StockTransactionsControllerTest extends TestCase
             'on_hand_quantity_change' => 4,
             'receipted_quantity_change' => 5,
             'pending_quantity_change' => 6,
+            'unit_price' => '3.75',
             'transaction_type' => 2,
         ]);
 
@@ -132,6 +135,7 @@ class StockTransactionsControllerTest extends TestCase
         /** @var StockTransaction $updated */
         $updated = $transactions->get($id);
         $this->assertSame(4, (int)$updated->on_hand_quantity_change);
+        $this->assertSame(3.75, (float)$updated->unit_price);
         $this->assertSame($original->audit_hash, $updated->audit_hash);
     }
 

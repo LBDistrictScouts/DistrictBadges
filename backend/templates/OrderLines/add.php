@@ -22,6 +22,7 @@
                     echo $this->Form->control('order_id', ['options' => $orders]);
                     echo $this->Form->control('badge_id', ['options' => $badges]);
                     echo $this->Form->control('quantity');
+                    echo $this->Form->control('unit_price');
                     echo $this->Form->control('amount');
                     echo $this->Form->control('fulfilled');
                 ?>

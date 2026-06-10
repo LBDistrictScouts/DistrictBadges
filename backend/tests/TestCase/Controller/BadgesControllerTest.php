@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
+use App\Model\Enum\BadgeStatus;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -35,6 +36,28 @@ class BadgesControllerTest extends TestCase
         $this->get('/badges');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Available');
+        $this->assertResponseNotContains('National Product Code');
+        $this->assertResponseNotContains('Replenishment Price');
+        $this->assertResponseNotContains('Reserve');
+        $this->assertResponseContains('All statuses');
+    }
+
+    public function testIndexFilters(): void
+    {
+        $this->get('/badges?name=Lorem&status=' . BadgeStatus::Available->value);
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+
+        $this->get('/badges?name=Missing');
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+
+        $this->get('/badges?status=' . BadgeStatus::Unavailable->value);
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Second badge');
     }
 
     /**
@@ -46,10 +69,30 @@ class BadgesControllerTest extends TestCase
     public function testView(): void
     {
         $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+        $badges = $this->getTableLocator()->get('Badges');
+        $badges->updateAll(
+            [
+                'on_hand_quantity' => 11,
+                'reserve_quantity' => 10,
+                'pending_quantity' => 12,
+                'receipted_quantity' => 13,
+                'fulfilled_quantity' => 14,
+            ],
+            ['id' => $id],
+        );
 
         $this->get("/badges/view/{$id}");
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Available');
+        $this->assertResponseContains('Stock Amounts');
+        $this->assertResponseContains('Calculated Stock');
+        $this->assertResponseContains('Historic Stock Movements');
+        $this->assertResponseRegExp('/data-stock-amount="on-hand">\s*11\s*<\/strong>/');
+        $this->assertResponseRegExp('/data-stock-amount="reserve">\s*10\s*<\/strong>/');
+        $this->assertResponseRegExp('/data-stock-amount="pending">\s*12\s*<\/strong>/');
+        $this->assertResponseRegExp('/data-stock-amount="receipted">\s*13\s*<\/strong>/');
+        $this->assertResponseRegExp('/data-stock-amount="fulfilled">\s*14\s*<\/strong>/');
     }
 
     /**
@@ -69,6 +112,9 @@ class BadgesControllerTest extends TestCase
             'stocked' => true,
             'national_product_code' => null,
             'national_data' => null,
+            'reserve_quantity' => 6,
+            'price' => '4.50',
+            'replenishment_price' => '2.75',
         ]);
 
         $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
@@ -81,6 +127,9 @@ class BadgesControllerTest extends TestCase
         $this->assertTrue((bool)$saved->stocked);
         $this->assertNull($saved->national_product_code);
         $this->assertNull($saved->national_data);
+        $this->assertSame(6, $saved->reserve_quantity);
+        $this->assertSame(4.5, (float)$saved->price);
+        $this->assertSame(2.75, (float)$saved->replenishment_price);
     }
 
     /**
@@ -100,6 +149,9 @@ class BadgesControllerTest extends TestCase
             'stocked' => false,
             'national_product_code' => null,
             'national_data' => null,
+            'reserve_quantity' => 7,
+            'price' => '5.25',
+            'replenishment_price' => '3.25',
         ]);
 
         $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
@@ -108,6 +160,9 @@ class BadgesControllerTest extends TestCase
         $updated = $badges->get($id);
         $this->assertSame('Updated Badge', $updated->badge_name);
         $this->assertFalse((bool)$updated->stocked);
+        $this->assertSame(7, $updated->reserve_quantity);
+        $this->assertSame(5.25, (float)$updated->price);
+        $this->assertSame(3.25, (float)$updated->replenishment_price);
     }
 
     /**
@@ -124,6 +179,8 @@ class BadgesControllerTest extends TestCase
             'stocked' => true,
             'national_product_code' => null,
             'national_data' => null,
+            'price' => '2.00',
+            'replenishment_price' => '1.00',
         ]);
         $badges->saveOrFail($entity);
         $id = $entity->id;

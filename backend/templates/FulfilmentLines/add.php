@@ -2,10 +2,11 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\FulfilmentLine $fulfilmentLine
- * @var \Cake\Collection\CollectionInterface|string[] $badges
- * @var \Cake\Collection\CollectionInterface|string[] $fulfilments
- * @var \Cake\Collection\CollectionInterface|string[] $audits
- * @var \Cake\Collection\CollectionInterface|string[] $replenishments
+ * @var \Cake\Collection\CollectionInterface|array<string> $badges
+ * @var \Cake\Collection\CollectionInterface|array<string> $fulfilments
+ * @var \Cake\Collection\CollectionInterface|array<string> $audits
+ * @var \Cake\Collection\CollectionInterface|array<string> $replenishments
+ * @var array<string, string> $orderLines
  */
 use App\Model\Enum\TransactionType;
 ?>
@@ -23,15 +24,21 @@ use App\Model\Enum\TransactionType;
                 <legend><?= __('Add Fulfilment Line') ?></legend>
                 <?php
                     echo $this->Form->control('badge_id', ['options' => $badges]);
+                    echo $this->Form->control('order_line_id', [
+                        'options' => $orderLines,
+                        'empty' => __('Select an order line'),
+                    ]);
                     echo $this->Form->control('on_hand_quantity_change');
                     echo $this->Form->control('receipted_quantity_change');
                     echo $this->Form->control('pending_quantity_change');
+                    echo $this->Form->control('fulfilled_quantity_change');
+                    echo $this->Form->control('unit_price');
                     echo $this->Form->control('transaction_type', [
                         'type' => 'text',
                         'value' => TransactionType::Fulfilment->label(),
                         'disabled' => true,
                     ]);
-                ?>
+                    ?>
             </fieldset>
             <?= $this->Form->button(__('Submit')) ?>
             <?= $this->Form->end() ?>

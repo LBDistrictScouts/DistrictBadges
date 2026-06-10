@@ -81,6 +81,47 @@ class ReplenishmentReceiptLinesTableTest extends TestCase
         $this->assertCount(1, $results);
     }
 
+    public function testAggregateMethodsUseReceiptLines(): void
+    {
+        $replenishmentId = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+
+        $this->assertSame(
+            '0.00',
+            $this->ReplenishmentReceiptLines
+                ->getBehavior('LineTotals')
+                ->getTotalAmountForParent($replenishmentId),
+        );
+        $this->assertSame(
+            0,
+            $this->ReplenishmentReceiptLines
+                ->getBehavior('LineTotals')
+                ->getTotalQuantityForParent($replenishmentId),
+        );
+    }
+
+    public function testCounterCacheUpdatesReplenishmentTotals(): void
+    {
+        $entity = $this->ReplenishmentReceiptLines->newEntity([
+            'transaction_timestamp' => new FrozenTime('2026-02-24 00:00:00'),
+            'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+            'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+            'on_hand_quantity_change' => 0,
+            'receipted_quantity_change' => 2,
+            'pending_quantity_change' => 0,
+            'monetary_amount' => '2.25',
+        ]);
+
+        $this->ReplenishmentReceiptLines->saveOrFail($entity);
+
+        $replenishment = $this->ReplenishmentReceiptLines->Replenishments->get(
+            'f6d1f429-877b-4d92-83a0-cb305d853da7',
+        );
+        $this->assertSame(1.5, (float)$replenishment->get('total_ordered_amount'));
+        $this->assertSame(1, $replenishment->get('total_ordered_quantity'));
+        $this->assertSame(2.25, (float)$replenishment->get('total_received_amount'));
+        $this->assertSame(2, $replenishment->get('total_received_quantity'));
+    }
+
     public function testAfterSaveUpdatesBadgeTotalsAndLatestHash(): void
     {
         $entity = $this->ReplenishmentReceiptLines->newEntity([

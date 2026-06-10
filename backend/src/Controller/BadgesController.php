@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Enum\BadgeStatus;
+
 /**
  * Badges Controller
  *
@@ -18,9 +20,27 @@ class BadgesController extends AppController
     public function index()
     {
         $query = $this->Badges->find();
-        $badges = $this->paginate($query);
+        $filters = [
+            'name' => trim((string)$this->request->getQuery('name')),
+            'status' => (string)$this->request->getQuery('status'),
+        ];
 
-        $this->set(compact('badges'));
+        if ($filters['name'] !== '') {
+            $query->where(['badge_name LIKE' => '%' . $filters['name'] . '%']);
+        }
+
+        $status = filter_var($filters['status'], FILTER_VALIDATE_INT);
+        if ($status !== false && BadgeStatus::tryFrom($status) !== null) {
+            $query->where(['status' => $status]);
+        }
+
+        $badges = $this->paginate($query);
+        $statusOptions = [];
+        foreach (BadgeStatus::cases() as $case) {
+            $statusOptions[$case->value] = $case->label();
+        }
+
+        $this->set(compact('badges', 'filters', 'statusOptions'));
     }
 
     /**

@@ -29,6 +29,7 @@
                     echo $this->Form->control('description');
                     echo $this->Form->control('quantity');
                     echo $this->Form->control('unit_price');
+                    echo $this->Form->control('line_amount');
                 ?>
             </fieldset>
             <?= $this->Form->button(__('Submit')) ?>

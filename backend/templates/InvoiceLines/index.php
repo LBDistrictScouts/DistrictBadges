@@ -17,6 +17,7 @@
                     <th><?= $this->Paginator->sort('description') ?></th>
                     <th><?= $this->Paginator->sort('quantity') ?></th>
                     <th><?= $this->Paginator->sort('unit_price') ?></th>
+                    <th><?= $this->Paginator->sort('line_amount') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
@@ -29,6 +30,7 @@
                     <td><?= h($invoiceLine->description) ?></td>
                     <td><?= $this->Number->format($invoiceLine->quantity) ?></td>
                     <td><?= $this->Number->format($invoiceLine->unit_price) ?></td>
+                    <td><?= $this->Number->format($invoiceLine->line_amount) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $invoiceLine->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $invoiceLine->id]) ?>

@@ -15,6 +15,7 @@ use Cake\ORM\Entity;
  * @property string $account_id
  *
  * @property \App\Model\Entity\Account $account
+ * @property \App\Model\Entity\InvoiceLine[] $invoice_lines
  */
 class Invoice extends Entity
 {
@@ -30,8 +31,8 @@ class Invoice extends Entity
     protected array $_accessible = [
         'invoice_date' => true,
         'due_date' => true,
-        'invoice_number' => true,
         'account_id' => true,
         'account' => true,
+        'invoice_lines' => true,
     ];
 }

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
+use App\Model\Enum\BadgeStatus;
 use App\Model\Table\StockTransactionsTable;
 use Cake\I18n\FrozenTime;
 use Cake\TestSuite\TestCase;
@@ -76,6 +77,7 @@ class StockTransactionsTableTest extends TestCase
             'on_hand_quantity_change' => 'not-an-int',
             'receipted_quantity_change' => null,
             'pending_quantity_change' => null,
+            'unit_price' => 'not-a-decimal',
             'transaction_type' => '',
         ]);
 
@@ -85,6 +87,7 @@ class StockTransactionsTableTest extends TestCase
         $this->assertArrayHasKey('on_hand_quantity_change', $errors);
         $this->assertArrayHasKey('receipted_quantity_change', $errors);
         $this->assertArrayHasKey('pending_quantity_change', $errors);
+        $this->assertArrayHasKey('unit_price', $errors);
         $this->assertArrayHasKey('transaction_type', $errors);
 
         $valid = $this->StockTransactions->newEntity([
@@ -98,6 +101,7 @@ class StockTransactionsTableTest extends TestCase
             'on_hand_quantity_change' => 1,
             'receipted_quantity_change' => 1,
             'pending_quantity_change' => 1,
+            'unit_price' => '1.50',
             'transaction_type' => '0',
         ]);
         $this->assertSame([], $valid->getErrors());
@@ -156,6 +160,8 @@ class StockTransactionsTableTest extends TestCase
             'on_hand_quantity_change' => 0,
             'receipted_quantity_change' => 0,
             'pending_quantity_change' => 0,
+            'monetary_amount' => '0.00',
+            'unit_price' => '2.50',
             'transaction_type' => '0',
         ], ['validate' => false]);
 
@@ -172,6 +178,8 @@ class StockTransactionsTableTest extends TestCase
             'on_hand_quantity_change' => 0,
             'receipted_quantity_change' => 0,
             'pending_quantity_change' => 0,
+            'monetary_amount' => '0.00',
+            'unit_price' => '2.50',
             'audit_id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
             'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
@@ -206,6 +214,7 @@ class StockTransactionsTableTest extends TestCase
         $this->assertSame(6, $badge->get('on_hand_quantity'));
         $this->assertSame(3, $badge->get('receipted_quantity'));
         $this->assertSame(5, $badge->get('pending_quantity'));
+        $this->assertSame(BadgeStatus::Available, $badge->get('status'));
         $this->assertSame($entity->get('audit_hash'), $badge->get('latest_hash'));
     }
 

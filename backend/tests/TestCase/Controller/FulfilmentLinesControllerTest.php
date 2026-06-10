@@ -28,6 +28,8 @@ class FulfilmentLinesControllerTest extends TestCase
         'app.Fulfilments',
         'app.Audits',
         'app.Replenishments',
+        'app.Orders',
+        'app.OrderLines',
         'app.FulfilmentLines',
     ];
 
@@ -72,9 +74,11 @@ class FulfilmentLinesControllerTest extends TestCase
         $this->post('/fulfilment-lines/add', [
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'on_hand_quantity_change' => 1,
             'receipted_quantity_change' => 0,
             'pending_quantity_change' => 0,
+            'fulfilled_quantity_change' => 1,
         ]);
 
         $this->assertRedirect(['controller' => 'FulfilmentLines', 'action' => 'index']);
@@ -95,14 +99,22 @@ class FulfilmentLinesControllerTest extends TestCase
     {
         $lines = $this->getTableLocator()->get('FulfilmentLines');
         $id = '2e3f4051-2222-4c3b-9d4e-1b2c3d4e5f60';
+        $this->assertTrue($lines->getSchema()->hasColumn('fulfilled_quantity_change'));
+        $lines->OrderLines->updateAll([
+            'quantity' => 4,
+            'fulfilled_quantity' => 0,
+            'fulfilled' => false,
+        ], ['id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db']);
 
         $this->enableCsrfToken();
         $this->put("/fulfilment-lines/edit/{$id}", [
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'on_hand_quantity_change' => 4,
             'receipted_quantity_change' => 2,
             'pending_quantity_change' => 1,
+            'fulfilled_quantity_change' => 4,
         ]);
 
         $this->assertRedirect(['controller' => 'FulfilmentLines', 'action' => 'index']);
@@ -111,6 +123,7 @@ class FulfilmentLinesControllerTest extends TestCase
         /** @var FulfilmentLine $updated */
         $updated = $lines->get($id);
         $this->assertSame(4, (int)$updated->on_hand_quantity_change);
+        $this->assertSame(4, (int)$updated->fulfilled_quantity_change);
         $this->assertSame(2, $updated->get('transaction_type')->value);
     }
 

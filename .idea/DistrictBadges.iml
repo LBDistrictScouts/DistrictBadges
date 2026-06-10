@@ -93,6 +93,17 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/guzzle" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/promises" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/mtdowling/jmespath.php" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/brick/math" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/cakephp/queue" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/enqueue/dsn" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/enqueue/enqueue" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/enqueue/null" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/enqueue/simple-client" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/queue-interop/amqp-interop" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/queue-interop/queue-interop" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ramsey/collection" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ramsey/uuid" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/config" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

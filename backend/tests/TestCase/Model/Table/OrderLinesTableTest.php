@@ -68,6 +68,7 @@ class OrderLinesTableTest extends TestCase
             'order_id' => 'not-a-uuid',
             'badge_id' => 'not-a-uuid',
             'quantity' => null,
+            'unit_price' => null,
             'amount' => null,
             'fulfilled' => 'not-bool',
         ]);
@@ -76,6 +77,7 @@ class OrderLinesTableTest extends TestCase
         $this->assertArrayHasKey('order_id', $errors);
         $this->assertArrayHasKey('badge_id', $errors);
         $this->assertArrayHasKey('quantity', $errors);
+        $this->assertArrayHasKey('unit_price', $errors);
         $this->assertArrayHasKey('amount', $errors);
         $this->assertArrayHasKey('fulfilled', $errors);
 
@@ -83,6 +85,7 @@ class OrderLinesTableTest extends TestCase
             'order_id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'quantity' => 1,
+            'unit_price' => 10.5,
             'amount' => 10.5,
             'fulfilled' => true,
         ]);
@@ -101,6 +104,7 @@ class OrderLinesTableTest extends TestCase
             'order_id' => '11111111-1111-1111-1111-111111111111',
             'badge_id' => '11111111-1111-1111-1111-111111111111',
             'quantity' => 1,
+            'unit_price' => 10.5,
             'amount' => 10.5,
             'fulfilled' => true,
         ]);
@@ -122,6 +126,7 @@ class OrderLinesTableTest extends TestCase
             'order_id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'quantity' => 2,
+            'unit_price' => 6.375,
             'amount' => 12.75,
             'fulfilled' => true,
         ]);
@@ -134,7 +139,30 @@ class OrderLinesTableTest extends TestCase
         $this->assertSame('dd7b14cc-abe6-4e58-b63d-070678d78644', $saved->order_id);
         $this->assertSame('f525eb6d-021c-4ef2-811f-feac8db8d35d', $saved->badge_id);
         $this->assertSame(2, (int)$saved->quantity);
+        $this->assertEquals(6.38, (float)$saved->unit_price);
         $this->assertEquals(12.75, (float)$saved->amount);
         $this->assertTrue((bool)$saved->fulfilled);
+
+        $order = $this->OrderLines->Orders->get($saved->order_id);
+        $this->assertSame('14.25', (string)$order->total_ordered_amount);
+        $this->assertSame(3, (int)$order->total_ordered_quantity);
+        $this->assertSame('0.00', (string)$order->total_fulfilled_amount);
+        $this->assertSame(0, (int)$order->total_fulfilled_quantity);
+    }
+
+    /**
+     * Test deleting a line recalculates the order totals.
+     *
+     * @return void
+     */
+    public function testDeleteRecalculatesOrderTotals(): void
+    {
+        $line = $this->OrderLines->get('be20de8c-eea8-4114-a98e-1d55e483e8db');
+
+        $this->assertTrue($this->OrderLines->delete($line));
+
+        $order = $this->OrderLines->Orders->get('dd7b14cc-abe6-4e58-b63d-070678d78644');
+        $this->assertSame('0.00', (string)$order->total_ordered_amount);
+        $this->assertSame(0, (int)$order->total_ordered_quantity);
     }
 }

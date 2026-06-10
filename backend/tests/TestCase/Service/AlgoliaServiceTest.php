@@ -5,7 +5,9 @@ namespace App\Test\TestCase\Service;
 
 use Algolia\AlgoliaSearch\Api\SearchClient;
 use App\Model\Entity\Badge;
+use App\Model\Enum\BadgeStatus;
 use App\Service\AlgoliaService;
+use Cake\Core\Configure;
 use Cake\Log\Engine\ArrayLog;
 use Cake\Log\Log;
 use Cake\ORM\Entity;
@@ -17,6 +19,11 @@ use RuntimeException;
  */
 class AlgoliaServiceTest extends TestCase
 {
+    public function testAlgoliaIsDisabledByTestBootstrap(): void
+    {
+        $this->assertFalse(Configure::read('Algolia.enabled'));
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
@@ -39,7 +46,8 @@ class AlgoliaServiceTest extends TestCase
                 'badges',
                 $this->callback(function (array $payload): bool {
                     return ($payload['objectID'] ?? null) === 'badge-1'
-                        && ($payload['badge_name'] ?? null) === 'Test Badge';
+                        && ($payload['badge_name'] ?? null) === 'Test Badge'
+                        && !array_key_exists('reserve_quantity', $payload);
                 }),
             );
 
@@ -58,9 +66,11 @@ class AlgoliaServiceTest extends TestCase
             'badge_name' => 'Test Badge',
             'national_product_code' => 123,
             'stocked' => true,
+            'status' => BadgeStatus::Available,
             'on_hand_quantity' => 5,
             'receipted_quantity' => 2,
             'pending_quantity' => 1,
+            'reserve_quantity' => 3,
             'latest_hash' => 'hash',
             'price' => '9.99',
         ]);
@@ -98,11 +108,20 @@ class AlgoliaServiceTest extends TestCase
         $service->upsertBadge($badge);
     }
 
-    public function testUpsertBadgeSkipsWhenNotStocked(): void
+    public function testUpsertBadgeUpdatesUnstockedBadge(): void
     {
         $client = $this->createMock(SearchClient::class);
-        $client->expects($this->never())
-            ->method('saveObject');
+        $client->expects($this->once())
+            ->method('saveObject')
+            ->with(
+                'badges',
+                $this->callback(function (array $payload): bool {
+                    return ($payload['objectID'] ?? null) === 'badge-3'
+                        && ($payload['status'] ?? null) === 'Unstocked'
+                        && ($payload['status_value'] ?? null) === BadgeStatus::Unstocked->value
+                        && ($payload['available'] ?? null) === false;
+                }),
+            );
 
         $service = new AlgoliaService(
             [
@@ -118,6 +137,7 @@ class AlgoliaServiceTest extends TestCase
             'id' => 'badge-3',
             'badge_name' => 'Not Stocked',
             'stocked' => false,
+            'status' => BadgeStatus::Unstocked,
         ]);
 
         $service->upsertBadge($badge);

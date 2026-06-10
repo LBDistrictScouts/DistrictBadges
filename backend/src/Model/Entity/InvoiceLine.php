@@ -14,6 +14,7 @@ use Cake\ORM\Entity;
  * @property string $description
  * @property int $quantity
  * @property string $unit_price
+ * @property string $line_amount
  *
  * @property \App\Model\Entity\Invoice $invoice
  * @property \App\Model\Entity\Badge $badge
@@ -35,6 +36,7 @@ class InvoiceLine extends Entity
         'description' => true,
         'quantity' => true,
         'unit_price' => true,
+        'line_amount' => true,
         'invoice' => true,
         'badge' => true,
     ];

@@ -8,10 +8,34 @@
     <aside class="column">
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
-            <?= $this->Html->link(__('Edit Fulfilment'), ['action' => 'edit', $fulfilment->id], ['class' => 'side-nav-item']) ?>
-            <?= $this->Form->postLink(__('Delete Fulfilment'), ['action' => 'delete', $fulfilment->id], ['confirm' => __('Are you sure you want to delete this fulfilment?'), 'class' => 'side-nav-item']) ?>
-            <?= $this->Html->link(__('List Fulfilments'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
-            <?= $this->Html->link(__('New Fulfilment'), ['action' => 'add'], ['class' => 'side-nav-item']) ?>
+            <?php if ($fulfilment->status === \App\Model\Enum\FulfilmentStatus::Draft) : ?>
+            <?= $this->Form->postLink(
+                __('Dispatch Fulfilment'),
+                ['action' => 'dispatch', $fulfilment->id],
+                [
+                    'confirm' => __('Are you sure you want to dispatch this fulfilment?'),
+                    'class' => 'side-nav-item',
+                ],
+            ) ?>
+            <?php endif; ?>
+            <?= $this->Form->postLink(
+                __('Delete Fulfilment'),
+                ['action' => 'delete', $fulfilment->id],
+                [
+                    'confirm' => __('Are you sure you want to delete this fulfilment?'),
+                    'class' => 'side-nav-item',
+                ],
+            ) ?>
+            <?= $this->Html->link(
+                __('List Fulfilments'),
+                ['action' => 'index'],
+                ['class' => 'side-nav-item'],
+            ) ?>
+            <?= $this->Html->link(
+                __('New Fulfilment'),
+                ['action' => 'add'],
+                ['class' => 'side-nav-item'],
+            ) ?>
         </div>
     </aside>
     <div class="column column-80">
@@ -19,48 +43,63 @@
             <h3><?= h($fulfilment->fulfilment_number) ?></h3>
             <table>
                 <tr>
-                    <th><?= __('Fulfilment Number') ?></th>
-                    <td><?= h($fulfilment->fulfilment_number) ?></td>
+                    <th><?= __('Status') ?></th>
+                    <td><?= h($fulfilment->status->label()) ?></td>
                 </tr>
                 <tr>
-                    <th><?= __('Fulfilment Date') ?></th>
-                    <td><?= h($fulfilment->fulfilment_date) ?></td>
+                    <th><?= __('Created') ?></th>
+                    <td><?= h($fulfilment->fulfilment_date?->i18nFormat('dd MMM yyyy HH:mm')) ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('Dispatched') ?></th>
+                    <td>
+                        <?= $fulfilment->dispatched_date
+                            ? h($fulfilment->dispatched_date->i18nFormat('dd MMM yyyy HH:mm'))
+                            : __('Not dispatched') ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th><?= __('Total Quantity') ?></th>
+                    <td><?= $this->Number->format($fulfilment->total_quantity) ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('Total Amount') ?></th>
+                    <td><?= $this->Number->currency($fulfilment->total_amount) ?></td>
                 </tr>
             </table>
+
             <div class="related">
-                <h4><?= __('Related Stock Transactions') ?></h4>
-                <?php if (!empty($fulfilment->stock_transactions)) : ?>
+                <h4><?= __('Fulfilment Lines') ?></h4>
+                <?php if (!empty($fulfilment->fulfilment_lines)) : ?>
                 <div class="table-responsive">
                     <table>
                         <tr>
-                            <th><?= __('Transaction Type') ?></th>
-                            <th><?= __('Transaction Timestamp') ?></th>
-                            <th><?= __('Change Amount') ?></th>
-                            <th><?= __('Audit Hash') ?></th>
-                            <th class="actions"><?= __('Actions') ?></th>
+                            <th><?= __('Badge') ?></th>
+                            <th><?= __('Quantity') ?></th>
+                            <th><?= __('Unit Price') ?></th>
+                            <th><?= __('Line Amount') ?></th>
+                            <th><?= __('Processed') ?></th>
                         </tr>
-                        <?php foreach ($fulfilment->stock_transactions as $stockTransaction) : ?>
+                        <?php foreach ($fulfilment->fulfilment_lines as $line) : ?>
                         <tr>
-                            <td><?= h($stockTransaction->transaction_type) ?></td>
-                            <td><?= h($stockTransaction->transaction_timestamp) ?></td>
-                            <td><?= h($stockTransaction->change_amount) ?></td>
-                            <td><?= h($stockTransaction->audit_hash) ?></td>
-                            <td class="actions">
-                                <?= $this->Html->link(__('View'), ['controller' => 'StockTransactions', 'action' => 'view', $stockTransaction->id]) ?>
-                                <?= $this->Html->link(__('Edit'), ['controller' => 'StockTransactions', 'action' => 'edit', $stockTransaction->id]) ?>
-                                <?= $this->Form->postLink(
-                                    __('Delete'),
-                                    ['controller' => 'StockTransactions', 'action' => 'delete', $stockTransaction->id],
-                                    [
-                                        'method' => 'delete',
-                                        'confirm' => __('Are you sure you want to delete this stock transaction?'),
-                                    ]
-                                ) ?>
+                            <td>
+                                <?= $line->hasValue('badge')
+                                    ? $this->Html->link(
+                                        $line->badge->badge_name,
+                                        ['controller' => 'Badges', 'action' => 'view', $line->badge->id],
+                                    )
+                                    : __('Unknown badge') ?>
                             </td>
+                            <td><?= $this->Number->format($line->fulfilled_quantity_change) ?></td>
+                            <td><?= $this->Number->currency($line->unit_price ?? 0) ?></td>
+                            <td><?= $this->Number->currency($line->monetary_amount ?? 0) ?></td>
+                            <td><?= h($line->transaction_timestamp?->i18nFormat('dd MMM yyyy HH:mm')) ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </table>
                 </div>
+                <?php else : ?>
+                <p><?= __('No fulfilment lines have been added.') ?></p>
                 <?php endif; ?>
             </div>
         </div>

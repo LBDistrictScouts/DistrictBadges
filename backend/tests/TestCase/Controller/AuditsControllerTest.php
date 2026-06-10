@@ -42,6 +42,7 @@ class AuditsControllerTest extends TestCase
         $this->get('/audits');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('>Edit<');
     }
 
     /**
@@ -55,6 +56,7 @@ class AuditsControllerTest extends TestCase
         $this->get('/audits/view/003b39f5-34f6-4f49-b1ff-97204ffc4336');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Edit Audit');
     }
 
     /**
@@ -83,31 +85,6 @@ class AuditsControllerTest extends TestCase
             ->where(['audit_timestamp' => '2026-02-22 10:00:00'])
             ->firstOrFail();
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
-    }
-
-    /**
-     * Test edit method
-     *
-     * @return void
-     * @link \App\Controller\AuditsController::edit()
-     */
-    public function testEdit(): void
-    {
-        $audits = $this->getTableLocator()->get('Audits');
-        $id = '003b39f5-34f6-4f49-b1ff-97204ffc4336';
-
-        $this->enableCsrfToken();
-        $this->put("/audits/edit/{$id}", [
-            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
-            'audit_timestamp' => '2026-02-22 11:00:00',
-            'audit_completed' => false,
-        ]);
-
-        $this->assertRedirect(['controller' => 'Audits', 'action' => 'index']);
-        $this->assertFlashMessage('The audit has been saved.');
-
-        $updated = $audits->get($id);
-        $this->assertSame(false, $updated->audit_completed);
     }
 
     /**

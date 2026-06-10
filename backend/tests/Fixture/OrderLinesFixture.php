@@ -23,8 +23,10 @@ class OrderLinesFixture extends TestFixture
                 'order_id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
                 'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                 'quantity' => 1,
+                'unit_price' => 1.5,
                 'amount' => 1.5,
-                'fulfilled' => 1,
+                'fulfilled_quantity' => 0,
+                'fulfilled' => 0,
             ],
         ];
         parent::init();

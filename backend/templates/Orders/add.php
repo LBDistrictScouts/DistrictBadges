@@ -2,7 +2,10 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Order $order
- * @var \Cake\Collection\CollectionInterface|string[] $accounts
+ * @var \Cake\Collection\CollectionInterface|array<string> $accounts
+ * @var \Cake\Collection\CollectionInterface|array<string> $users
+ * @var array<string> $badges
+ * @var array<string, mixed> $lineGrid
  */
 ?>
 <div class="row">
@@ -18,15 +21,11 @@
             <fieldset>
                 <legend><?= __('Add Order') ?></legend>
                 <?php
-                    echo $this->Form->control('order_number');
-                    echo $this->Form->control('placed_date');
-                    echo $this->Form->control('fulfilled');
-                    echo $this->Form->control('total_amount');
-                    echo $this->Form->control('total_quantity');
                     echo $this->Form->control('account_id', ['options' => $accounts]);
-                    echo $this->Form->control('user_id');
+                    echo $this->Form->control('user_id', ['options' => $users]);
                 ?>
             </fieldset>
+            <?= $this->StockTransactionLines->grid($order, $badges, $lineGrid) ?>
             <?= $this->Form->button(__('Submit')) ?>
             <?= $this->Form->end() ?>
         </div>

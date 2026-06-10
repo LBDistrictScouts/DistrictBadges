@@ -140,6 +140,18 @@ class StockTransactionsTable extends Table
             ->notEmptyString('pending_quantity_change');
 
         $validator
+            ->integer('fulfilled_quantity_change')
+            ->notEmptyString('fulfilled_quantity_change');
+
+        $validator
+            ->decimal('monetary_amount')
+            ->allowEmptyString('monetary_amount');
+
+        $validator
+            ->decimal('unit_price')
+            ->allowEmptyString('unit_price');
+
+        $validator
             ->integer('transaction_type')
             ->requirePresence('transaction_type', 'create')
             ->notEmptyString('transaction_type')
@@ -188,6 +200,8 @@ class StockTransactionsTable extends Table
             'on_hand_quantity_change' => $entity->get('on_hand_quantity_change'),
             'receipted_quantity_change' => $entity->get('receipted_quantity_change'),
             'pending_quantity_change' => $entity->get('pending_quantity_change'),
+            'monetary_amount' => $entity->get('monetary_amount'),
+            'unit_price' => $entity->get('unit_price'),
             'audit_id' => $entity->get('audit_id'),
             'fulfilment_id' => $entity->get('fulfilment_id'),
             'replenishment_id' => $entity->get('replenishment_id'),
@@ -265,6 +279,7 @@ class StockTransactionsTable extends Table
                 'on_hand_total' => $stockTransactions->find()->func()->sum('on_hand_quantity_change'),
                 'receipted_total' => $stockTransactions->find()->func()->sum('receipted_quantity_change'),
                 'pending_total' => $stockTransactions->find()->func()->sum('pending_quantity_change'),
+                'fulfilled_total' => $stockTransactions->find()->func()->sum('fulfilled_quantity_change'),
             ])
             ->where(['badge_id' => $badgeId])
             ->disableHydration()
@@ -281,6 +296,7 @@ class StockTransactionsTable extends Table
         $badge->set('on_hand_quantity', (int)($totals['on_hand_total'] ?? 0));
         $badge->set('receipted_quantity', (int)($totals['receipted_total'] ?? 0));
         $badge->set('pending_quantity', (int)($totals['pending_total'] ?? 0));
+        $badge->set('fulfilled_quantity', (int)($totals['fulfilled_total'] ?? 0));
         $badge->set('latest_hash', (string)($latest['audit_hash'] ?? ''));
 
         $this->Badges->saveOrFail($badge, ['checkRules' => false, 'validate' => false]);

@@ -55,6 +55,10 @@
                     <td><?= $this->Number->format($stockTransaction->pending_quantity_change) ?></td>
                 </tr>
                 <tr>
+                    <th><?= __('Unit Price') ?></th>
+                    <td><?= $this->Number->currency($stockTransaction->unit_price) ?></td>
+                </tr>
+                <tr>
                     <th><?= __('Transaction Type') ?></th>
                     <td><?= h($stockTransaction->transaction_type->label()) ?></td>
                 </tr>

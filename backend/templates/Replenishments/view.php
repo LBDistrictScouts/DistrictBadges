@@ -8,10 +8,38 @@
     <aside class="column">
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
-            <?= $this->Html->link(__('Edit Replenishment'), ['action' => 'edit', $replenishment->id], ['class' => 'side-nav-item']) ?>
-            <?= $this->Form->postLink(__('Delete Replenishment'), ['action' => 'delete', $replenishment->id], ['confirm' => __('Are you sure you want to delete # {0}?', $replenishment->id), 'class' => 'side-nav-item']) ?>
-            <?= $this->Html->link(__('List Replenishments'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
-            <?= $this->Html->link(__('New Replenishment'), ['action' => 'add'], ['class' => 'side-nav-item']) ?>
+            <?php if (!in_array(
+                $replenishment->status,
+                [
+                    \App\Model\Enum\ReplenishmentStatus::Received,
+                    \App\Model\Enum\ReplenishmentStatus::Cancelled,
+                ],
+                true,
+            )) : ?>
+            <?= $this->Html->link(
+                __('Receive Replenishment'),
+                ['action' => 'receive', $replenishment->id],
+                ['class' => 'side-nav-item'],
+            ) ?>
+            <?php endif; ?>
+            <?= $this->Form->postLink(
+                __('Delete Replenishment'),
+                ['action' => 'delete', $replenishment->id],
+                [
+                    'confirm' => __('Are you sure you want to delete this replenishment?'),
+                    'class' => 'side-nav-item',
+                ],
+            ) ?>
+            <?= $this->Html->link(
+                __('List Replenishments'),
+                ['action' => 'index'],
+                ['class' => 'side-nav-item'],
+            ) ?>
+            <?= $this->Html->link(
+                __('New Replenishment'),
+                ['action' => 'add'],
+                ['class' => 'side-nav-item'],
+            ) ?>
         </div>
     </aside>
     <div class="column column-80">
@@ -19,88 +47,110 @@
             <h3><?= h($replenishment->wholesale_order_number) ?></h3>
             <table>
                 <tr>
-                    <th><?= __('Id') ?></th>
-                    <td><?= h($replenishment->id) ?></td>
+                    <th><?= __('Status') ?></th>
+                    <td><?= h($replenishment->status->label()) ?></td>
                 </tr>
                 <tr>
-                    <th><?= __('Wholesale Order Number') ?></th>
-                    <td><?= h($replenishment->wholesale_order_number) ?></td>
+                    <th><?= __('Created') ?></th>
+                    <td><?= h($replenishment->created_date?->i18nFormat('dd MMM yyyy HH:mm')) ?></td>
                 </tr>
                 <tr>
-                    <th><?= __('Total Amount') ?></th>
-                    <td><?= $this->Number->format($replenishment->total_amount) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Total Quantity') ?></th>
-                    <td><?= $this->Number->format($replenishment->total_quantity) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Created Date') ?></th>
-                    <td><?= h($replenishment->created_date) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Order Submitted Date') ?></th>
-                    <td><?= h($replenishment->order_submitted_date) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Received Date') ?></th>
-                    <td><?= h($replenishment->received_date) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Order Submitted') ?></th>
-                    <td><?= $replenishment->order_submitted ? __('Yes') : __('No'); ?></td>
+                    <th><?= __('Submitted') ?></th>
+                    <td>
+                        <?= $replenishment->order_submitted_date
+                            ? h($replenishment->order_submitted_date->i18nFormat('dd MMM yyyy HH:mm'))
+                            : __('Not yet submitted') ?>
+                    </td>
                 </tr>
                 <tr>
                     <th><?= __('Received') ?></th>
-                    <td><?= $replenishment->received ? __('Yes') : __('No'); ?></td>
+                    <td>
+                        <?= $replenishment->received_date
+                            ? h($replenishment->received_date->i18nFormat('dd MMM yyyy HH:mm'))
+                            : __('Not yet received') ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th><?= __('Ordered Total') ?></th>
+                    <td>
+                        <?= $this->Number->format($replenishment->total_ordered_quantity) ?>
+                        <?= __('items') ?>,
+                        <?= $this->Number->currency($replenishment->total_ordered_amount) ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th><?= __('Received Total') ?></th>
+                    <td>
+                        <?= $this->Number->format($replenishment->total_received_quantity) ?>
+                        <?= __('items') ?>,
+                        <?= $this->Number->currency($replenishment->total_received_amount) ?>
+                    </td>
                 </tr>
             </table>
+
             <div class="related">
-                <h4><?= __('Related Stock Transactions') ?></h4>
-                <?php if (!empty($replenishment->stock_transactions)) : ?>
+                <h4><?= __('Ordered Lines') ?></h4>
+                <?php if (!empty($replenishment->replenishment_order_lines)) : ?>
                 <div class="table-responsive">
                     <table>
                         <tr>
-                            <th><?= __('Id') ?></th>
-                            <th><?= __('Transaction Timestamp') ?></th>
-                            <th><?= __('Badge Id') ?></th>
-                            <th><?= __('Audit Hash') ?></th>
-                            <th><?= __('Fulfilment Id') ?></th>
-                            <th><?= __('Audit Id') ?></th>
-                            <th><?= __('On Hand Quantity Change') ?></th>
-                            <th><?= __('Receipted Quantity Change') ?></th>
-                            <th><?= __('Pending Quantity Change') ?></th>
-                            <th><?= __('Transaction Type') ?></th>
-                            <th class="actions"><?= __('Actions') ?></th>
+                            <th><?= __('Badge') ?></th>
+                            <th><?= __('Quantity') ?></th>
+                            <th><?= __('Unit Price') ?></th>
+                            <th><?= __('Line Amount') ?></th>
                         </tr>
-                        <?php foreach ($replenishment->stock_transactions as $stockTransaction) : ?>
+                        <?php foreach ($replenishment->replenishment_order_lines as $line) : ?>
                         <tr>
-                            <td><?= h($stockTransaction->id) ?></td>
-                            <td><?= h($stockTransaction->transaction_timestamp) ?></td>
-                            <td><?= h($stockTransaction->badge_id) ?></td>
-                            <td><?= h($stockTransaction->audit_hash) ?></td>
-                            <td><?= h($stockTransaction->fulfilment_id) ?></td>
-                            <td><?= h($stockTransaction->audit_id) ?></td>
-                            <td><?= h($stockTransaction->on_hand_quantity_change) ?></td>
-                            <td><?= h($stockTransaction->receipted_quantity_change) ?></td>
-                            <td><?= h($stockTransaction->pending_quantity_change) ?></td>
-                            <td><?= h($stockTransaction->transaction_type) ?></td>
-                            <td class="actions">
-                                <?= $this->Html->link(__('View'), ['controller' => 'StockTransactions', 'action' => 'view', $stockTransaction->id]) ?>
-                                <?= $this->Html->link(__('Edit'), ['controller' => 'StockTransactions', 'action' => 'edit', $stockTransaction->id]) ?>
-                                <?= $this->Form->postLink(
-                                    __('Delete'),
-                                    ['controller' => 'StockTransactions', 'action' => 'delete', $stockTransaction->id],
-                                    [
-                                        'method' => 'delete',
-                                        'confirm' => __('Are you sure you want to delete # {0}?', $stockTransaction->id),
-                                    ]
-                                ) ?>
+                            <td>
+                                <?= $line->hasValue('badge')
+                                    ? $this->Html->link(
+                                        $line->badge->badge_name,
+                                        ['controller' => 'Badges', 'action' => 'view', $line->badge->id],
+                                    )
+                                    : __('Unknown badge') ?>
                             </td>
+                            <td><?= $this->Number->format($line->pending_quantity_change) ?></td>
+                            <td><?= $this->Number->currency($line->unit_price ?? 0) ?></td>
+                            <td><?= $this->Number->currency($line->monetary_amount ?? 0) ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </table>
                 </div>
+                <?php else : ?>
+                <p><?= __('No ordered lines have been added.') ?></p>
+                <?php endif; ?>
+            </div>
+
+            <div class="related">
+                <h4><?= __('Received Lines') ?></h4>
+                <?php if (!empty($replenishment->replenishment_receipt_lines)) : ?>
+                <div class="table-responsive">
+                    <table>
+                        <tr>
+                            <th><?= __('Badge') ?></th>
+                            <th><?= __('Quantity') ?></th>
+                            <th><?= __('Unit Price') ?></th>
+                            <th><?= __('Line Amount') ?></th>
+                        </tr>
+                        <?php foreach ($replenishment->replenishment_receipt_lines as $line) : ?>
+                        <tr>
+                            <td>
+                                <?= $line->hasValue('badge')
+                                    ? $this->Html->link(
+                                        $line->badge->badge_name,
+                                        ['controller' => 'Badges', 'action' => 'view', $line->badge->id],
+                                    )
+                                    : __('Unknown badge') ?>
+                            </td>
+                            <td><?= $this->Number->format($line->receipted_quantity_change) ?></td>
+                            <td><?= $this->Number->currency($line->unit_price ?? 0) ?></td>
+                            <td><?= $this->Number->currency($line->monetary_amount ?? 0) ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </table>
+                </div>
+                <?php else : ?>
+                <p><?= __('No received lines have been added.') ?></p>
                 <?php endif; ?>
             </div>
         </div>

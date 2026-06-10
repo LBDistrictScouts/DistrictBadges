@@ -11,6 +11,7 @@ use Cake\Validation\Validator;
  * Invoices Model
  *
  * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
+ * @property \App\Model\Table\InvoiceLinesTable&\Cake\ORM\Association\HasMany $InvoiceLines
  * @method \App\Model\Entity\Invoice newEmptyEntity()
  * @method \App\Model\Entity\Invoice newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Invoice> newEntities(array $data, array $options = [])
@@ -41,9 +42,17 @@ class InvoicesTable extends Table
         $this->setDisplayField('invoice_number');
         $this->setPrimaryKey('id');
 
+        $this->addBehavior('EntityNumber', [
+            'field' => 'invoice_number',
+            'prefix' => 'INV',
+        ]);
+
         $this->belongsTo('Accounts', [
             'foreignKey' => 'account_id',
             'joinType' => 'INNER',
+        ]);
+        $this->hasMany('InvoiceLines', [
+            'foreignKey' => 'invoice_id',
         ]);
     }
 
@@ -68,8 +77,7 @@ class InvoicesTable extends Table
         $validator
             ->scalar('invoice_number')
             ->maxLength('invoice_number', 255)
-            ->requirePresence('invoice_number', 'create')
-            ->notEmptyString('invoice_number');
+            ->allowEmptyString('invoice_number');
 
         $validator
             ->uuid('account_id')

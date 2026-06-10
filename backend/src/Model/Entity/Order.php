@@ -11,13 +11,18 @@ use Cake\ORM\Entity;
  * @property string $id
  * @property string $order_number
  * @property \Cake\I18n\DateTime $placed_date
+ * @property \App\Model\Enum\OrderStatus $status
  * @property bool $fulfilled
- * @property string $total_amount
- * @property int $total_quantity
+ * @property string $total_ordered_amount
+ * @property int $total_ordered_quantity
+ * @property string $total_fulfilled_amount
+ * @property int $total_fulfilled_quantity
  * @property string $account_id
  * @property string $user_id
  *
  * @property \App\Model\Entity\Account $account
+ * @property \App\Model\Entity\User $user
+ * @property \App\Model\Entity\OrderLine[] $order_lines
  */
 class Order extends Entity
 {
@@ -31,13 +36,11 @@ class Order extends Entity
      * @var array<string, bool>
      */
     protected array $_accessible = [
-        'order_number' => true,
-        'placed_date' => true,
-        'fulfilled' => true,
-        'total_amount' => true,
-        'total_quantity' => true,
+        'fulfilled' => false,
         'account_id' => true,
         'user_id' => true,
         'account' => true,
+        'user' => true,
+        'order_lines' => true,
     ];
 }

@@ -69,6 +69,7 @@ class InvoiceLinesTableTest extends TestCase
             'description' => '',
             'quantity' => null,
             'unit_price' => null,
+            'line_amount' => null,
         ]);
 
         $errors = $entity->getErrors();
@@ -77,6 +78,7 @@ class InvoiceLinesTableTest extends TestCase
         $this->assertArrayHasKey('description', $errors);
         $this->assertArrayHasKey('quantity', $errors);
         $this->assertArrayHasKey('unit_price', $errors);
+        $this->assertArrayHasKey('line_amount', $errors);
 
         $valid = $this->InvoiceLines->newEntity([
             'invoice_id' => 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138',
@@ -84,6 +86,7 @@ class InvoiceLinesTableTest extends TestCase
             'description' => 'Valid invoice line',
             'quantity' => 1,
             'unit_price' => 9.5,
+            'line_amount' => 9.5,
         ]);
         $this->assertSame([], $valid->getErrors());
     }
@@ -102,6 +105,7 @@ class InvoiceLinesTableTest extends TestCase
             'description' => 'Broken invoice line',
             'quantity' => 1,
             'unit_price' => 9.5,
+            'line_amount' => 9.5,
         ]);
 
         $result = $this->InvoiceLines->save($entity);
@@ -118,6 +122,7 @@ class InvoiceLinesTableTest extends TestCase
             'description' => 'Saved invoice line',
             'quantity' => 2,
             'unit_price' => 12.75,
+            'line_amount' => 25.5,
         ]);
 
         $result = $this->InvoiceLines->save($entity);
@@ -128,5 +133,6 @@ class InvoiceLinesTableTest extends TestCase
         $this->assertSame('Saved invoice line', $saved->description);
         $this->assertSame(2, (int)$saved->quantity);
         $this->assertEquals(12.75, (float)$saved->unit_price);
+        $this->assertEquals(25.5, (float)$saved->line_amount);
     }
 }

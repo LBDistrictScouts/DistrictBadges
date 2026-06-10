@@ -2,6 +2,8 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Fulfilment $fulfilment
+ * @var array<string> $badges
+ * @var array<string, mixed> $lineGrid
  */
 ?>
 <div class="row">
@@ -17,10 +19,9 @@
             <fieldset>
                 <legend><?= __('Add Fulfilment') ?></legend>
                 <?php
-                    echo $this->Form->control('fulfilment_date');
-                    echo $this->Form->control('fulfilment_number');
                 ?>
             </fieldset>
+            <?= $this->StockTransactionLines->grid($fulfilment, $badges, $lineGrid) ?>
             <?= $this->Form->button(__('Submit')) ?>
             <?= $this->Form->end() ?>
         </div>

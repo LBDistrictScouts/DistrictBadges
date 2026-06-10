@@ -84,6 +84,11 @@ class InvoiceLinesTable extends Table
             ->requirePresence('unit_price', 'create')
             ->notEmptyString('unit_price');
 
+        $validator
+            ->decimal('line_amount')
+            ->requirePresence('line_amount', 'create')
+            ->notEmptyString('line_amount');
+
         return $validator;
     }
 

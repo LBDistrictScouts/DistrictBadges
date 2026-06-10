@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
+use App\Model\Enum\OrderStatus;
 use App\Model\Table\OrdersTable;
+use Cake\I18n\DateTime;
+use Cake\I18n\FrozenTime;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -66,29 +69,22 @@ class OrdersTableTest extends TestCase
     {
         $entity = $this->Orders->newEntity([
             'order_number' => '',
-            'placed_date' => null,
-            'fulfilled' => 'not-bool',
-            'total_amount' => null,
-            'total_quantity' => null,
             'account_id' => 'not-a-uuid',
             'user_id' => 'not-a-uuid',
         ]);
 
         $errors = $entity->getErrors();
-        $this->assertArrayHasKey('order_number', $errors);
-        $this->assertArrayHasKey('placed_date', $errors);
-        $this->assertArrayHasKey('fulfilled', $errors);
-        $this->assertArrayHasKey('total_amount', $errors);
-        $this->assertArrayHasKey('total_quantity', $errors);
+        $this->assertArrayNotHasKey('order_number', $errors);
         $this->assertArrayHasKey('account_id', $errors);
         $this->assertArrayHasKey('user_id', $errors);
+        $this->assertArrayHasKey(
+            'status',
+            $this->Orders->getValidator()->validate(['status' => 999]),
+        );
 
         $valid = $this->Orders->newEntity([
             'order_number' => 'ORD-1000',
-            'placed_date' => '2025-01-01 10:00:00',
-            'fulfilled' => true,
-            'total_amount' => 10.25,
-            'total_quantity' => 3,
+            'status' => OrderStatus::Placed->value,
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
         ]);
@@ -105,10 +101,7 @@ class OrdersTableTest extends TestCase
     {
         $entity = $this->Orders->newEntity([
             'order_number' => 'ORD-2000',
-            'placed_date' => '2025-02-01 10:00:00',
-            'fulfilled' => true,
-            'total_amount' => 15.5,
-            'total_quantity' => 4,
+            'status' => OrderStatus::Placed->value,
             'account_id' => '11111111-1111-1111-1111-111111111111',
             'user_id' => '11111111-1111-1111-1111-111111111111',
         ]);
@@ -126,26 +119,34 @@ class OrdersTableTest extends TestCase
      */
     public function testSave(): void
     {
+        $timestamp = new FrozenTime('2025-03-01 10:00:00');
+        FrozenTime::setTestNow($timestamp);
+        $this->Orders
+            ->getBehavior('EntityNumber')
+            ->setDate(new DateTime('2025-03-01 10:00:00'));
         $entity = $this->Orders->newEntity([
             'order_number' => 'ORD-3000',
-            'placed_date' => '2025-03-01 10:00:00',
-            'fulfilled' => true,
-            'total_amount' => 25.75,
-            'total_quantity' => 5,
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
         ]);
 
-        $result = $this->Orders->save($entity);
+        try {
+            $result = $this->Orders->save($entity);
+        } finally {
+            FrozenTime::setTestNow(null);
+        }
         $this->assertNotFalse($result);
         $this->assertNotEmpty($result->id);
 
         $saved = $this->Orders->get($result->id);
-        $this->assertSame('ORD-3000', $saved->order_number);
+        $this->assertSame('ORD-2025-03-1', $saved->order_number);
         $this->assertSame('2025-03-01 10:00:00', $saved->placed_date->format('Y-m-d H:i:s'));
-        $this->assertTrue((bool)$saved->fulfilled);
-        $this->assertEquals(25.75, (float)$saved->total_amount);
-        $this->assertSame(5, (int)$saved->total_quantity);
+        $this->assertSame(OrderStatus::Draft, $saved->status);
+        $this->assertFalse((bool)$saved->fulfilled);
+        $this->assertSame(0.0, (float)$saved->total_ordered_amount);
+        $this->assertSame(0, (int)$saved->total_ordered_quantity);
+        $this->assertSame(0.0, (float)$saved->total_fulfilled_amount);
+        $this->assertSame(0, (int)$saved->total_fulfilled_quantity);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
     }

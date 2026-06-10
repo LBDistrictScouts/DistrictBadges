@@ -26,6 +26,7 @@ use App\Model\Enum\TransactionType;
                     echo $this->Form->control('on_hand_quantity_change');
                     echo $this->Form->control('receipted_quantity_change');
                     echo $this->Form->control('pending_quantity_change');
+                    echo $this->Form->control('unit_price');
                     echo $this->Form->control('transaction_type', [
                         'type' => 'text',
                         'value' => TransactionType::ReplenishmentOrder->label(),

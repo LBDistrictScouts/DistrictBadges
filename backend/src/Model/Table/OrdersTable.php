@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Enum\OrderStatus;
+use ArrayObject;
+use Cake\Database\Type\EnumType;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -11,6 +16,8 @@ use Cake\Validation\Validator;
  * Orders Model
  *
  * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
+ * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
+ * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\HasMany $OrderLines
  * @method \App\Model\Entity\Order newEmptyEntity()
  * @method \App\Model\Entity\Order newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Order> newEntities(array $data, array $options = [])
@@ -40,6 +47,19 @@ class OrdersTable extends Table
         $this->setTable('orders');
         $this->setDisplayField('order_number');
         $this->setPrimaryKey('id');
+        $this->getSchema()->setColumnType('status', EnumType::from(OrderStatus::class));
+
+        $this->addBehavior('Timestamp', [
+            'events' => [
+                'Model.beforeSave' => [
+                    'placed_date' => 'new',
+                ],
+            ],
+        ]);
+        $this->addBehavior('EntityNumber', [
+            'field' => 'order_number',
+            'prefix' => 'ORD',
+        ]);
 
         $this->belongsTo('Accounts', [
             'foreignKey' => 'account_id',
@@ -65,28 +85,12 @@ class OrdersTable extends Table
         $validator
             ->scalar('order_number')
             ->maxLength('order_number', 255)
-            ->requirePresence('order_number', 'create')
-            ->notEmptyString('order_number');
+            ->allowEmptyString('order_number');
 
         $validator
-            ->dateTime('placed_date')
-            ->requirePresence('placed_date', 'create')
-            ->notEmptyDateTime('placed_date');
-
-        $validator
-            ->boolean('fulfilled')
-            ->requirePresence('fulfilled', 'create')
-            ->notEmptyString('fulfilled');
-
-        $validator
-            ->decimal('total_amount')
-            ->requirePresence('total_amount', 'create')
-            ->notEmptyString('total_amount');
-
-        $validator
-            ->integer('total_quantity')
-            ->requirePresence('total_quantity', 'create')
-            ->notEmptyString('total_quantity');
+            ->integer('status')
+            ->inList('status', array_column(OrderStatus::cases(), 'value'))
+            ->allowEmptyString('status');
 
         $validator
             ->uuid('account_id')
@@ -112,5 +116,43 @@ class OrdersTable extends Table
         $rules->add($rules->existsIn(['user_id'], 'Users'), ['errorField' => 'user_id']);
 
         return $rules;
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Order.
+     * @param \ArrayObject $options Save options.
+     * @return void
+     */
+    public function beforeSave(
+        EventInterface $event,
+        EntityInterface $entity,
+        ArrayObject $options,
+    ): void {
+        $options['dispatchOrderPlaced'] = $entity->isNew();
+        if ($entity->isNew() && !$entity->hasValue('status')) {
+            $entity->set('status', OrderStatus::Draft);
+        }
+        if ($entity->isNew()) {
+            $entity->set('fulfilled', false);
+        }
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Order.
+     * @param \ArrayObject $options Save options.
+     * @return void
+     */
+    public function afterSaveCommit(
+        EventInterface $event,
+        EntityInterface $entity,
+        ArrayObject $options,
+    ): void {
+        if (!($options['dispatchOrderPlaced'] ?? false)) {
+            return;
+        }
+
+        $this->dispatchEvent('Order.afterPlace', [], $entity);
     }
 }

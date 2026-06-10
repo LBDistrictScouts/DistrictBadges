@@ -25,6 +25,9 @@
                     echo $this->Form->control('badge_name');
                     echo $this->Form->control('national_product_code');
                     echo $this->Form->control('stocked');
+                    echo $this->Form->control('reserve_quantity', ['min' => 0]);
+                    echo $this->Form->control('price');
+                    echo $this->Form->control('replenishment_price');
                 ?>
             </fieldset>
             <?= $this->Form->button(__('Submit')) ?>
