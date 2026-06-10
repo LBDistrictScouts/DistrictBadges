@@ -88,11 +88,9 @@ class Badge extends Entity
      */
     protected function _getImagePath(): ?string
     {
-        if (!key_exists('image', $this->national_core_data)) {
-            return null;
-        }
-
-        return $this->national_core_data['image'];
+        return $this->national_core_data['image']
+            ?? $this->national_core_data['ImageURL']
+            ?? null;
     }
 
     /**

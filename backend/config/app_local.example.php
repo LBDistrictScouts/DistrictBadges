@@ -103,8 +103,10 @@ return [
     ],
 
     'Sqs' => [
-        'region' => env('AWS_REGION', 'us-east-1'),
+        'region' => env('AWS_REGION', 'eu-west-1'),
+        'profile' => env('AWS_PROFILE', null),
         'queueUrl' => env('SQS_ORDER_QUEUE_URL', ''),
+        'badgeImportQueueUrl' => env('SQS_BADGE_IMPORT_QUEUE_URL', ''),
         'endpoint' => env('SQS_ENDPOINT', null),
     ],
 ];
