@@ -1,4 +1,6 @@
 <?php
+use App\Model\Enum\BadgeStatus;
+
 /**
  * @var \App\View\AppView $this
  * @var iterable<\App\Model\Entity\Badge> $badges
@@ -38,11 +40,17 @@
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($badges as $badge): ?>
+                <?php foreach ($badges as $badge) : ?>
                 <tr>
                     <td>
                         <?php if (!is_null($badge->image_large_url)) : ?>
-                            <img src="<?= $badge->image_large_url ?>" alt="<?= $badge->badge_name ?>" width="100" height="100" style="max-width: 100px;" />
+                            <img
+                                src="<?= $badge->image_large_url ?>"
+                                alt="<?= $badge->badge_name ?>"
+                                width="100"
+                                height="100"
+                                style="max-width: 100px;"
+                            />
                         <?php endif; ?>
                     </td>
                     <td><?= h($badge->badge_name) ?></td>
@@ -50,14 +58,27 @@
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $badge->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $badge->id]) ?>
-                        <?= $this->Form->postLink(
-                            __('Delete'),
-                            ['action' => 'delete', $badge->id],
-                            [
-                                'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete this badge?'),
-                            ]
-                        ) ?>
+                        <?php if ($badge->status === BadgeStatus::Unstocked) : ?>
+                            <?= $this->Form->postLink(
+                                __('Stock'),
+                                ['action' => 'activate', $badge->id],
+                                [
+                                    'confirm' => __(
+                                        'Are you sure you want to mark this badge as stocked?',
+                                    ),
+                                ],
+                            ) ?>
+                        <?php endif; ?>
+                        <?php if ($badge->canBeDeleted()) : ?>
+                            <?= $this->Form->postLink(
+                                __('Delete'),
+                                ['action' => 'delete', $badge->id],
+                                [
+                                    'method' => 'delete',
+                                    'confirm' => __('Are you sure you want to delete this badge?'),
+                                ],
+                            ) ?>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -72,6 +93,10 @@
             <?= $this->Paginator->next(__('next') . ' >') ?>
             <?= $this->Paginator->last(__('last') . ' >>') ?>
         </ul>
-        <p><?= $this->Paginator->counter(__('Page {{page}} of {{pages}}, showing {{current}} record(s) out of {{count}} total')) ?></p>
+        <p>
+            <?= $this->Paginator->counter(
+                __('Page {{page}} of {{pages}}, showing {{current}} record(s) out of {{count}} total'),
+            ) ?>
+        </p>
     </div>
 </div>

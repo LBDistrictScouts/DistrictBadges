@@ -64,6 +64,36 @@ class BadgeImportProcessorTest extends TestCase
         $this->assertSame(4, $updated->reserve_quantity);
     }
 
+    public function testProcessIgnoresBadgeNameEndingWithSpaceHyphen(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $before = $badges->find()->count();
+        $payload = $this->payload();
+        $payload['BadgeName'] = 'Beavers Flag Topper -';
+
+        $processor = new BadgeImportProcessor();
+        $processor->setTableLocator($this->getTableLocator());
+        $result = $processor->process(json_encode($payload, JSON_THROW_ON_ERROR));
+
+        $this->assertSame(BadgeImportProcessor::ACK, $result);
+        $this->assertSame($before, $badges->find()->count());
+        $this->assertFalse($badges->exists(['national_product_code' => 2477]));
+    }
+
+    public function testProcessDoesNotIgnoreHyphenWithinBadgeName(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $payload = $this->payload();
+        $payload['BadgeName'] = 'Beavers - Flag Topper';
+
+        $processor = new BadgeImportProcessor();
+        $processor->setTableLocator($this->getTableLocator());
+        $result = $processor->process(json_encode($payload, JSON_THROW_ON_ERROR));
+
+        $this->assertSame(BadgeImportProcessor::ACK, $result);
+        $this->assertTrue($badges->exists(['national_product_code' => 2477]));
+    }
+
     public function testProcessRejectsInvalidJson(): void
     {
         $processor = new BadgeImportProcessor();

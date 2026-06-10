@@ -53,14 +53,26 @@ class AlgoliaService
             return;
         }
 
-        $objectId = (string)$badge->get('id');
-        if ($objectId === '') {
-            throw new RuntimeException('Algolia badge sync failed: badge id missing.');
-        }
+        $this->requireObjectId($badge);
 
         $payload = $this->resolveBadgePayload($badge);
 
         $this->client->saveObject($this->indexName, $payload);
+    }
+
+    /**
+     * Remove a badge that should no longer be searchable.
+     *
+     * @param \Cake\Datasource\EntityInterface $badge Badge entity.
+     * @return void
+     */
+    public function deleteBadge(EntityInterface $badge): void
+    {
+        if (!$this->enabled || $this->client === null) {
+            return;
+        }
+
+        $this->client->deleteObject($this->indexName, $this->requireObjectId($badge));
     }
 
     /**
@@ -99,5 +111,19 @@ class AlgoliaService
         }
 
         return $badge->toAlgoliaPayload();
+    }
+
+    /**
+     * @param \Cake\Datasource\EntityInterface $badge Badge entity.
+     * @return string
+     */
+    private function requireObjectId(EntityInterface $badge): string
+    {
+        $objectId = (string)$badge->get('id');
+        if ($objectId === '') {
+            throw new RuntimeException('Algolia badge sync failed: badge id missing.');
+        }
+
+        return $objectId;
     }
 }

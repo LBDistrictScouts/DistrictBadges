@@ -99,6 +99,34 @@ class BadgesController extends AppController
     }
 
     /**
+     * Mark an unstocked badge as actively stocked.
+     *
+     * @param string|null $id Badge id.
+     * @return \Cake\Http\Response|null Redirects to index.
+     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
+     */
+    public function activate(?string $id = null)
+    {
+        $this->request->allowMethod(['post']);
+        $badge = $this->Badges->get($id);
+
+        if ($badge->status !== BadgeStatus::Unstocked) {
+            $this->Flash->error(__('Only unstocked badges can be activated.'));
+
+            return $this->redirect(['action' => 'index']);
+        }
+
+        $badge->set('stocked', true);
+        if ($this->Badges->save($badge)) {
+            $this->Flash->success(__('The badge is now stocked.'));
+        } else {
+            $this->Flash->error(__('The badge could not be activated. Please, try again.'));
+        }
+
+        return $this->redirect(['action' => 'index']);
+    }
+
+    /**
      * Delete method
      *
      * @param string|null $id Badge id.
@@ -109,6 +137,15 @@ class BadgesController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $badge = $this->Badges->get($id);
+
+        if (!$badge->canBeDeleted()) {
+            $this->Flash->error(
+                __('Badges with receipted or fulfilled stock history cannot be deleted.'),
+            );
+
+            return $this->redirect(['action' => 'index']);
+        }
+
         if ($this->Badges->delete($badge)) {
             $this->Flash->success(__('The badge has been deleted.'));
         } else {

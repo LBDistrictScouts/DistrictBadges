@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
+use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
 use Cake\I18n\FrozenTime;
 use Cake\TestSuite\IntegrationTestTrait;
@@ -116,6 +117,63 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains(
             'Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet',
         );
+        $this->assertResponseContains('/css/vendor/select2.min.css');
+        $this->assertResponseContains('/js/vendor/jquery.min.js');
+        $this->assertResponseContains('/js/vendor/select2.min.js');
+        $this->assertResponseContains('badgeSelect.select2({');
+    }
+
+    public function testAddExcludesUnstockedBadgesFromGrid(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $unstockedId = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+        $badges->updateAll([
+            'stocked' => false,
+            'status' => BadgeStatus::Unstocked->value,
+        ], ['id' => $unstockedId]);
+
+        $this->get('/orders/add');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+    }
+
+    public function testLineRowRejectsUnstockedBadge(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $unstockedId = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+        $badges->updateAll([
+            'stocked' => false,
+            'status' => BadgeStatus::Unstocked->value,
+        ], ['id' => $unstockedId]);
+
+        $this->enableCsrfToken();
+        $this->post('/orders/line-row', [
+            'badge_id' => $unstockedId,
+            'index' => 0,
+            'quantity' => 1,
+            'unit_price' => '1.00',
+            'amount' => '1.00',
+        ]);
+
+        $this->assertResponseCode(422);
+        $this->assertResponseContains('The selected badge could not be found.');
+    }
+
+    public function testBadgePriceRejectsUnstockedBadge(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $unstockedId = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+        $badges->updateAll([
+            'stocked' => false,
+            'status' => BadgeStatus::Unstocked->value,
+        ], ['id' => $unstockedId]);
+
+        $this->get('/orders/badge-price?badge_id=' . $unstockedId);
+
+        $this->assertResponseCode(422);
+        $this->assertResponseContains('The selected badge could not be found.');
     }
 
     /**

@@ -216,14 +216,16 @@ class BadgesTableTest extends TestCase
         $this->assertNotFalse($result);
     }
 
-    public function testTransitionToUnstockedTriggersAlgoliaSync(): void
+    public function testTransitionFromUnavailableToUnstockedDeletesFromAlgolia(): void
     {
         $service = $this->createMock(AlgoliaService::class);
         $service->expects($this->once())
-            ->method('upsertBadge')
+            ->method('deleteBadge')
             ->with($this->callback(
                 fn(EntityInterface $badge): bool => $badge->get('status') === BadgeStatus::Unstocked,
             ));
+        $service->expects($this->never())
+            ->method('upsertBadge');
 
         $this->Badges->setAlgoliaService($service);
 
@@ -234,7 +236,7 @@ class BadgesTableTest extends TestCase
         $this->Badges->saveOrFail($badge);
     }
 
-    public function testDeprecatedTransitionToUnstockedTriggersAlgoliaSync(): void
+    public function testDeprecatedTransitionToUnstockedDeletesFromAlgolia(): void
     {
         $badge = $this->Badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
         $badge->set('stocked', false);
@@ -244,14 +246,34 @@ class BadgesTableTest extends TestCase
 
         $service = $this->createMock(AlgoliaService::class);
         $service->expects($this->once())
-            ->method('upsertBadge')
+            ->method('deleteBadge')
             ->with($this->callback(
                 fn(EntityInterface $savedBadge): bool => $savedBadge->get('status')
                     === BadgeStatus::Unstocked,
             ));
+        $service->expects($this->never())
+            ->method('upsertBadge');
         $this->Badges->setAlgoliaService($service);
 
         $badge->set('pending_quantity', 0);
         $this->Badges->saveOrFail($badge);
+    }
+
+    public function testNewUnstockedBadgeDoesNotSyncToAlgolia(): void
+    {
+        $service = $this->createMock(AlgoliaService::class);
+        $service->expects($this->never())
+            ->method('upsertBadge');
+        $service->expects($this->never())
+            ->method('deleteBadge');
+        $this->Badges->setAlgoliaService($service);
+
+        $badge = $this->Badges->newEntity([
+            'badge_name' => 'Never Stocked',
+            'stocked' => false,
+        ]);
+
+        $this->Badges->saveOrFail($badge);
+        $this->assertSame(BadgeStatus::Unstocked, $badge->status);
     }
 }

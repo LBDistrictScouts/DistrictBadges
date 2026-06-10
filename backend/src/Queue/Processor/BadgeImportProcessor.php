@@ -56,6 +56,10 @@ class BadgeImportProcessor
          */
         $product = (array)$payload;
         $productId = (int)$product['NationalBadgeID'];
+        if (str_ends_with((string)$product['BadgeName'], ' -')) {
+            return self::ACK;
+        }
+
         $hash = hash('sha256', json_encode($product, JSON_THROW_ON_ERROR));
 
         try {
@@ -71,12 +75,14 @@ class BadgeImportProcessor
                 return self::ACK;
             }
 
+            $price = (float)$product['Price'];
+
             $data = [
                 'badge_name' => (string)$product['BadgeName'],
                 'national_product_code' => $productId,
                 'national_data' => ['result' => [$product]],
                 'latest_hash' => $hash,
-                'price' => number_format((float)$product['Price'], 2, '.', ''),
+                'price' => number_format($price, 2, '.', ''),
             ];
             if ($isNew) {
                 $data += [
@@ -86,7 +92,7 @@ class BadgeImportProcessor
                     'receipted_quantity' => 0,
                     'pending_quantity' => 0,
                     'fulfilled_quantity' => 0,
-                    'replenishment_price' => '0.00',
+                    'replenishment_price' => number_format($price * 0.8, 2, '.', ''),
                 ];
             }
 

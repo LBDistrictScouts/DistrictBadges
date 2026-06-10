@@ -54,7 +54,7 @@ class StockTransactionLinesHelper extends Helper
         $selectorControls = '';
         $selectorHeaders = '';
         foreach ($config['selectors'] ?? [] as $field => $selectorConfig) {
-            $selectorControls .= '<div class="column">'
+            $selectorControls .= '<div class="column stock-line-builder-column">'
                 . $this->Form->control('line_' . $field, [
                     'label' => $selectorConfig['label'],
                     'options' => $selectorConfig['options'],
@@ -73,7 +73,7 @@ class StockTransactionLinesHelper extends Helper
                 $displayValue = !empty($fieldConfig['currency'])
                     ? $this->Number->currency($value, (string)$fieldConfig['currency'])
                     : $value;
-                $fieldControls .= '<div class="column"><label>'
+                $fieldControls .= '<div class="column stock-line-builder-column"><label>'
                     . h($fieldConfig['label'])
                     . '</label><output class="stock-line-calculated" data-stock-line-output="'
                     . h($field) . '">' . h($displayValue) . '</output>'
@@ -94,7 +94,8 @@ class StockTransactionLinesHelper extends Helper
                         . h($this->currencySymbol((string)$fieldConfig['currency']))
                         . '</span>' . $control . '</div>';
                 }
-                $fieldControls .= '<div class="column">' . $control . '</div>';
+                $fieldControls .= '<div class="column stock-line-builder-column">'
+                    . $control . '</div>';
             }
         }
 
@@ -143,7 +144,8 @@ class StockTransactionLinesHelper extends Helper
         return '<fieldset class="stock-transaction-lines" data-stock-transaction-lines>'
             . '<legend>' . h($config['legend']) . '</legend>'
             . $bulkLoaderHtml
-            . (empty($config['hideLineBuilder']) ? '<div class="row"><div class="column">'
+            . (empty($config['hideLineBuilder'])
+                ? '<div class="row stock-line-builder"><div class="column stock-line-badge-column">'
             . $this->Form->control('line_badge_id', [
                 'label' => __('Badge'),
                 'options' => $badges,
@@ -321,6 +323,15 @@ class StockTransactionLinesHelper extends Helper
     var fields = {$fields};
     var fieldNames = Object.keys(fields);
     var selectorNames = {$selectors};
+    var badgeSelect = null;
+    if (badgeInput && window.jQuery && window.jQuery.fn.select2) {
+        badgeSelect = window.jQuery(badgeInput);
+        badgeSelect.select2({
+            width: '100%',
+            placeholder: badgeInput.options[0] ? badgeInput.options[0].text : '',
+            allowClear: true
+        });
+    }
     var currencyFormatter = function (currency) {
         return new Intl.NumberFormat('en-GB', {
             style: 'currency',
@@ -333,6 +344,10 @@ class StockTransactionLinesHelper extends Helper
         error.hidden = !message;
     };
     var resetFields = function () {
+        if (badgeInput) {
+            badgeInput.value = '';
+            if (badgeSelect) badgeSelect.val(null).trigger('change.select2');
+        }
         fieldNames.forEach(function (field) {
             var input = container.querySelector('[data-stock-line-field="' + field + '"]');
             if (input) input.value = fields[field].default ?? 0;
@@ -379,7 +394,7 @@ class StockTransactionLinesHelper extends Helper
         var row = event.target.closest('[data-stock-transaction-line]');
         if (row) calculate(row, 'data-stock-row-field');
     });
-    if (badgeInput) badgeInput.addEventListener('change', async function () {
+    var loadBadgePrice = async function () {
         if (!priceEndpoint || !badgeInput.value) return;
         showError('');
         try {
@@ -394,7 +409,14 @@ class StockTransactionLinesHelper extends Helper
         } catch (exception) {
             showError(exception.message);
         }
-    });
+    };
+    if (badgeInput) {
+        if (badgeSelect) {
+            badgeSelect.on('change', loadBadgePrice);
+        } else {
+            badgeInput.addEventListener('change', loadBadgePrice);
+        }
+    }
     container.addEventListener('click', function (event) {
         var button = event.target.closest('[data-stock-line-remove]');
         if (button) button.closest('[data-stock-transaction-line]').remove();
@@ -426,7 +448,6 @@ class StockTransactionLinesHelper extends Helper
             grid.insertAdjacentHTML('beforeend', payload.html);
             calculate(grid.lastElementChild, 'data-stock-row-field');
             nextIndex += 1;
-            badgeInput.value = '';
             resetFields();
         } catch (exception) {
             showError(exception.message);

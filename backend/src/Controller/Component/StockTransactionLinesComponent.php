@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Component;
 
+use App\Model\Enum\BadgeStatus;
 use Cake\Controller\Component;
 use Cake\Datasource\EntityInterface;
 use Cake\Http\Response;
@@ -18,6 +19,7 @@ class StockTransactionLinesComponent extends Component
     {
         return $linesTable->Badges
             ->find('list', valueField: 'badge_name')
+            ->where(['status !=' => BadgeStatus::Unstocked->value])
             ->orderBy(['badge_name' => 'ASC'])
             ->toArray();
     }
@@ -95,7 +97,10 @@ class StockTransactionLinesComponent extends Component
         $badge = $linesTable->Badges
             ->find()
             ->select(['id', 'badge_name'])
-            ->where(['id' => $badgeId])
+            ->where([
+                'id' => $badgeId,
+                'status !=' => BadgeStatus::Unstocked->value,
+            ])
             ->first();
 
         if ($badge === null) {
@@ -155,7 +160,10 @@ class StockTransactionLinesComponent extends Component
 
         $badge = $badges->find()
             ->select(['id', $priceField])
-            ->where(['id' => $badgeId])
+            ->where([
+                'id' => $badgeId,
+                'status !=' => BadgeStatus::Unstocked->value,
+            ])
             ->disableHydration()
             ->first();
 

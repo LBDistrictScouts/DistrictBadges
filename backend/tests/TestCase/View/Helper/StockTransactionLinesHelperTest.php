@@ -93,12 +93,26 @@ class StockTransactionLinesHelperTest extends TestCase
         );
         $this->assertStringContainsString('calculation.operation', $html);
         $this->assertStringContainsString('\/fulfilments\/badge-price', $html);
-        $this->assertStringContainsString("badgeInput.addEventListener('change'", $html);
+        $this->assertStringContainsString('badgeSelect.select2({', $html);
+        $this->assertStringContainsString("badgeSelect.on('change'", $html);
+        $this->assertStringContainsString("trigger('change.select2')", $html);
         $this->assertStringContainsString('var resetFields = function ()', $html);
         $this->assertStringContainsString('var selectorNames = ["order_line_id"]', $html);
         $this->assertStringContainsString('resetFields();', $html);
         $this->assertStringContainsString('Badge name', $html);
         $this->assertStringContainsString('data-stock-transaction-lines', $html);
+        $this->assertStringContainsString(
+            'class="row stock-line-builder"',
+            $html,
+        );
+        $this->assertStringContainsString(
+            'class="column stock-line-badge-column"',
+            $html,
+        );
+        $this->assertSame(
+            4,
+            substr_count($html, 'class="column stock-line-builder-column"'),
+        );
     }
 
     public function testGridSupportsBulkLoaderWithoutManualLineBuilder(): void

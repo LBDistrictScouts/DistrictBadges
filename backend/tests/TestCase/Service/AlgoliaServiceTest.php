@@ -108,20 +108,12 @@ class AlgoliaServiceTest extends TestCase
         $service->upsertBadge($badge);
     }
 
-    public function testUpsertBadgeUpdatesUnstockedBadge(): void
+    public function testDeleteBadge(): void
     {
         $client = $this->createMock(SearchClient::class);
         $client->expects($this->once())
-            ->method('saveObject')
-            ->with(
-                'badges',
-                $this->callback(function (array $payload): bool {
-                    return ($payload['objectID'] ?? null) === 'badge-3'
-                        && ($payload['status'] ?? null) === 'Unstocked'
-                        && ($payload['status_value'] ?? null) === BadgeStatus::Unstocked->value
-                        && ($payload['available'] ?? null) === false;
-                }),
-            );
+            ->method('deleteObject')
+            ->with('badges', 'badge-3');
 
         $service = new AlgoliaService(
             [
@@ -140,7 +132,7 @@ class AlgoliaServiceTest extends TestCase
             'status' => BadgeStatus::Unstocked,
         ]);
 
-        $service->upsertBadge($badge);
+        $service->deleteBadge($badge);
     }
 
     public function testUpsertBadgeThrowsWhenMissingId(): void

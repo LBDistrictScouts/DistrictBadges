@@ -144,4 +144,14 @@ class Badge extends Entity
             'image_medium_url' => $this->get('image_medium_url'),
         ];
     }
+
+    /**
+     * Whether this badge has no historic stock movements and can be deleted.
+     *
+     * @return bool
+     */
+    public function canBeDeleted(): bool
+    {
+        return $this->receipted_quantity <= 0 && $this->fulfilled_quantity <= 0;
+    }
 }

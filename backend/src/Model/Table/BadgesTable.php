@@ -259,6 +259,20 @@ class BadgesTable extends Table
         $service = $this->buildAlgoliaService();
 
         try {
+            if ($entity->get('status') === BadgeStatus::Unstocked) {
+                $previousStatus = $entity->getOriginal('status');
+                $wasSearchable = in_array(
+                    $previousStatus,
+                    [BadgeStatus::Deprecated, BadgeStatus::Unavailable],
+                    true,
+                );
+                if ($wasSearchable) {
+                    $service->deleteBadge($entity);
+                }
+
+                return;
+            }
+
             $service->upsertBadge($entity);
         } catch (RuntimeException $exception) {
             Log::warning($exception->getMessage());

@@ -41,6 +41,12 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseNotContains('Replenishment Price');
         $this->assertResponseNotContains('Reserve');
         $this->assertResponseContains('All statuses');
+        $this->assertResponseNotContains(
+            '/badges/delete/f525eb6d-021c-4ef2-811f-feac8db8d35d',
+        );
+        $this->assertResponseContains(
+            '/badges/delete/0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70',
+        );
     }
 
     public function testIndexFilters(): void
@@ -58,6 +64,20 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Second badge');
+    }
+
+    public function testIndexShowsStockActionOnlyForUnstockedBadges(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $unstocked = $badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+        $unstocked->set('stocked', false);
+        $badges->saveOrFail($unstocked, ['skipAlgolia' => true]);
+
+        $this->get('/badges');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('/badges/activate/' . $unstocked->id);
+        $this->assertResponseRegExp('/<a[^>]*>Stock<\/a>/');
     }
 
     /**
@@ -165,6 +185,48 @@ class BadgesControllerTest extends TestCase
         $this->assertSame(3.25, (float)$updated->replenishment_price);
     }
 
+    public function testActivateUnstockedBadge(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+        $badges->updateAll([
+            'stocked' => false,
+            'status' => BadgeStatus::Unstocked->value,
+        ], ['id' => $id]);
+
+        $this->enableCsrfToken();
+        $this->post("/badges/activate/{$id}");
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $this->assertFlashMessage('The badge is now stocked.');
+
+        $updated = $badges->get($id);
+        $this->assertTrue($updated->stocked);
+        $this->assertSame(BadgeStatus::Unavailable, $updated->status);
+    }
+
+    public function testActivateRejectsBadgeThatIsNotUnstocked(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->enableCsrfToken();
+        $this->post("/badges/activate/{$id}");
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $this->assertFlashMessage('Only unstocked badges can be activated.');
+        $this->assertTrue($badges->get($id)->stocked);
+    }
+
+    public function testActivateRequiresPost(): void
+    {
+        $id = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+
+        $this->get("/badges/activate/{$id}");
+
+        $this->assertResponseCode(405);
+    }
+
     /**
      * Test delete method
      *
@@ -193,5 +255,20 @@ class BadgesControllerTest extends TestCase
         $this->assertFlashMessage('The badge has been deleted.');
         $this->assertSame($before - 1, $badges->find()->count());
         $this->assertFalse($badges->exists(['id' => $id]));
+    }
+
+    public function testDeleteRejectsBadgeWithStockHistory(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->enableCsrfToken();
+        $this->post("/badges/delete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $this->assertFlashMessage(
+            'Badges with receipted or fulfilled stock history cannot be deleted.',
+        );
+        $this->assertTrue($badges->exists(['id' => $id]));
     }
 }
