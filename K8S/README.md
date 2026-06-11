@@ -27,6 +27,19 @@ The 1Password item should expose these keys:
 - `ALGOLIA_APP_ID`
 - `ALGOLIA_ADMIN_API_KEY`
 
+Create or update the matching 1Password items referenced by the manifests with:
+
+```bash
+bash K8S/scripts/generate-1password-items.sh
+```
+
+Useful options:
+
+```bash
+bash K8S/scripts/generate-1password-items.sh --dry-run
+bash K8S/scripts/generate-1password-items.sh --force
+```
+
 Non-secret environment variables live in `base/config/app-config-map.yaml` and are patched per environment.
 
 `DATABASE_URL` should point at the environment-specific PostgreSQL service:

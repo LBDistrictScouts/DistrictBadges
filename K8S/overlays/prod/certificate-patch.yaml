@@ -5,4 +5,4 @@ metadata:
   namespace: district-badges
 spec:
   dnsNames:
-    - badges.example.com
+    - badges.lbdscouts.org.uk
