@@ -1,0 +1,8 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: district-badges-tls
+  namespace: district-badges
+spec:
+  dnsNames:
+    - badges.example.com

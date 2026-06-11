@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: district-badges-migrate
+  namespace: district-badges
+spec:
+  template:
+    spec:
+      serviceAccountName: prod-district-badges-runtime
+      containers:
+        - name: migrate
+          envFrom:
+            - configMapRef:
+                name: prod-district-badges-config
+            - secretRef:
+                name: prod-district-badges-secrets

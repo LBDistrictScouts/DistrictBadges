@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: district-badges-migrate
+  namespace: district-badges
+  labels:
+    app: district-badges-migrate
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: district-badges-migrate
+    spec:
+      serviceAccountName: district-badges-runtime
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/lbdistrictscouts/districtbadges/backend:latest
+          imagePullPolicy: Always
+          command:
+            - php
+            - bin/cake.php
+            - migrations
+            - migrate
+          envFrom:
+            - configMapRef:
+                name: district-badges-config
+            - secretRef:
+                name: district-badges-secrets

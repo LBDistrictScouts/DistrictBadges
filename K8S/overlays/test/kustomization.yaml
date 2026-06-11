@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: district-badges-test
+
+namePrefix: test-
+
+resources:
+  - ../../base
+
+replicas:
+  - name: district-badges
+    count: 1
+  - name: badge-import-worker
+    count: 1
+
+labels:
+  - pairs:
+      environment: test
+    includeSelectors: true
+    includeTemplates: true
+
+patches:
+  - target:
+      kind: Namespace
+      name: district-badges
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: district-badges-test
+  - path: config-map-patch.yaml
+  - path: nginx-config-map-patch.yaml
+  - path: certificate-patch.yaml
+  - path: one-password-item-patch.yaml

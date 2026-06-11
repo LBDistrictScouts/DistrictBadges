@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: district-badges-config
+  namespace: district-badges
+data:
+  APP_NAME: district-badges
+  APP_ENCODING: UTF-8
+  APP_DEFAULT_LOCALE: en_GB
+  APP_DEFAULT_TIMEZONE: Europe/London
+  APP_FULL_BASE_URL: https://badges.example.com
+  AWS_REGION: eu-west-1
+  DEBUG: "false"
+  LOG_DEBUG_URL: php://stdout
+  LOG_ERROR_URL: php://stderr
+  ALGOLIA_ENABLED: "false"
+  ALGOLIA_INDEX_BADGES: BADGES
