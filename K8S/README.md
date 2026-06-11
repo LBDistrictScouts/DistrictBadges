@@ -16,6 +16,9 @@ The 1Password item should expose these keys:
 
 - `SECURITY_SALT`
 - `DATABASE_URL`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
 - `EMAIL_TRANSPORT_DEFAULT_URL`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
@@ -25,6 +28,15 @@ The 1Password item should expose these keys:
 - `ALGOLIA_ADMIN_API_KEY`
 
 Non-secret environment variables live in `base/config/app-config-map.yaml` and are patched per environment.
+
+`DATABASE_URL` should point at the environment-specific PostgreSQL service:
+
+- test: `postgres://<user>:<password>@test-district-badges-postgres:5432/<database>?encoding=utf8&timezone=UTC&cacheMetadata=true`
+- prod: `postgres://<user>:<password>@prod-district-badges-postgres:5432/<database>?encoding=utf8&timezone=UTC&cacheMetadata=true`
+
+## Database
+
+PostgreSQL runs as a StatefulSet with a `local-db-ssd-rwo` volume claim. The pod has required node affinity for `storage.homelab/db-ssd=true`, matching the Homelab SSD-backed database node convention.
 
 ## Deploy
 

@@ -11,3 +11,7 @@ nameReference:
         version: v1
         kind: Job
         path: spec/template/spec/containers/envFrom/secretRef/name
+      - group: apps
+        version: v1
+        kind: StatefulSet
+        path: spec/template/spec/containers/env/valueFrom/secretKeyRef/name

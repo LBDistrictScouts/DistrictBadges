@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: district-badges-postgres
+  namespace: district-badges
+spec:
+  type: ClusterIP
+  selector:
+    app: district-badges-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
