@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Enum\FulfilmentStatus;
 use ArrayObject;
+use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
@@ -26,17 +28,6 @@ class FulfilmentLinesTable extends StockTransactionsTable
             'association' => 'Fulfilments',
             'foreignKey' => 'fulfilment_id',
             'quantityField' => 'fulfilled_quantity_change',
-        ]);
-        $this->addBehavior('OrderFulfilmentTotals', [
-            'className' => 'LineTotals',
-            'association' => 'Orders',
-            'foreignKey' => 'order_line_id',
-            'throughAssociation' => 'OrderLines',
-            'throughForeignKey' => 'order_id',
-            'quantityField' => 'fulfilled_quantity_change',
-            'targetAmountField' => 'total_fulfilled_amount',
-            'targetQuantityField' => 'total_fulfilled_quantity',
-            'implementedMethods' => [],
         ]);
     }
 
@@ -130,5 +121,70 @@ class FulfilmentLinesTable extends StockTransactionsTable
         bool $primary,
     ): void {
         $query->where(['fulfilment_id IS NOT' => null]);
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
+    public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        parent::afterSave($event, $entity, $options);
+        $this->refreshDispatchedOrderTotals($entity);
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Entity.
+     * @param \ArrayObject $options Options.
+     * @return void
+     */
+    public function afterDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        $this->refreshDispatchedOrderTotals($entity);
+    }
+
+    /**
+     * @param \Cake\Datasource\EntityInterface $entity Fulfilment line.
+     * @return void
+     */
+    private function refreshDispatchedOrderTotals(EntityInterface $entity): void
+    {
+        $orderLineId = $entity->get('order_line_id') ?? $entity->getOriginal('order_line_id');
+        if (!$orderLineId) {
+            return;
+        }
+
+        $orderLine = $this->OrderLines->find()
+            ->select(['id', 'order_id'])
+            ->where(['id' => $orderLineId])
+            ->first();
+        if ($orderLine === null) {
+            return;
+        }
+
+        $orders = $this->OrderLines->Orders;
+        $alias = $this->getAlias();
+        $query = $this->find()
+            ->innerJoinWith('OrderLines')
+            ->innerJoinWith('Fulfilments')
+            ->where([
+                'OrderLines.order_id' => $orderLine->order_id,
+                'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
+            ]);
+        $totals = $query
+            ->select([
+                'total_amount' => $query->func()->sum($alias . '.monetary_amount'),
+                'total_quantity' => $query->func()->sum($alias . '.fulfilled_quantity_change'),
+            ])
+            ->disableHydration()
+            ->first();
+
+        $orders->updateAll([
+            'total_fulfilled_amount' => number_format((float)($totals['total_amount'] ?? 0), 2, '.', ''),
+            'total_fulfilled_quantity' => (int)($totals['total_quantity'] ?? 0),
+        ], ['id' => $orderLine->order_id]);
     }
 }

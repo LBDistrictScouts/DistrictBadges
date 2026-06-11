@@ -8,7 +8,7 @@ class SeparateReplenishmentTotals extends BaseMigration
     /**
      * @return void
      */
-    public function change(): void
+    public function up(): void
     {
         $this->table('replenishments')
             ->renameColumn('total_amount', 'total_ordered_amount')
@@ -24,6 +24,43 @@ class SeparateReplenishmentTotals extends BaseMigration
                 'limit' => 11,
                 'null' => false,
             ])
+            ->update();
+
+        $this->execute(
+            'UPDATE replenishments SET '
+            . 'total_ordered_amount = COALESCE(('
+            . 'SELECT SUM(stock_transactions.monetary_amount) FROM stock_transactions '
+            . 'WHERE stock_transactions.replenishment_id = replenishments.id '
+            . 'AND stock_transactions.transaction_type = 3'
+            . '), 0), '
+            . 'total_ordered_quantity = COALESCE(('
+            . 'SELECT SUM(stock_transactions.pending_quantity_change) FROM stock_transactions '
+            . 'WHERE stock_transactions.replenishment_id = replenishments.id '
+            . 'AND stock_transactions.transaction_type = 3'
+            . '), 0), '
+            . 'total_received_amount = COALESCE(('
+            . 'SELECT SUM(stock_transactions.monetary_amount) FROM stock_transactions '
+            . 'WHERE stock_transactions.replenishment_id = replenishments.id '
+            . 'AND stock_transactions.transaction_type = 4'
+            . '), 0), '
+            . 'total_received_quantity = COALESCE(('
+            . 'SELECT SUM(stock_transactions.receipted_quantity_change) FROM stock_transactions '
+            . 'WHERE stock_transactions.replenishment_id = replenishments.id '
+            . 'AND stock_transactions.transaction_type = 4'
+            . '), 0)',
+        );
+    }
+
+    /**
+     * @return void
+     */
+    public function down(): void
+    {
+        $this->table('replenishments')
+            ->removeColumn('total_received_amount')
+            ->removeColumn('total_received_quantity')
+            ->renameColumn('total_ordered_amount', 'total_amount')
+            ->renameColumn('total_ordered_quantity', 'total_quantity')
             ->update();
     }
 }

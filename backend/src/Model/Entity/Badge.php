@@ -21,6 +21,7 @@ use Cake\ORM\Entity;
  * @property int $pending_quantity
  * @property int $fulfilled_quantity
  * @property string $latest_hash
+ * @property string $national_product_hash
  * @property string $price
  * @property string $replenishment_price
  *
@@ -60,6 +61,7 @@ class Badge extends Entity
         'pending_quantity' => true,
         'fulfilled_quantity' => true,
         'latest_hash' => true,
+        'national_product_hash' => true,
         'price' => true,
         'replenishment_price' => true,
         'stock_transactions' => true,

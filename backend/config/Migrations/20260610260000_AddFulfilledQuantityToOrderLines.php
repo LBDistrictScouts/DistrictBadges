@@ -48,8 +48,10 @@ class AddFulfilledQuantityToOrderLines extends BaseMigration
     {
         return 'SELECT SUM(stock_transactions.fulfilled_quantity_change) '
             . 'FROM stock_transactions '
+            . 'INNER JOIN fulfilments ON fulfilments.id = stock_transactions.fulfilment_id '
             . 'WHERE stock_transactions.order_line_id = order_lines.id '
             . 'AND stock_transactions.fulfilment_id IS NOT NULL '
-            . 'AND stock_transactions.transaction_type = 2';
+            . 'AND stock_transactions.transaction_type = 2 '
+            . 'AND fulfilments.status = 10';
     }
 }

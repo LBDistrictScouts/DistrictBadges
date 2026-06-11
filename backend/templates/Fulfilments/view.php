@@ -18,14 +18,6 @@
                 ],
             ) ?>
             <?php endif; ?>
-            <?= $this->Form->postLink(
-                __('Delete Fulfilment'),
-                ['action' => 'delete', $fulfilment->id],
-                [
-                    'confirm' => __('Are you sure you want to delete this fulfilment?'),
-                    'class' => 'side-nav-item',
-                ],
-            ) ?>
             <?= $this->Html->link(
                 __('List Fulfilments'),
                 ['action' => 'index'],
@@ -91,8 +83,16 @@
                                     : __('Unknown badge') ?>
                             </td>
                             <td><?= $this->Number->format($line->fulfilled_quantity_change) ?></td>
-                            <td><?= $this->Number->currency($line->unit_price ?? 0) ?></td>
-                            <td><?= $this->Number->currency($line->monetary_amount ?? 0) ?></td>
+                            <td>
+                                <?= $line->unit_price === null
+                                    ? ''
+                                    : $this->Number->currency($line->unit_price) ?>
+                            </td>
+                            <td>
+                                <?= $line->monetary_amount === null
+                                    ? ''
+                                    : $this->Number->currency($line->monetary_amount) ?>
+                            </td>
                             <td><?= h($line->transaction_timestamp?->i18nFormat('dd MMM yyyy HH:mm')) ?></td>
                         </tr>
                         <?php endforeach; ?>

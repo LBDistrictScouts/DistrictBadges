@@ -35,6 +35,16 @@ class FulfilmentsControllerTest extends TestCase
         'app.StockTransactions',
     ];
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'status' => OrderStatus::Placed->value,
+            'fulfilled' => false,
+        ], ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644']);
+    }
+
     /**
      * Test index method
      *
@@ -201,6 +211,20 @@ class FulfilmentsControllerTest extends TestCase
     {
         $id = 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a';
         $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        $this->getTableLocator()->get('OrderLines')->updateAll([
+            'quantity' => 2,
+            'fulfilled_quantity' => 0,
+            'fulfilled' => false,
+        ], ['id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db']);
+        $this->getTableLocator()->get('Badges')->updateAll([
+            'on_hand_quantity' => 2,
+        ], ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d']);
+        $this->getTableLocator()->get('StockTransactions')->updateAll([
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+            'transaction_type' => 2,
+            'fulfilled_quantity_change' => 1,
+            'on_hand_quantity_change' => -1,
+        ], ['id' => 'bad57a31-305f-4398-87d6-8fcfe4600793']);
         $fulfilments->updateAll([
             'status' => FulfilmentStatus::Draft->value,
             'dispatched_date' => null,
@@ -458,6 +482,21 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseContains('must belong to the same user');
     }
 
+    public function testOrderLinesRejectsCancelledOrder(): void
+    {
+        $orders = $this->getTableLocator()->get('Orders');
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $orders->updateAll(
+            ['status' => OrderStatus::Cancelled->value],
+            ['id' => $orderId],
+        );
+
+        $this->get('/fulfilments/order-lines?order_id=' . $orderId . '&index=0');
+
+        $this->assertResponseCode(422);
+        $this->assertResponseContains('could not be fulfilled');
+    }
+
     public function testOrderLinesOmitsBadgesWithoutStock(): void
     {
         $badges = $this->getTableLocator()->get('Badges');
@@ -574,7 +613,42 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseContains(
             'Fulfilment lines must be unique, belong to orders for the same user, '
-            . 'and not exceed available stock.',
+            . 'belong to fulfilable orders, and not exceed available stock.',
+        );
+    }
+
+    public function testAddRejectsCancelledOrderLine(): void
+    {
+        $orders = $this->getTableLocator()->get('Orders');
+        $orderLines = $this->getTableLocator()->get('OrderLines');
+        $orderLineId = 'be20de8c-eea8-4114-a98e-1d55e483e8db';
+        $orderLine = $orderLines->get($orderLineId);
+        $orders->updateAll(
+            ['status' => OrderStatus::Cancelled->value],
+            ['id' => $orderLine->order_id],
+        );
+        $this->getTableLocator()->get('Badges')->updateAll(
+            ['on_hand_quantity' => 10],
+            ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d'],
+        );
+
+        $this->enableCsrfToken();
+        $this->post('/fulfilments/add', [
+            'fulfilment_lines' => [
+                [
+                    'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                    'order_line_id' => $orderLineId,
+                    'quantity' => 1,
+                    'unit_price' => '1.50',
+                    'monetary_amount' => '1.50',
+                ],
+            ],
+        ]);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains(
+            'Fulfilment lines must be unique, belong to orders for the same user, '
+            . 'belong to fulfilable orders, and not exceed available stock.',
         );
     }
 

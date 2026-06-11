@@ -293,6 +293,11 @@ class BadgesTable extends Table
             ->notEmptyString('fulfilled_quantity');
 
         $validator
+            ->scalar('national_product_hash')
+            ->maxLength('national_product_hash', 64)
+            ->allowEmptyString('national_product_hash');
+
+        $validator
             ->integer('reserve_quantity')
             ->greaterThanOrEqual('reserve_quantity', 0)
             ->notEmptyString('reserve_quantity');

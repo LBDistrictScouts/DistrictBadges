@@ -90,7 +90,7 @@ class UsersTableTest extends TestCase
         ]);
         $this->assertSame([], $valid->getErrors());
         $this->assertSame('Test User', $valid->full_name);
-        $this->assertSame('full_name', $this->Users->getDisplayField());
+        $this->assertSame('email', $this->Users->getDisplayField());
     }
 
     /**

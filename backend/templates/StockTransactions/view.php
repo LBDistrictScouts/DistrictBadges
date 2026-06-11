@@ -56,7 +56,11 @@
                 </tr>
                 <tr>
                     <th><?= __('Unit Price') ?></th>
-                    <td><?= $this->Number->currency($stockTransaction->unit_price) ?></td>
+                    <td>
+                        <?= $stockTransaction->unit_price === null
+                            ? ''
+                            : $this->Number->currency($stockTransaction->unit_price) ?>
+                    </td>
                 </tr>
                 <tr>
                     <th><?= __('Transaction Type') ?></th>

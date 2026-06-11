@@ -67,7 +67,10 @@ class OrdersController extends AppController
         $accountOptions = $this->Orders->Accounts->find('list')
             ->orderByAsc('account_name')
             ->all();
-        $userOptions = $this->Orders->Users->find('list')
+        $userOptions = $this->Orders->Users->find(
+            'list',
+            valueField: static fn($user): string => $user->full_name,
+        )
             ->orderByAsc('last_name')
             ->orderByAsc('first_name')
             ->all();
@@ -130,7 +133,11 @@ class OrdersController extends AppController
             $this->Flash->error(__('The order could not be saved. Please, try again.'));
         }
         $accounts = $this->Orders->Accounts->find('list', limit: 200)->all();
-        $users = $this->Orders->Users->find('list', limit: 200)->all();
+        $users = $this->Orders->Users->find(
+            'list',
+            valueField: static fn($user): string => $user->full_name,
+            limit: 200,
+        )->all();
         $badges = $this->StockTransactionLines->badgeOptions(
             $this->Orders->OrderLines->getTarget(),
         );
@@ -186,7 +193,11 @@ class OrdersController extends AppController
             $this->Flash->error(__('The order could not be saved. Please, try again.'));
         }
         $accounts = $this->Orders->Accounts->find('list', limit: 200)->all();
-        $users = $this->Orders->Users->find('list', limit: 200)->all();
+        $users = $this->Orders->Users->find(
+            'list',
+            valueField: static fn($user): string => $user->full_name,
+            limit: 200,
+        )->all();
         $this->set(compact('order', 'accounts', 'users'));
     }
 

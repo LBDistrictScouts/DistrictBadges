@@ -40,7 +40,7 @@ class BadgeImportProcessorTest extends TestCase
         $this->assertSame(0, $badge->on_hand_quantity);
         $this->assertSame('100779', $badge->national_data['result'][0]['SKUCode']);
         $this->assertSame('/product/1/0/100779.jpg', $badge->image_path);
-        $this->assertSame(64, strlen($badge->latest_hash));
+        $this->assertSame(64, strlen($badge->national_product_hash));
 
         $badge = $this->getTableLocator()->get('Badges')->get(
             $badge->id,
@@ -71,6 +71,7 @@ class BadgeImportProcessorTest extends TestCase
         $this->assertSame('Beavers Flag Topper', $updated->badge_name);
         $this->assertSame(12, $updated->on_hand_quantity);
         $this->assertSame(4, $updated->reserve_quantity);
+        $this->assertSame((string)$existing->latest_hash, (string)$updated->latest_hash);
     }
 
     public function testProcessIgnoresBadgeNameEndingWithSpaceHyphen(): void

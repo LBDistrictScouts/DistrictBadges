@@ -54,6 +54,7 @@
                                             'label' => false,
                                             'type' => 'number',
                                             'min' => 0,
+                                            'max' => (int)$row['expected_quantity'],
                                             'step' => 1,
                                             'value' => '',
                                             'placeholder' => '0',

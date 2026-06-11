@@ -37,7 +37,11 @@
                     <td><?= $this->Number->format($stockTransaction->on_hand_quantity_change) ?></td>
                     <td><?= $this->Number->format($stockTransaction->receipted_quantity_change) ?></td>
                     <td><?= $this->Number->format($stockTransaction->pending_quantity_change) ?></td>
-                    <td><?= $this->Number->currency($stockTransaction->unit_price) ?></td>
+                    <td>
+                        <?= $stockTransaction->unit_price === null
+                            ? ''
+                            : $this->Number->currency($stockTransaction->unit_price) ?>
+                    </td>
 
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $stockTransaction->id]) ?>

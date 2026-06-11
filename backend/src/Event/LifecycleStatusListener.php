@@ -83,6 +83,22 @@ class LifecycleStatusListener implements EventListenerInterface
         );
 
         $orders = $this->orders();
+        /** @var \App\Model\Table\StockTransactionsTable $stockTransactions */
+        $stockTransactions = $this->fetchModel('StockTransactions');
+        $badgeIds = $stockTransactions->find()
+            ->select(['badge_id'])
+            ->where([
+                'StockTransactions.fulfilment_id' => $fulfilment->id,
+                'StockTransactions.transaction_type' => TransactionType::Fulfilment->value,
+            ])
+            ->distinct(['badge_id'])
+            ->disableHydration()
+            ->all()
+            ->extract('badge_id');
+        foreach ($badgeIds as $badgeId) {
+            $stockTransactions->refreshBadgeStockForBadge((string)$badgeId);
+        }
+
         $orderLines = $orders->OrderLines->find()
             ->innerJoinWith('StockTransactions', function ($query) use ($fulfilment) {
                 return $query->where([
@@ -117,6 +133,7 @@ class LifecycleStatusListener implements EventListenerInterface
             if ($order->status === OrderStatus::Cancelled) {
                 continue;
             }
+            $this->refreshOrderFulfilmentTotals($order);
             $this->updateStatus($order, $this->statusFromTotals($order));
         }
     }
@@ -192,6 +209,40 @@ class LifecycleStatusListener implements EventListenerInterface
         $order->set('fulfilled', $status === OrderStatus::Fulfilled);
         $order->setDirty('status', false);
         $order->setDirty('fulfilled', false);
+    }
+
+    /**
+     * @param \App\Model\Entity\Order $order Order.
+     * @return void
+     */
+    private function refreshOrderFulfilmentTotals(Order $order): void
+    {
+        $orders = $this->orders();
+        $query = $orders->OrderLines->StockTransactions->find()
+            ->innerJoinWith('OrderLines')
+            ->innerJoinWith('Fulfilments')
+            ->where([
+                'OrderLines.order_id' => $order->id,
+                'StockTransactions.transaction_type' => TransactionType::Fulfilment->value,
+                'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
+            ]);
+        $totals = $query
+            ->select([
+                'total_amount' => $query->func()->sum('StockTransactions.monetary_amount'),
+                'total_quantity' => $query->func()->sum('StockTransactions.fulfilled_quantity_change'),
+            ])
+            ->disableHydration()
+            ->first();
+        $values = [
+            'total_fulfilled_amount' => number_format((float)($totals['total_amount'] ?? 0), 2, '.', ''),
+            'total_fulfilled_quantity' => (int)($totals['total_quantity'] ?? 0),
+        ];
+
+        $orders->updateAll($values, ['id' => $order->id]);
+        foreach ($values as $field => $value) {
+            $order->set($field, $value);
+            $order->setDirty($field, false);
+        }
     }
 
     /**

@@ -57,11 +57,17 @@ class LifecycleStatusListenerTest extends TestCase
             'status' => OrderStatus::Placed,
             'fulfilled' => false,
             'total_ordered_quantity' => 4,
-            'total_fulfilled_quantity' => 2,
+            'total_fulfilled_quantity' => 0,
         ], ['id' => $order->id]);
+        $orders->OrderLines->updateAll([
+            'quantity' => 4,
+            'fulfilled_quantity' => 0,
+            'fulfilled' => false,
+        ], ['id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db']);
         $stockTransactions->updateAll([
             'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
             'transaction_type' => TransactionType::Fulfilment->value,
+            'fulfilled_quantity_change' => 2,
         ], [
             'id' => 'bad57a31-305f-4398-87d6-8fcfe4600793',
         ]);
@@ -79,9 +85,11 @@ class LifecycleStatusListenerTest extends TestCase
         $this->assertSame(OrderStatus::PartiallyFulfilled, $updated->status);
         $this->assertFalse($updated->fulfilled);
 
-        $orders->updateAll([
-            'total_fulfilled_quantity' => 4,
-        ], ['id' => $order->id]);
+        $stockTransactions->updateAll([
+            'fulfilled_quantity_change' => 4,
+        ], [
+            'id' => 'bad57a31-305f-4398-87d6-8fcfe4600793',
+        ]);
         $fulfilments->updateAll([
             'status' => FulfilmentStatus::Draft,
             'dispatched_date' => null,

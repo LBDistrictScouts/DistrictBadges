@@ -71,7 +71,7 @@ class BadgeImportProcessor
             $isNew = $badge === null;
             $badge ??= $badges->newEmptyEntity();
 
-            if (!$isNew && hash_equals((string)$badge->latest_hash, $hash)) {
+            if (!$isNew && hash_equals((string)$badge->national_product_hash, $hash)) {
                 $badges->associateTagsFromBadgeName($badge);
 
                 return self::ACK;
@@ -83,7 +83,7 @@ class BadgeImportProcessor
                 'badge_name' => (string)$product['BadgeName'],
                 'national_product_code' => $productId,
                 'national_data' => ['result' => [$product]],
-                'latest_hash' => $hash,
+                'national_product_hash' => $hash,
                 'price' => number_format($price, 2, '.', ''),
             ];
             if ($isNew) {

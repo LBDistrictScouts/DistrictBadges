@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Event;
 
 use App\Model\Entity\OrderLine;
+use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\TransactionType;
 use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\EventInterface;
@@ -46,10 +47,12 @@ class OrderLineFulfilmentListener implements EventListenerInterface
                     ->func()
                     ->sum('fulfilled_quantity_change'),
             ])
+            ->innerJoinWith('Fulfilments')
             ->where([
-                'order_line_id' => $orderLine->id,
-                'fulfilment_id IS NOT' => null,
-                'transaction_type' => TransactionType::Fulfilment->value,
+                'StockTransactions.order_line_id' => $orderLine->id,
+                'StockTransactions.fulfilment_id IS NOT' => null,
+                'StockTransactions.transaction_type' => TransactionType::Fulfilment->value,
+                'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
             ])
             ->disableHydration()
             ->first();

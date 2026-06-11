@@ -5,6 +5,7 @@ namespace App\Controller;
 
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
+use App\Model\Enum\TransactionType;
 use Cake\Datasource\EntityInterface;
 use Cake\Utility\Text;
 
@@ -172,11 +173,17 @@ class FulfilmentsController extends AppController
 
         $order = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
             ->find()
-            ->select(['id', 'order_number', 'user_id'])
-            ->where(['id' => $orderId])
+            ->select(['id', 'order_number', 'user_id', 'status'])
+            ->where([
+                'id' => $orderId,
+                'status NOT IN' => [
+                    OrderStatus::Fulfilled->value,
+                    OrderStatus::Cancelled->value,
+                ],
+            ])
             ->first();
         if ($order === null) {
-            return $this->jsonError(__('The selected order could not be found.'));
+            return $this->jsonError(__('The selected order could not be fulfilled.'));
         }
         if (!$this->orderLinesMatchUser($existingOrderLineIds, (string)$order->user_id)) {
             return $this->jsonError(__('All orders in a fulfilment must belong to the same user.'));
@@ -262,10 +269,20 @@ class FulfilmentsController extends AppController
     public function dispatch(?string $id = null)
     {
         $this->request->allowMethod(['post']);
-        $fulfilment = $this->Fulfilments->get($id);
+        $fulfilment = $this->Fulfilments->get($id, contain: [
+            'FulfilmentLines.Badges',
+            'FulfilmentLines.OrderLines',
+        ]);
 
         if ($fulfilment->status !== FulfilmentStatus::Draft) {
             $this->Flash->error(__('Only draft fulfilments can be dispatched.'));
+
+            return $this->redirect(['action' => 'view', $fulfilment->id]);
+        }
+        if (!$this->fulfilmentCanDispatch($fulfilment->fulfilment_lines ?? [])) {
+            $this->Flash->error(__(
+                'This fulfilment can no longer be dispatched because stock or order quantities changed.',
+            ));
 
             return $this->redirect(['action' => 'view', $fulfilment->id]);
         }
@@ -382,6 +399,13 @@ class FulfilmentsController extends AppController
         $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines
             ->find()
             ->contain(['Orders', 'Badges'])
+            ->innerJoinWith('Orders')
+            ->where([
+                'Orders.status NOT IN' => [
+                    OrderStatus::Fulfilled->value,
+                    OrderStatus::Cancelled->value,
+                ],
+            ])
             ->orderBy(['Orders.order_number' => 'ASC', 'Badges.badge_name' => 'ASC'])
             ->all();
 
@@ -463,13 +487,14 @@ class FulfilmentsController extends AppController
         if (
             count($orderLineIds) !== count(array_unique($orderLineIds))
             || !$this->orderLinesMatchUser($orderLineIds)
+            || !$this->orderLinesAreFulfillable($orderLineIds)
             || !$this->quantitiesFitAvailableStock($data['fulfilment_lines'] ?? [])
         ) {
             $fulfilment->setError(
                 'fulfilment_lines',
                 __(
                     'Fulfilment lines must be unique, belong to orders for the same user, '
-                    . 'and not exceed available stock.',
+                    . 'belong to fulfilable orders, and not exceed available stock.',
                 ),
             );
         }
@@ -517,6 +542,32 @@ class FulfilmentsController extends AppController
     }
 
     /**
+     * @param array<\App\Model\Entity\FulfilmentLine> $lines Fulfilment lines.
+     * @return bool
+     */
+    private function fulfilmentCanDispatch(array $lines): bool
+    {
+        $fulfilmentLines = 0;
+        foreach ($lines as $line) {
+            if ($line->transaction_type !== TransactionType::Fulfilment) {
+                continue;
+            }
+            $fulfilmentLines++;
+            $quantity = (int)$line->fulfilled_quantity_change;
+            if (
+                !$line->hasValue('badge')
+                || !$line->hasValue('order_line')
+                || $quantity > max(0, (int)$line->badge->on_hand_quantity)
+                || $quantity > (int)$line->order_line->remaining_quantity
+            ) {
+                return false;
+            }
+        }
+
+        return $fulfilmentLines > 0;
+    }
+
+    /**
      * @param array<string> $orderLineIds Order line ids.
      * @param string|null $expectedUserId Expected user id.
      * @return bool
@@ -545,6 +596,31 @@ class FulfilmentsController extends AppController
 
         return count($users) === 1
             && ($expectedUserId === null || (string)$users[0] === $expectedUserId);
+    }
+
+    /**
+     * @param array<string> $orderLineIds Order line ids.
+     * @return bool
+     */
+    private function orderLinesAreFulfillable(array $orderLineIds): bool
+    {
+        if ($orderLineIds === []) {
+            return true;
+        }
+
+        $invalid = $this->Fulfilments->FulfilmentLines->OrderLines
+            ->find()
+            ->innerJoinWith('Orders')
+            ->where([
+                'OrderLines.id IN' => $orderLineIds,
+                'Orders.status IN' => [
+                    OrderStatus::Fulfilled->value,
+                    OrderStatus::Cancelled->value,
+                ],
+            ])
+            ->count();
+
+        return $invalid === 0;
     }
 
     /**
