@@ -44,16 +44,8 @@ jobs:
         run: test -z "$(git status --porcelain -- webroot/css webroot/js)"
 
   backend-tests:
-    name: Backend Tests (${{ matrix.database }})
+    name: Backend Tests (PostgreSQL)
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - database: SQLite
-            database_test_url: sqlite://./testdb.sqlite
-          - database: PostgreSQL
-            database_test_url: postgres://postgres:postgres@127.0.0.1:5432/district_badges_test
     services:
       postgres:
         image: postgres:17
@@ -75,7 +67,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, intl, pdo_pgsql, pdo_sqlite
+          extensions: mbstring, intl, pdo_pgsql
           coverage: none
 
       - name: Composer install
@@ -94,4 +86,4 @@ jobs:
         working-directory: backend
         run: composer test
         env:
-          DATABASE_TEST_URL: ${{ matrix.database_test_url }}
+          DATABASE_TEST_URL: postgres://postgres:postgres@127.0.0.1:5432/district_badges_test
