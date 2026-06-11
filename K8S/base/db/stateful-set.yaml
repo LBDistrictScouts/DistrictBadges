@@ -72,12 +72,15 @@ spec:
               cpu: 1
               memory: 1Gi
   volumeClaimTemplates:
-    - metadata:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: postgres-data
       spec:
         accessModes:
           - ReadWriteOnce
         storageClassName: local-db-ssd-rwo
+        volumeMode: Filesystem
         resources:
           requests:
             storage: 10Gi
