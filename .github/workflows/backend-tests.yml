@@ -1,13 +1,15 @@
-name: Backend Tests
+name: Tests
 
 on:
   push:
     paths:
       - 'backend/**'
+      - 'webstore/**'
       - '.github/workflows/backend-tests.yml'
   pull_request:
     paths:
       - 'backend/**'
+      - 'webstore/**'
       - '.github/workflows/backend-tests.yml'
   workflow_dispatch:
 
@@ -15,34 +17,6 @@ permissions:
   contents: read
 
 jobs:
-  frontend-assets:
-    name: Frontend Assets
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: yarn
-          cache-dependency-path: backend/yarn.lock
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Yarn install
-        run: yarn install --immutable
-
-      - name: Build frontend assets
-        run: yarn build
-
-      - name: Check generated assets
-        run: test -z "$(git status --porcelain -- webroot/css webroot/js)"
-
   backend-tests:
     name: Backend Tests (PostgreSQL)
     runs-on: ubuntu-24.04
@@ -70,6 +44,14 @@ jobs:
           extensions: mbstring, intl, pdo_pgsql
           coverage: none
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Composer install
         working-directory: backend
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -82,8 +64,46 @@ jobs:
         working-directory: backend
         run: composer cs-check
 
+      - name: Yarn install
+        working-directory: backend
+        run: yarn install --immutable
+
+      - name: Build backend assets
+        working-directory: backend
+        run: yarn build
+
+      - name: Check generated backend assets
+        working-directory: backend
+        run: test -z "$(git status --porcelain -- webroot/css webroot/js)"
+
       - name: Run tests
         working-directory: backend
         run: composer test
         env:
           DATABASE_TEST_URL: postgres://postgres:postgres@127.0.0.1:5432/district_badges_test
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: webstore
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Setup Yarn
+        run: corepack enable
+
+      - name: Yarn install
+        run: yarn install --immutable
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Build
+        run: yarn build
