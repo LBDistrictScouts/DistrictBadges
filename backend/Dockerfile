@@ -44,8 +44,11 @@ RUN yarn install --immutable
 
 COPY --chown=$user:$group . .
 
-RUN yarn build && \
+RUN test ! -f config/app_local.php && \
+    yarn build && \
     test -f webroot/js/vendor/jquery.min.js && \
     test -f webroot/js/vendor/select2.min.js && \
     test -f webroot/css/vendor/select2.min.css && \
-    composer run-script post-install-cmd --no-interaction
+    composer run-script post-install-cmd --no-interaction && \
+    rm -f config/app_local.php && \
+    test ! -f config/app_local.php

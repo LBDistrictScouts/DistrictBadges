@@ -21,9 +21,9 @@ spec:
           command:
             - sh
             - -c
-            - cp -a /var/www/html/. /workdir
+            - cp -a /var/www/html/webroot/. /workdir
           volumeMounts:
-            - name: app-code
+            - name: webroot
               mountPath: /workdir
       containers:
         - name: app
@@ -50,9 +50,6 @@ spec:
               port: 9000
             initialDelaySeconds: 15
             periodSeconds: 20
-          volumeMounts:
-            - name: app-code
-              mountPath: /var/www/html
         - name: web
           image: nginx:1.27-alpine
           imagePullPolicy: IfNotPresent
@@ -74,8 +71,8 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 20
           volumeMounts:
-            - name: app-code
-              mountPath: /var/www/html
+            - name: webroot
+              mountPath: /var/www/html/webroot
             - name: nginx-config
               mountPath: /etc/nginx/conf.d/default.conf
               subPath: default.conf
@@ -83,7 +80,7 @@ spec:
               mountPath: /etc/nginx/tls
               readOnly: true
       volumes:
-        - name: app-code
+        - name: webroot
           emptyDir: {}
         - name: nginx-config
           configMap:

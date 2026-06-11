@@ -153,10 +153,12 @@ jobs:
         run: |
           docker run --rm district-badges-backend:smoke test -f /var/www/html/vendor/autoload.php
           docker run --rm district-badges-backend:smoke test -f /var/www/html/bin/cake.php
+          docker run --rm district-badges-backend:smoke test ! -f /var/www/html/config/app_local.php
           docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/js/vendor/jquery.min.js
           docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/js/vendor/select2.min.js
           docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/css/vendor/select2.min.css
           docker run --rm district-badges-backend:smoke php -r 'require "/var/www/html/vendor/autoload.php";'
+          test "$(docker run --rm -e SECURITY_SALT=docker-smoke district-badges-backend:smoke php bin/cake.php version)" = "5.3.2"
 
   docker-build:
     name: Build Docker Image (${{ matrix.platform }})
