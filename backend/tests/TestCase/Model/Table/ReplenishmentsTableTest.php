@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
+use App\Model\Enum\ReplenishmentStatus;
 use App\Model\Table\ReplenishmentsTable;
+use Cake\I18n\DateTime;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -67,32 +69,31 @@ class ReplenishmentsTableTest extends TestCase
     public function testValidationDefault(): void
     {
         $entity = $this->Replenishments->newEntity([
-            'created_date' => 'not-a-date',
-            'order_submitted' => null,
-            'received' => null,
-            'total_amount' => 'not-a-decimal',
-            'total_quantity' => 'not-an-int',
             'wholesale_order_number' => '',
         ]);
 
         $errors = $entity->getErrors();
-        $this->assertArrayHasKey('created_date', $errors);
-        $this->assertArrayHasKey('order_submitted', $errors);
-        $this->assertArrayHasKey('received', $errors);
-        $this->assertArrayHasKey('total_amount', $errors);
-        $this->assertArrayHasKey('total_quantity', $errors);
-        $this->assertArrayHasKey('wholesale_order_number', $errors);
+        $this->assertArrayNotHasKey('wholesale_order_number', $errors);
 
         $valid = $this->Replenishments->newEntity([
-            'created_date' => '2026-02-22 10:00:00',
-            'order_submitted' => true,
-            'order_submitted_date' => '2026-02-22 10:00:00',
-            'received' => true,
-            'received_date' => '2026-02-22 10:00:00',
-            'total_amount' => 12.5,
-            'total_quantity' => 5,
             'wholesale_order_number' => 'WO-123',
         ]);
         $this->assertSame([], $valid->getErrors());
+    }
+
+    public function testSaveGeneratesReplenishmentNumber(): void
+    {
+        $this->Replenishments
+            ->getBehavior('EntityNumber')
+            ->setDate(new DateTime('2025-04-01 09:00:00'));
+
+        $replenishment = $this->Replenishments->saveOrFail(
+            $this->Replenishments->newEmptyEntity(),
+        );
+
+        $this->assertSame('REP-2025-04-1', $replenishment->wholesale_order_number);
+        $this->assertSame(ReplenishmentStatus::Draft, $replenishment->status);
+        $this->assertFalse($replenishment->order_submitted);
+        $this->assertFalse($replenishment->received);
     }
 }

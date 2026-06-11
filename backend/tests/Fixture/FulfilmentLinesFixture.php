@@ -31,9 +31,13 @@ class FulfilmentLinesFixture extends TestFixture
                 'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
                 'audit_id' => null,
                 'replenishment_id' => null,
+                'order_line_id' => null,
                 'on_hand_quantity_change' => 2,
                 'receipted_quantity_change' => 1,
                 'pending_quantity_change' => 0,
+                'fulfilled_quantity_change' => 1,
+                'monetary_amount' => 0,
+                'unit_price' => null,
                 'transaction_type' => '2',
             ],
         ];

@@ -359,7 +359,246 @@ input[type='color'] {
     border: 0;
 }
 
+.stock-line-calculated {
+    display: block;
+    font-weight: 600;
+    padding: .8rem 0;
+}
+
+.stock-line-currency-control {
+    position: relative;
+}
+
+.stock-line-currency-control > span {
+    bottom: .8rem;
+    font-weight: 600;
+    left: 1rem;
+    position: absolute;
+    z-index: 1;
+}
+
+.stock-line-currency-control input {
+    padding-left: 2.5rem;
+}
+
+.stock-transaction-lines .select2-container {
+    margin-bottom: 1.5rem;
+}
+
+.stock-transaction-lines .select2-container .select2-selection--single {
+    border-color: #d1d1d1;
+    border-radius: .4rem;
+    height: 3.8rem;
+}
+
+.stock-transaction-lines .select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 3.8rem;
+    padding-left: 1rem;
+}
+
+.stock-transaction-lines .select2-container .select2-selection--single .select2-selection__arrow {
+    height: 3.6rem;
+}
+
+@media (min-width: 40rem) {
+    .stock-line-builder > .stock-line-badge-column {
+        flex: 2 1 0;
+        max-width: none;
+    }
+
+    .stock-line-builder > .stock-line-builder-column {
+        flex: 1 1 0;
+        max-width: none;
+    }
+}
+
+.orders-index-table th,
+.orders-index-table td,
+.replenishments-index-table th,
+.replenishments-index-table td {
+    padding-left: .8rem;
+    padding-right: .8rem;
+    white-space: nowrap;
+}
+
+.orders-index-table th:first-child,
+.orders-index-table td:first-child,
+.replenishments-index-table th:first-child,
+.replenishments-index-table td:first-child {
+    padding-left: 0;
+}
+
+.orders-index-table th:last-child,
+.orders-index-table td:last-child,
+.replenishments-index-table th:last-child,
+.replenishments-index-table td:last-child {
+    padding-right: 0;
+}
+
+.index-filters {
+    background: #f7f7f7;
+    border-radius: .4rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+}
+
+.index-filters__row {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.index-filters__row + .index-filters__row {
+    margin-top: 1rem;
+}
+
+.index-filters__row .input {
+    margin-bottom: 0;
+}
+
+.index-filters__actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.index-filters__actions .button {
+    margin-bottom: 0;
+}
+
+.badge-tag-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.badge-tag-group {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+}
+
+.badge-tag-group__label {
+    color: var(--color-lightgray);
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.badge-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.badge-tag {
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: .65rem 1rem;
+}
+
+.badge-tag--section {
+    background: #e3f2fd;
+    color: #0d47a1;
+}
+
+.badge-tag--type {
+    background: #f3e5f5;
+    color: #4a148c;
+}
+
+.badge-stock-summary {
+    margin-top: 2.5rem;
+}
+
+.badge-stock-groups {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.badge-stock-group h5 {
+    color: #606c76;
+    margin-bottom: 1rem;
+}
+
+.badge-stock-cards {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.badge-stock-card {
+    border-left: .5rem solid;
+    border-radius: .5rem;
+    box-shadow: 0 .2rem .8rem rgb(0 0 0 / 8%);
+    display: flex;
+    flex-direction: column;
+    min-height: 10rem;
+    padding: 1.5rem;
+}
+
+.badge-stock-card--on-hand {
+    background: #e8f5e9;
+    border-color: #2e7d32;
+    color: #1b5e20;
+}
+
+.badge-stock-card--pending {
+    background: #fff8e1;
+    border-color: #f9a825;
+    color: #8d6e00;
+}
+
+.badge-stock-card--reserve {
+    background: #e0f2f1;
+    border-color: #00897b;
+    color: #004d40;
+}
+
+.badge-stock-card--receipted {
+    background: #e3f2fd;
+    border-color: #1976d2;
+    color: #0d47a1;
+}
+
+.badge-stock-card--fulfilled {
+    background: #f3e5f5;
+    border-color: #7b1fa2;
+    color: #4a148c;
+}
+
+.badge-stock-card__label {
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.badge-stock-card__amount {
+    font-size: 3.2rem;
+    line-height: 1;
+    margin-top: auto;
+    padding-top: 1rem;
+}
+
+@media screen and (max-width: 800px) {
+    .badge-stock-groups {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media screen and (max-width: 640px) {
+    .index-filters__row {
+        grid-template-columns: 1fr;
+    }
+
+    .badge-stock-cards {
+        grid-template-columns: 1fr;
+    }
+
     /* Fix milligram not having a responsive column system */
     .row .column[class*='column-'] {
         flex: 0 0 100%;

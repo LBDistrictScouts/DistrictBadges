@@ -16,8 +16,12 @@
     </aside>
     <div class="column column-80">
         <div class="users view content">
-            <h3><?= h($user->first_name) ?></h3>
+            <h3><?= h($user->full_name) ?></h3>
             <table>
+                <tr>
+                    <th><?= __('Full Name') ?></th>
+                    <td><?= h($user->full_name) ?></td>
+                </tr>
                 <tr>
                     <th><?= __('First Name') ?></th>
                     <td><?= h($user->first_name) ?></td>
@@ -56,8 +60,10 @@
                             <th><?= __('Order Number') ?></th>
                             <th><?= __('Placed Date') ?></th>
                             <th><?= __('Fulfilled') ?></th>
-                            <th><?= __('Total Amount') ?></th>
-                            <th><?= __('Total Quantity') ?></th>
+                            <th><?= __('Total Ordered Amount') ?></th>
+                            <th><?= __('Total Ordered Quantity') ?></th>
+                            <th><?= __('Total Fulfilled Amount') ?></th>
+                            <th><?= __('Total Fulfilled Quantity') ?></th>
                             <th class="actions"><?= __('Actions') ?></th>
                         </tr>
                         <?php foreach ($user->orders as $order) : ?>
@@ -65,8 +71,10 @@
                             <td><?= h($order->order_number) ?></td>
                             <td><?= h($order->placed_date) ?></td>
                             <td><?= h($order->fulfilled) ?></td>
-                            <td><?= h($order->total_amount) ?></td>
-                            <td><?= h($order->total_quantity) ?></td>
+                            <td><?= h($order->total_ordered_amount) ?></td>
+                            <td><?= h($order->total_ordered_quantity) ?></td>
+                            <td><?= h($order->total_fulfilled_amount) ?></td>
+                            <td><?= h($order->total_fulfilled_quantity) ?></td>
                             <td class="actions">
                                 <?= $this->Html->link(__('View'), ['controller' => 'Orders', 'action' => 'view', $order->id]) ?>
                                 <?= $this->Html->link(__('Edit'), ['controller' => 'Orders', 'action' => 'edit', $order->id]) ?>
@@ -76,7 +84,7 @@
                                     [
                                         'method' => 'delete',
                                         'confirm' => __('Are you sure you want to delete this order?'),
-                                    ]
+                                    ],
                                 ) ?>
                             </td>
                         </tr>

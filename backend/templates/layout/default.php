@@ -27,7 +27,14 @@ $appDescription = 'District Badges Operations';
     </title>
     <?= $this->Html->meta('icon') ?>
 
-    <?= $this->Html->css(['normalize.min', 'milligram.min', 'fonts', 'cake']) ?>
+    <?= $this->Html->css([
+        'normalize.min',
+        'milligram.min',
+        'fonts',
+        'vendor/select2.min',
+        'cake',
+    ]) ?>
+    <?= $this->Html->script(['vendor/jquery.min', 'vendor/select2.min']) ?>
 
     <?= $this->fetch('meta') ?>
     <?= $this->fetch('css') ?>
@@ -39,7 +46,13 @@ $appDescription = 'District Badges Operations';
             <a href="<?= $this->Url->build('/') ?>">District Badges</a>
             <span class="top-nav-subtitle">Operations</span>
         </div>
-        <button class="top-nav-toggle" type="button" aria-expanded="false" aria-controls="top-nav-links" data-nav-toggle>
+        <button
+            class="top-nav-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="top-nav-links"
+            data-nav-toggle
+        >
             <span class="sr-only">Toggle navigation</span>
             <span class="top-nav-toggle__bar"></span>
             <span class="top-nav-toggle__bar"></span>

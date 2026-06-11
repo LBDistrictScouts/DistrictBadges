@@ -52,8 +52,8 @@ return [
     'App' => [
         'namespace' => 'App',
         'encoding' => env('APP_ENCODING', 'UTF-8'),
-        'defaultLocale' => env('APP_DEFAULT_LOCALE', 'en_US'),
-        'defaultTimezone' => env('APP_DEFAULT_TIMEZONE', 'UTC'),
+        'defaultLocale' => env('APP_DEFAULT_LOCALE', 'en_GB'),
+        'defaultTimezone' => env('APP_DEFAULT_TIMEZONE', 'Europe/London'),
         'base' => false,
         'dir' => 'src',
         'webroot' => 'webroot',
@@ -89,8 +89,10 @@ return [
     ],
 
     'Sqs' => [
-        'region' => env('AWS_REGION', 'us-east-1'),
+        'region' => env('AWS_REGION', 'eu-west-1'),
+        'profile' => env('AWS_PROFILE', null),
         'queueUrl' => env('SQS_ORDER_QUEUE_URL', ''),
+        'badgeImportQueueUrl' => env('SQS_BADGE_IMPORT_QUEUE_URL', ''),
         'endpoint' => env('SQS_ENDPOINT', null),
     ],
 

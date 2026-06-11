@@ -69,6 +69,7 @@ class OrderLinesControllerTest extends TestCase
             'order_id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'quantity' => 3,
+            'unit_price' => 3.33,
             'amount' => 9.99,
             'fulfilled' => true,
         ]);
@@ -82,6 +83,7 @@ class OrderLinesControllerTest extends TestCase
             ->firstOrFail();
         $this->assertSame('dd7b14cc-abe6-4e58-b63d-070678d78644', $saved->order_id);
         $this->assertSame('f525eb6d-021c-4ef2-811f-feac8db8d35d', $saved->badge_id);
+        $this->assertEquals(3.33, (float)$saved->unit_price);
         $this->assertTrue((bool)$saved->fulfilled);
     }
 
@@ -101,6 +103,7 @@ class OrderLinesControllerTest extends TestCase
             'order_id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'quantity' => 4,
+            'unit_price' => 3.125,
             'amount' => 12.5,
             'fulfilled' => false,
         ]);
@@ -110,6 +113,7 @@ class OrderLinesControllerTest extends TestCase
 
         $updated = $orderLines->get($id);
         $this->assertSame(4, (int)$updated->quantity);
+        $this->assertEquals(3.13, (float)$updated->unit_price);
         $this->assertEquals(12.5, (float)$updated->amount);
         $this->assertFalse((bool)$updated->fulfilled);
     }
@@ -127,6 +131,7 @@ class OrderLinesControllerTest extends TestCase
             'order_id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'quantity' => 1,
+            'unit_price' => 1.5,
             'amount' => 1.5,
             'fulfilled' => true,
         ]);

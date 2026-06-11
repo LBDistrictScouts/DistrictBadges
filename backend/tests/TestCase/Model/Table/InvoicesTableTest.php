@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Model\Table;
 
 use App\Model\Table\InvoicesTable;
+use Cake\I18n\DateTime;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -72,7 +73,7 @@ class InvoicesTableTest extends TestCase
         $errors = $entity->getErrors();
         $this->assertArrayHasKey('invoice_date', $errors);
         $this->assertArrayHasKey('due_date', $errors);
-        $this->assertArrayHasKey('invoice_number', $errors);
+        $this->assertArrayNotHasKey('invoice_number', $errors);
         $this->assertArrayHasKey('account_id', $errors);
 
         $valid = $this->Invoices->newEntity([
@@ -111,6 +112,9 @@ class InvoicesTableTest extends TestCase
      */
     public function testSave(): void
     {
+        $this->Invoices
+            ->getBehavior('EntityNumber')
+            ->setDate(new DateTime('2025-03-01 09:00:00'));
         $entity = $this->Invoices->newEntity([
             'invoice_date' => '2025-03-01 09:00:00',
             'due_date' => '2025-03-10 09:00:00',
@@ -123,7 +127,7 @@ class InvoicesTableTest extends TestCase
         $this->assertNotEmpty($result->id);
 
         $saved = $this->Invoices->get($result->id);
-        $this->assertSame('INV-3000', $saved->invoice_number);
+        $this->assertSame('INV-2025-03-1', $saved->invoice_number);
         $this->assertSame('2025-03-01 09:00:00', $saved->invoice_date->format('Y-m-d H:i:s'));
         $this->assertSame('2025-03-10 09:00:00', $saved->due_date->format('Y-m-d H:i:s'));
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);

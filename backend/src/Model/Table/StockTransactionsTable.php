@@ -7,6 +7,7 @@ use App\Model\Entity\AuditLine;
 use App\Model\Entity\FulfilmentLine;
 use App\Model\Entity\ReplenishmentOrderLine;
 use App\Model\Entity\ReplenishmentReceiptLine;
+use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\TransactionType;
 use ArrayObject;
 use Cake\Database\Type\EnumType;
@@ -140,6 +141,18 @@ class StockTransactionsTable extends Table
             ->notEmptyString('pending_quantity_change');
 
         $validator
+            ->integer('fulfilled_quantity_change')
+            ->notEmptyString('fulfilled_quantity_change');
+
+        $validator
+            ->decimal('monetary_amount')
+            ->allowEmptyString('monetary_amount');
+
+        $validator
+            ->decimal('unit_price')
+            ->allowEmptyString('unit_price');
+
+        $validator
             ->integer('transaction_type')
             ->requirePresence('transaction_type', 'create')
             ->notEmptyString('transaction_type')
@@ -188,6 +201,9 @@ class StockTransactionsTable extends Table
             'on_hand_quantity_change' => $entity->get('on_hand_quantity_change'),
             'receipted_quantity_change' => $entity->get('receipted_quantity_change'),
             'pending_quantity_change' => $entity->get('pending_quantity_change'),
+            'fulfilled_quantity_change' => $entity->get('fulfilled_quantity_change'),
+            'monetary_amount' => $entity->get('monetary_amount'),
+            'unit_price' => $entity->get('unit_price'),
             'audit_id' => $entity->get('audit_id'),
             'fulfilment_id' => $entity->get('fulfilment_id'),
             'replenishment_id' => $entity->get('replenishment_id'),
@@ -241,12 +257,12 @@ class StockTransactionsTable extends Table
     {
         $badgeId = $entity->get('badge_id');
         if (!empty($badgeId)) {
-            $this->refreshBadgeStock($badgeId);
+            $this->refreshBadgeStockForBadge($badgeId);
         }
 
         $originalBadgeId = $entity->getOriginal('badge_id');
         if (!empty($originalBadgeId) && $originalBadgeId !== $badgeId) {
-            $this->refreshBadgeStock($originalBadgeId);
+            $this->refreshBadgeStockForBadge($originalBadgeId);
         }
     }
 
@@ -254,26 +270,46 @@ class StockTransactionsTable extends Table
      * @param string $badgeId Badge id.
      * @return void
      */
-    private function refreshBadgeStock(string $badgeId): void
+    public function refreshBadgeStockForBadge(string $badgeId): void
     {
         $stockTransactions = $this->getAlias() === 'StockTransactions'
             ? $this
             : TableRegistry::getTableLocator()->get('StockTransactions');
 
-        $totals = $stockTransactions->find()
+        $query = $stockTransactions->find()
+            ->leftJoinWith('Fulfilments')
+            ->where(['StockTransactions.badge_id' => $badgeId])
+            ->where(function ($exp) {
+                return $exp->or([
+                    'StockTransactions.fulfilment_id IS' => null,
+                    'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
+                ]);
+            });
+
+        $totals = $query
             ->select([
                 'on_hand_total' => $stockTransactions->find()->func()->sum('on_hand_quantity_change'),
                 'receipted_total' => $stockTransactions->find()->func()->sum('receipted_quantity_change'),
                 'pending_total' => $stockTransactions->find()->func()->sum('pending_quantity_change'),
+                'fulfilled_total' => $stockTransactions->find()->func()->sum('fulfilled_quantity_change'),
             ])
-            ->where(['badge_id' => $badgeId])
             ->disableHydration()
             ->first();
 
         $latest = $stockTransactions->find()
+            ->leftJoinWith('Fulfilments')
             ->select(['audit_hash'])
-            ->where(['badge_id' => $badgeId])
-            ->orderBy(['transaction_timestamp' => 'DESC', 'id' => 'DESC'])
+            ->where(['StockTransactions.badge_id' => $badgeId])
+            ->where(function ($exp) {
+                return $exp->or([
+                    'StockTransactions.fulfilment_id IS' => null,
+                    'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
+                ]);
+            })
+            ->orderBy([
+                'StockTransactions.transaction_timestamp' => 'DESC',
+                'StockTransactions.id' => 'DESC',
+            ])
             ->disableHydration()
             ->first();
 
@@ -281,6 +317,7 @@ class StockTransactionsTable extends Table
         $badge->set('on_hand_quantity', (int)($totals['on_hand_total'] ?? 0));
         $badge->set('receipted_quantity', (int)($totals['receipted_total'] ?? 0));
         $badge->set('pending_quantity', (int)($totals['pending_total'] ?? 0));
+        $badge->set('fulfilled_quantity', (int)($totals['fulfilled_total'] ?? 0));
         $badge->set('latest_hash', (string)($latest['audit_hash'] ?? ''));
 
         $this->Badges->saveOrFail($badge, ['checkRules' => false, 'validate' => false]);

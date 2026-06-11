@@ -16,6 +16,8 @@ declare(strict_types=1);
  */
 namespace App;
 
+use App\Event\LifecycleStatusListener;
+use App\Event\OrderLineFulfilmentListener;
 use App\Middleware\HostHeaderMiddleware;
 use Cake\Core\Configure;
 use Cake\Core\ContainerInterface;
@@ -119,7 +121,8 @@ class Application extends BaseApplication
      */
     public function events(EventManagerInterface $eventManager): EventManagerInterface
     {
-        // $eventManager->on(new SomeCustomListenerClass());
+        $eventManager->on(new LifecycleStatusListener());
+        $eventManager->on(new OrderLineFulfilmentListener());
 
         return $eventManager;
     }

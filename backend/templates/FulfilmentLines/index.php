@@ -11,7 +11,6 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('transaction_timestamp') ?></th>
                     <th><?= $this->Paginator->sort('badge_id') ?></th>
                     <th><?= $this->Paginator->sort('audit_hash') ?></th>
@@ -26,9 +25,8 @@
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($fulfilmentLines as $fulfilmentLine): ?>
+                <?php foreach ($fulfilmentLines as $fulfilmentLine) : ?>
                 <tr>
-                    <td><?= h($fulfilmentLine->id) ?></td>
                     <td><?= h($fulfilmentLine->transaction_timestamp) ?></td>
                     <td><?= $fulfilmentLine->hasValue('badge') ? $this->Html->link($fulfilmentLine->badge->badge_name, ['controller' => 'Badges', 'action' => 'view', $fulfilmentLine->badge->id]) : '' ?></td>
                     <td><?= h($fulfilmentLine->audit_hash) ?></td>
@@ -48,7 +46,7 @@
                             [
                                 'method' => 'delete',
                                 'confirm' => __('Are you sure you want to delete # {0}?', $fulfilmentLine->id),
-                            ]
+                            ],
                         ) ?>
                     </td>
                 </tr>

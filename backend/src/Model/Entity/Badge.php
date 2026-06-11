@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Entity;
 
+use App\Model\Enum\BadgeStatus;
 use Cake\ORM\Entity;
 
 /**
@@ -13,13 +14,23 @@ use Cake\ORM\Entity;
  * @property int|null $national_product_code
  * @property array|null $national_data
  * @property bool $stocked
+ * @property \App\Model\Enum\BadgeStatus $status
  * @property int $on_hand_quantity
+ * @property int $reserve_quantity
  * @property int $receipted_quantity
  * @property int $pending_quantity
+ * @property int $fulfilled_quantity
  * @property string $latest_hash
+ * @property string $national_product_hash
  * @property string $price
+ * @property string $replenishment_price
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
+ * @property \App\Model\Entity\InvoiceLine[] $invoice_lines
+ * @property \App\Model\Entity\OrderLine[] $order_lines
+ * @property \App\Model\Entity\BadgeTag[] $badge_tags
+ * @property \App\Model\Entity\BadgeSection[] $badge_sections
+ * @property \App\Model\Entity\BadgeType[] $badge_types
  *
  * @property ?string $image_path
  * @property ?string $image_large_url
@@ -43,11 +54,22 @@ class Badge extends Entity
         'national_product_code' => true,
         'national_data' => true,
         'stocked' => true,
+        'status' => false,
         'on_hand_quantity' => true,
+        'reserve_quantity' => true,
         'receipted_quantity' => true,
         'pending_quantity' => true,
+        'fulfilled_quantity' => true,
         'latest_hash' => true,
+        'national_product_hash' => true,
         'price' => true,
+        'replenishment_price' => true,
+        'stock_transactions' => true,
+        'invoice_lines' => true,
+        'order_lines' => true,
+        'badge_tags' => true,
+        'badge_sections' => true,
+        'badge_types' => true,
     ];
 
     protected array $_hidden = [
@@ -74,11 +96,9 @@ class Badge extends Entity
      */
     protected function _getImagePath(): ?string
     {
-        if (!key_exists('image', $this->national_core_data)) {
-            return null;
-        }
-
-        return $this->national_core_data['image'];
+        return $this->national_core_data['image']
+            ?? $this->national_core_data['ImageURL']
+            ?? null;
     }
 
     /**
@@ -116,15 +136,51 @@ class Badge extends Entity
      */
     public function toAlgoliaPayload(): array
     {
+        $status = $this->get('status');
+
         return [
             'objectID' => (string)$this->get('id'),
             'id' => (string)$this->get('id'),
             'badge_name' => $this->get('badge_name'),
             'national_product_code' => $this->get('national_product_code'),
-            'stocked' => (bool)$this->get('stocked'),
-            'price' => $this->get('price'),
+            'status' => $status instanceof BadgeStatus ? $status->label() : null,
+            'available' => $status === BadgeStatus::Available,
+            'price' => (float)$this->get('price'),
+            'reserve_quantity' => (int)$this->get('reserve_quantity'),
+            'on_hand_quantity' => (int)$this->get('on_hand_quantity'),
             'image_large_url' => $this->get('image_large_url'),
             'image_medium_url' => $this->get('image_medium_url'),
+            'section_tags' => $this->tagNames('badge_sections'),
+            'type_tags' => $this->tagNames('badge_types'),
         ];
+    }
+
+    /**
+     * @param string $property Association property.
+     * @return list<string>
+     */
+    private function tagNames(string $property): array
+    {
+        $tags = $this->get($property);
+        if (!is_iterable($tags)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($tags as $tag) {
+            $names[] = (string)$tag->get('tag_name');
+        }
+
+        return $names;
+    }
+
+    /**
+     * Whether this badge has no historic stock movements and can be deleted.
+     *
+     * @return bool
+     */
+    public function canBeDeleted(): bool
+    {
+        return $this->receipted_quantity <= 0 && $this->fulfilled_quantity <= 0;
     }
 }

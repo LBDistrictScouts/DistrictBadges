@@ -30,6 +30,9 @@ class StockTransactionsFixture extends TestFixture
                 'on_hand_quantity_change' => 1,
                 'receipted_quantity_change' => 1,
                 'pending_quantity_change' => 1,
+                'fulfilled_quantity_change' => 0,
+                'monetary_amount' => 0,
+                'unit_price' => null,
                 'transaction_type' => '0',
             ],
             [
@@ -44,6 +47,9 @@ class StockTransactionsFixture extends TestFixture
                 'on_hand_quantity_change' => 2,
                 'receipted_quantity_change' => 0,
                 'pending_quantity_change' => 0,
+                'fulfilled_quantity_change' => 0,
+                'monetary_amount' => 0,
+                'unit_price' => null,
                 'transaction_type' => '0',
             ],
             [
@@ -58,6 +64,9 @@ class StockTransactionsFixture extends TestFixture
                 'on_hand_quantity_change' => 0,
                 'receipted_quantity_change' => 0,
                 'pending_quantity_change' => 3,
+                'fulfilled_quantity_change' => 0,
+                'monetary_amount' => 4.5,
+                'unit_price' => 1.5,
                 'transaction_type' => '3',
             ],
             [
@@ -72,6 +81,9 @@ class StockTransactionsFixture extends TestFixture
                 'on_hand_quantity_change' => 0,
                 'receipted_quantity_change' => 0,
                 'pending_quantity_change' => 0,
+                'fulfilled_quantity_change' => 0,
+                'monetary_amount' => 0,
+                'unit_price' => null,
                 'transaction_type' => '4',
             ],
         ];

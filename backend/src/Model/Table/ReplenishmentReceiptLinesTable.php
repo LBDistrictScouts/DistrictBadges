@@ -5,6 +5,7 @@ namespace App\Model\Table;
 
 use App\Model\Enum\TransactionType;
 use ArrayObject;
+use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\ORM\Query\SelectQuery;
 use Cake\Validation\Validator;
@@ -21,6 +22,14 @@ class ReplenishmentReceiptLinesTable extends StockTransactionsTable
 
         $this->setTable('stock_transactions');
         $this->setEntityClass('App\Model\Entity\ReplenishmentReceiptLine');
+
+        $this->addBehavior('LineTotals', [
+            'association' => 'Replenishments',
+            'foreignKey' => 'replenishment_id',
+            'quantityField' => 'receipted_quantity_change',
+            'targetAmountField' => 'total_received_amount',
+            'targetQuantityField' => 'total_received_quantity',
+        ]);
     }
 
     /**
@@ -54,5 +63,25 @@ class ReplenishmentReceiptLinesTable extends StockTransactionsTable
             'replenishment_id IS NOT' => null,
             'transaction_type' => TransactionType::ReplenishmentReceipt,
         ]);
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Receipt line.
+     * @param \ArrayObject $options Save options.
+     * @return void
+     */
+    public function afterSaveCommit(
+        EventInterface $event,
+        EntityInterface $entity,
+        ArrayObject $options,
+    ): void {
+        $replenishmentId = $entity->get('replenishment_id');
+        if (!$replenishmentId) {
+            return;
+        }
+
+        $replenishment = $this->Replenishments->get($replenishmentId);
+        $this->dispatchEvent('Replenishment.afterReceive', [], $replenishment);
     }
 }

@@ -11,6 +11,7 @@
         <table>
             <thead>
                 <tr>
+                    <th><?= __('Full Name') ?></th>
                     <th><?= $this->Paginator->sort('first_name') ?></th>
                     <th><?= $this->Paginator->sort('last_name') ?></th>
                     <th><?= $this->Paginator->sort('account_id', __('Account')) ?></th>
@@ -24,6 +25,7 @@
             <tbody>
                 <?php foreach ($users as $user): ?>
                 <tr>
+                    <td><?= h($user->full_name) ?></td>
                     <td><?= h($user->first_name) ?></td>
                     <td><?= h($user->last_name) ?></td>
                     <td><?= $user->hasValue('account') ? $this->Html->link($user->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $user->account->id]) : '' ?></td>

@@ -21,7 +21,11 @@ class FulfilmentsFixture extends TestFixture
             [
                 'id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
                 'fulfilment_date' => 1771712826,
+                'dispatched_date' => 1771712826,
                 'fulfilment_number' => 'Lorem ipsum dolor sit amet',
+                'status' => 10,
+                'total_amount' => 0,
+                'total_quantity' => 0,
             ],
         ];
         parent::init();

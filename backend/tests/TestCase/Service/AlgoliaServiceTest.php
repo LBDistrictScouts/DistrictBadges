@@ -5,7 +5,11 @@ namespace App\Test\TestCase\Service;
 
 use Algolia\AlgoliaSearch\Api\SearchClient;
 use App\Model\Entity\Badge;
+use App\Model\Entity\BadgeSection;
+use App\Model\Entity\BadgeType;
+use App\Model\Enum\BadgeStatus;
 use App\Service\AlgoliaService;
+use Cake\Core\Configure;
 use Cake\Log\Engine\ArrayLog;
 use Cake\Log\Log;
 use Cake\ORM\Entity;
@@ -17,6 +21,11 @@ use RuntimeException;
  */
 class AlgoliaServiceTest extends TestCase
 {
+    public function testAlgoliaIsDisabledByTestBootstrap(): void
+    {
+        $this->assertFalse(Configure::read('Algolia.enabled'));
+    }
+
     protected function tearDown(): void
     {
         parent::tearDown();
@@ -39,7 +48,11 @@ class AlgoliaServiceTest extends TestCase
                 'badges',
                 $this->callback(function (array $payload): bool {
                     return ($payload['objectID'] ?? null) === 'badge-1'
-                        && ($payload['badge_name'] ?? null) === 'Test Badge';
+                        && ($payload['badge_name'] ?? null) === 'Test Badge'
+                        && ($payload['section_tags'] ?? null) === ['Cubs', 'Beavers']
+                        && ($payload['type_tags'] ?? null) === ['Challenge', 'Activity']
+                        && ($payload['reserve_quantity'] ?? null) === 3
+                        && ($payload['on_hand_quantity'] ?? null) === 5;
                 }),
             );
 
@@ -58,11 +71,21 @@ class AlgoliaServiceTest extends TestCase
             'badge_name' => 'Test Badge',
             'national_product_code' => 123,
             'stocked' => true,
+            'status' => BadgeStatus::Available,
             'on_hand_quantity' => 5,
             'receipted_quantity' => 2,
             'pending_quantity' => 1,
+            'reserve_quantity' => 3,
             'latest_hash' => 'hash',
             'price' => '9.99',
+            'badge_sections' => [
+                new BadgeSection(['tag_name' => 'Cubs']),
+                new BadgeSection(['tag_name' => 'Beavers']),
+            ],
+            'badge_types' => [
+                new BadgeType(['tag_name' => 'Challenge']),
+                new BadgeType(['tag_name' => 'Activity']),
+            ],
         ]);
 
         $service->upsertBadge($badge);
@@ -98,11 +121,12 @@ class AlgoliaServiceTest extends TestCase
         $service->upsertBadge($badge);
     }
 
-    public function testUpsertBadgeSkipsWhenNotStocked(): void
+    public function testDeleteBadge(): void
     {
         $client = $this->createMock(SearchClient::class);
-        $client->expects($this->never())
-            ->method('saveObject');
+        $client->expects($this->once())
+            ->method('deleteObject')
+            ->with('badges', 'badge-3');
 
         $service = new AlgoliaService(
             [
@@ -118,9 +142,53 @@ class AlgoliaServiceTest extends TestCase
             'id' => 'badge-3',
             'badge_name' => 'Not Stocked',
             'stocked' => false,
+            'status' => BadgeStatus::Unstocked,
         ]);
 
-        $service->upsertBadge($badge);
+        $service->deleteBadge($badge);
+    }
+
+    public function testReplaceBadgesExcludesUnstockedBadges(): void
+    {
+        $client = $this->createMock(SearchClient::class);
+        $client->expects($this->once())
+            ->method('replaceAllObjects')
+            ->with(
+                'badges',
+                $this->callback(function (array $payloads): bool {
+                    return count($payloads) === 1
+                        && $payloads[0]['objectID'] === 'badge-searchable'
+                        && $payloads[0]['section_tags'] === ['Beavers'];
+                }),
+            );
+
+        $service = new AlgoliaService(
+            [
+                'enabled' => true,
+                'appId' => 'app-id',
+                'apiKey' => 'api-key',
+                'indexName' => 'badges',
+            ],
+            $client,
+        );
+
+        $count = $service->replaceBadges([
+            new Badge([
+                'id' => 'badge-searchable',
+                'badge_name' => 'Searchable Badge',
+                'status' => BadgeStatus::Available,
+                'badge_sections' => [
+                    new BadgeSection(['tag_name' => 'Beavers']),
+                ],
+            ]),
+            new Badge([
+                'id' => 'badge-unstocked',
+                'badge_name' => 'Unstocked Badge',
+                'status' => BadgeStatus::Unstocked,
+            ]),
+        ]);
+
+        $this->assertSame(1, $count);
     }
 
     public function testUpsertBadgeThrowsWhenMissingId(): void

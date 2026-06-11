@@ -2,10 +2,11 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\FulfilmentLine $fulfilmentLine
- * @var string[]|\Cake\Collection\CollectionInterface $badges
- * @var string[]|\Cake\Collection\CollectionInterface $fulfilments
- * @var string[]|\Cake\Collection\CollectionInterface $audits
- * @var string[]|\Cake\Collection\CollectionInterface $replenishments
+ * @var \Cake\Collection\CollectionInterface|array<string> $badges
+ * @var \Cake\Collection\CollectionInterface|array<string> $fulfilments
+ * @var \Cake\Collection\CollectionInterface|array<string> $audits
+ * @var \Cake\Collection\CollectionInterface|array<string> $replenishments
+ * @var array<string, string> $orderLines
  */
 use App\Model\Enum\TransactionType;
 ?>
@@ -16,7 +17,10 @@ use App\Model\Enum\TransactionType;
             <?= $this->Form->postLink(
                 __('Delete'),
                 ['action' => 'delete', $fulfilmentLine->id],
-                ['confirm' => __('Are you sure you want to delete # {0}?', $fulfilmentLine->id), 'class' => 'side-nav-item']
+                [
+                    'confirm' => __('Are you sure you want to delete # {0}?', $fulfilmentLine->id),
+                    'class' => 'side-nav-item',
+                ],
             ) ?>
             <?= $this->Html->link(__('List Fulfilment Lines'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
         </div>
@@ -28,15 +32,21 @@ use App\Model\Enum\TransactionType;
                 <legend><?= __('Edit Fulfilment Line') ?></legend>
                 <?php
                     echo $this->Form->control('badge_id', ['options' => $badges]);
+                    echo $this->Form->control('order_line_id', [
+                        'options' => $orderLines,
+                        'empty' => __('Select an order line'),
+                    ]);
                     echo $this->Form->control('on_hand_quantity_change');
                     echo $this->Form->control('receipted_quantity_change');
                     echo $this->Form->control('pending_quantity_change');
+                    echo $this->Form->control('fulfilled_quantity_change');
+                    echo $this->Form->control('unit_price');
                     echo $this->Form->control('transaction_type', [
                         'type' => 'text',
                         'value' => TransactionType::Fulfilment->label(),
                         'disabled' => true,
                     ]);
-                ?>
+                    ?>
             </fieldset>
             <?= $this->Form->button(__('Submit')) ?>
             <?= $this->Form->end() ?>

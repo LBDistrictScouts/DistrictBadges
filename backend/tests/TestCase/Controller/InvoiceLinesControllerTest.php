@@ -70,6 +70,7 @@ class InvoiceLinesControllerTest extends TestCase
             'description' => 'New invoice line',
             'quantity' => 2,
             'unit_price' => 4.25,
+            'line_amount' => 8.5,
         ]);
 
         $this->assertRedirect(['controller' => 'InvoiceLines', 'action' => 'index']);
@@ -81,6 +82,7 @@ class InvoiceLinesControllerTest extends TestCase
             ->firstOrFail();
         $this->assertSame(2, (int)$saved->quantity);
         $this->assertEquals(4.25, (float)$saved->unit_price);
+        $this->assertEquals(8.5, (float)$saved->line_amount);
     }
 
     /**
@@ -101,6 +103,7 @@ class InvoiceLinesControllerTest extends TestCase
             'description' => 'Updated invoice line',
             'quantity' => 3,
             'unit_price' => 5.5,
+            'line_amount' => 16.5,
         ]);
 
         $this->assertRedirect(['controller' => 'InvoiceLines', 'action' => 'index']);
@@ -109,6 +112,7 @@ class InvoiceLinesControllerTest extends TestCase
         $updated = $invoiceLines->get($id);
         $this->assertSame('Updated invoice line', $updated->description);
         $this->assertSame(3, (int)$updated->quantity);
+        $this->assertEquals(16.5, (float)$updated->line_amount);
     }
 
     /**
@@ -126,6 +130,7 @@ class InvoiceLinesControllerTest extends TestCase
             'description' => 'Delete invoice line',
             'quantity' => 1,
             'unit_price' => 1.0,
+            'line_amount' => 1.0,
         ]);
         $invoiceLines->saveOrFail($entity);
         $id = $entity->id;

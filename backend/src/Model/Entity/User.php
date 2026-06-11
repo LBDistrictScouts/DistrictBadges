@@ -16,12 +16,20 @@ use Cake\ORM\Entity;
  * @property string|null $login
  * @property int $admin_role
  * @property bool $can_login
+ * @property string $full_name
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\Order[] $orders
  */
 class User extends Entity
 {
+    /**
+     * @var array<string>
+     */
+    protected array $_virtual = [
+        'full_name',
+    ];
+
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
      *
@@ -42,4 +50,12 @@ class User extends Entity
         'account' => true,
         'orders' => true,
     ];
+
+    /**
+     * @return string
+     */
+    protected function _getFullName(): string
+    {
+        return trim((string)$this->get('first_name') . ' ' . (string)$this->get('last_name'));
+    }
 }

@@ -13,7 +13,7 @@
             <?= $this->Form->postLink(
                 __('Delete'),
                 ['action' => 'delete', $orderLine->id],
-                ['confirm' => __('Are you sure you want to delete # {0}?', $orderLine->id), 'class' => 'side-nav-item']
+                ['confirm' => __('Are you sure you want to delete # {0}?', $orderLine->id), 'class' => 'side-nav-item'],
             ) ?>
             <?= $this->Html->link(__('List Order Lines'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
         </div>
@@ -27,6 +27,7 @@
                     echo $this->Form->control('order_id', ['options' => $orders]);
                     echo $this->Form->control('badge_id', ['options' => $badges]);
                     echo $this->Form->control('quantity');
+                    echo $this->Form->control('unit_price');
                     echo $this->Form->control('amount');
                     echo $this->Form->control('fulfilled');
                 ?>

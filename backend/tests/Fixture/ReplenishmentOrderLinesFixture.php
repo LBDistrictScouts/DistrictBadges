@@ -31,9 +31,13 @@ class ReplenishmentOrderLinesFixture extends TestFixture
                 'fulfilment_id' => null,
                 'audit_id' => null,
                 'replenishment_id' => 'f6d1f429-877b-4d92-83a0-cb305d853da7',
+                'order_line_id' => null,
                 'on_hand_quantity_change' => 0,
                 'receipted_quantity_change' => 1,
                 'pending_quantity_change' => 2,
+                'fulfilled_quantity_change' => 0,
+                'monetary_amount' => 4.5,
+                'unit_price' => 2.25,
                 'transaction_type' => '3',
             ],
         ];

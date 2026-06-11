@@ -8,7 +8,6 @@
     <aside class="column">
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
-            <?= $this->Html->link(__('Edit Audit'), ['action' => 'edit', $audit->id], ['class' => 'side-nav-item']) ?>
             <?= $this->Form->postLink(__('Delete Audit'), ['action' => 'delete', $audit->id], ['confirm' => __('Are you sure you want to delete # {0}?', $audit->id), 'class' => 'side-nav-item']) ?>
             <?= $this->Html->link(__('List Audits'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
             <?= $this->Html->link(__('New Audit'), ['action' => 'add'], ['class' => 'side-nav-item']) ?>
@@ -24,7 +23,7 @@
                 </tr>
                 <tr>
                     <th><?= __('User') ?></th>
-                    <td><?= $audit->hasValue('user') ? $this->Html->link($audit->user->first_name, ['controller' => 'Users', 'action' => 'view', $audit->user->id]) : '' ?></td>
+                    <td><?= $audit->hasValue('user') ? $this->Html->link($audit->user->full_name, ['controller' => 'Users', 'action' => 'view', $audit->user->id]) : '' ?></td>
                 </tr>
                 <tr>
                     <th><?= __('Audit Timestamp') ?></th>

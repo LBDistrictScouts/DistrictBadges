@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Enum\FulfilmentStatus;
+use ArrayObject;
+use Cake\Database\Type\EnumType;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
@@ -40,6 +45,22 @@ class FulfilmentsTable extends Table
         $this->setTable('fulfilments');
         $this->setDisplayField('fulfilment_number');
         $this->setPrimaryKey('id');
+        $this->getSchema()->setColumnType(
+            'status',
+            EnumType::from(FulfilmentStatus::class),
+        );
+
+        $this->addBehavior('Timestamp', [
+            'events' => [
+                'Model.beforeSave' => [
+                    'fulfilment_date' => 'new',
+                ],
+            ],
+        ]);
+        $this->addBehavior('EntityNumber', [
+            'field' => 'fulfilment_number',
+            'prefix' => 'FUL',
+        ]);
 
         $this->hasMany('StockTransactions', [
             'foreignKey' => 'fulfilment_id',
@@ -58,16 +79,31 @@ class FulfilmentsTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->dateTime('fulfilment_date')
-            ->requirePresence('fulfilment_date', 'create')
-            ->notEmptyDateTime('fulfilment_date');
-
-        $validator
             ->scalar('fulfilment_number')
             ->maxLength('fulfilment_number', 255)
-            ->requirePresence('fulfilment_number', 'create')
-            ->notEmptyString('fulfilment_number');
+            ->allowEmptyString('fulfilment_number');
+
+        $validator
+            ->integer('status')
+            ->inList('status', array_column(FulfilmentStatus::cases(), 'value'))
+            ->allowEmptyString('status');
 
         return $validator;
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Fulfilment.
+     * @param \ArrayObject $options Save options.
+     * @return void
+     */
+    public function beforeSave(
+        EventInterface $event,
+        EntityInterface $entity,
+        ArrayObject $options,
+    ): void {
+        if ($entity->isNew()) {
+            $entity->set('status', FulfilmentStatus::Draft);
+        }
     }
 }

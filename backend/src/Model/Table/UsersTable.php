@@ -39,7 +39,7 @@ class UsersTable extends Table
         parent::initialize($config);
 
         $this->setTable('users');
-        $this->setDisplayField('first_name');
+        $this->setDisplayField('email');
         $this->setPrimaryKey('id');
 
         $this->belongsTo('Accounts', [

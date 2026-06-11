@@ -19,6 +19,9 @@ use Cake\ORM\Entity;
  * @property int $on_hand_quantity_change
  * @property int $receipted_quantity_change
  * @property int $pending_quantity_change
+ * @property int $fulfilled_quantity_change
+ * @property string|null $monetary_amount
+ * @property string|null $unit_price
  * @property \App\Model\Enum\TransactionType $transaction_type
  *
  * @property \App\Model\Entity\Badge $badge
@@ -47,6 +50,9 @@ class StockTransaction extends Entity
         'on_hand_quantity_change' => true,
         'receipted_quantity_change' => true,
         'pending_quantity_change' => true,
+        'fulfilled_quantity_change' => true,
+        'monetary_amount' => true,
+        'unit_price' => true,
         'transaction_type' => true,
         'badge' => true,
         'fulfilment' => true,

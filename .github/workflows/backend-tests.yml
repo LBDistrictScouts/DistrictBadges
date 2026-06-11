@@ -2,21 +2,53 @@ name: Backend Tests
 
 on:
   push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*'
     paths:
       - 'backend/**'
       - '.github/workflows/backend-tests.yml'
   pull_request:
+    branches:
+      - '*'
     paths:
       - 'backend/**'
       - '.github/workflows/backend-tests.yml'
   workflow_dispatch:
+    inputs:
+      release_environment:
+        description: GitHub Environment used to gate manual releases
+        required: false
+        default: production
+        type: string
 
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lbdistrictscouts/districtbadges-backend
+
 jobs:
-  backend-tests:
+  php-tests:
+    name: CakePHP Backend Tests (PostgreSQL)
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: district_badges_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d district_badges_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v6
 
@@ -24,8 +56,16 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, intl, pdo_sqlite
+          extensions: mbstring, intl, pdo_pgsql
           coverage: none
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
 
       - name: Composer install
         working-directory: backend
@@ -43,4 +83,257 @@ jobs:
         working-directory: backend
         run: composer test
         env:
-          DATABASE_TEST_URL: sqlite://./testdb.sqlite
+          DATABASE_TEST_URL: postgres://postgres:postgres@127.0.0.1:5432/district_badges_test
+
+  ui-asset-tests:
+    name: Backend UI Asset Tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Cache backend Yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            backend/.yarn/cache
+            backend/.yarn/install-state.gz
+            backend/node_modules
+          key: ${{ runner.os }}-backend-yarn-${{ hashFiles('backend/package.json', 'backend/yarn.lock', 'backend/.yarnrc.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-yarn-
+
+      - name: Yarn install
+        run: yarn install --immutable
+
+      - name: Build backend assets
+        run: yarn build
+
+      - name: Check generated backend assets
+        run: test -z "$(git status --porcelain -- webroot/css webroot/js)"
+
+  docker-smoke-test:
+    name: Smoke Test Docker Image
+    needs:
+      - php-tests
+      - ui-asset-tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build smoke-test image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: district-badges-backend:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify runtime dependencies exist
+        run: |
+          docker run --rm district-badges-backend:smoke test -f /var/www/html/vendor/autoload.php
+          docker run --rm district-badges-backend:smoke test -f /var/www/html/bin/cake.php
+          docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/js/vendor/jquery.min.js
+          docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/js/vendor/select2.min.js
+          docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/css/vendor/select2.min.css
+          docker run --rm district-badges-backend:smoke php -r 'require "/var/www/html/vendor/autoload.php";'
+
+  docker-build:
+    name: Build Docker Image (${{ matrix.platform }})
+    if: github.event_name == 'pull_request'
+    needs: docker-smoke-test
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  docker-publish:
+    name: Publish Docker Image (${{ matrix.platform }})
+    if: github.event_name != 'pull_request'
+    needs: docker-smoke-test
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  docker-manifest:
+    name: Publish Docker Manifest
+    if: github.event_name != 'pull_request'
+    needs: docker-publish
+    runs-on: ubuntu-24.04
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || 'production' }}
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Publish release guidance
+        run: |
+          {
+            echo "## Runtime Secrets"
+            echo ""
+            echo "This workflow only publishes the image."
+            echo "Inject application secrets at container runtime via your deploy platform or Kubernetes."
+            echo ""
+            echo "Recommended GitHub Environment secrets for deployments:"
+            echo "- APP_FULL_BASE_URL"
+            echo "- SECURITY_SALT"
+            echo "- DATABASE_URL"
+            echo "- DATABASE_TEST_URL"
+            echo "- POSTGRES_DB"
+            echo "- POSTGRES_USER"
+            echo "- POSTGRES_PASSWORD"
+            echo "- AWS_REGION"
+            echo "- AWS_ACCESS_KEY_ID"
+            echo "- AWS_SECRET_ACCESS_KEY"
+            echo "- AWS_SESSION_TOKEN"
+            echo "- SQS_ORDER_QUEUE_URL"
+            echo "- SQS_BADGE_IMPORT_QUEUE_URL"
+            echo "- SQS_ENDPOINT"
+            echo "- ALGOLIA_ENABLED"
+            echo "- ALGOLIA_APP_ID"
+            echo "- ALGOLIA_ADMIN_API_KEY"
+            echo "- ALGOLIA_INDEX_BADGES"
+            echo "- EMAIL_TRANSPORT_DEFAULT_URL"
+          } >> "$GITHUB_STEP_SUMMARY"

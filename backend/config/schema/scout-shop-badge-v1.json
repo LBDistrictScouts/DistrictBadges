@@ -1,0 +1,101 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://districtbadges.lbdscouts.org.uk/schema/scout-shop-badge-v1.json",
+    "title": "Parsed Scout Shop badge product",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "BadgeName",
+        "NationalBadgeID",
+        "Price",
+        "ImageURL",
+        "ProductURL",
+        "CatagoryPath",
+        "CategoryIDs",
+        "Weight",
+        "BreadCrumb",
+        "Description",
+        "CanonicalURL",
+        "OGImage",
+        "Processed",
+        "SKUCode",
+        "id",
+        "createdAt",
+        "updatedAt"
+    ],
+    "properties": {
+        "BadgeName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+        },
+        "NationalBadgeID": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "Price": {
+            "type": "number",
+            "minimum": 0
+        },
+        "ImageURL": {
+            "type": "string",
+            "minLength": 1
+        },
+        "ProductURL": {
+            "type": "string",
+            "minLength": 1
+        },
+        "CatagoryPath": {
+            "type": "string",
+            "minLength": 1
+        },
+        "CategoryIDs": {
+            "type": "string",
+            "minLength": 1
+        },
+        "Weight": {
+            "type": [
+                "number",
+                "null"
+            ],
+            "minimum": 0
+        },
+        "BreadCrumb": {
+            "type": "string",
+            "minLength": 1
+        },
+        "Description": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "CanonicalURL": {
+            "type": "string",
+            "minLength": 1
+        },
+        "OGImage": {
+            "type": "string",
+            "minLength": 1
+        },
+        "Processed": {
+            "type": "null"
+        },
+        "SKUCode": {
+            "type": "string",
+            "minLength": 1
+        },
+        "id": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+        }
+    }
+}

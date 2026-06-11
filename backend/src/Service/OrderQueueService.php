@@ -64,6 +64,11 @@ class OrderQueueService
             'region' => (string)($config['region'] ?? 'us-east-1'),
         ];
 
+        $profile = $config['profile'] ?? null;
+        if (is_string($profile) && $profile !== '') {
+            $clientConfig['profile'] = $profile;
+        }
+
         $endpoint = $config['endpoint'] ?? null;
         if (is_string($endpoint) && $endpoint !== '') {
             $clientConfig['endpoint'] = $endpoint;

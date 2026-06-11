@@ -78,8 +78,8 @@ class OrdersControllerTest extends TestCase
             'order_number' => 'ORD-100',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
-            'total_amount' => 15.25,
-            'total_quantity' => 2,
+            'total_ordered_amount' => 15.25,
+            'total_ordered_quantity' => 2,
             'lines' => [
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
@@ -107,8 +107,8 @@ class OrdersControllerTest extends TestCase
             'order_number' => '',
             'account_id' => 'not-a-uuid',
             'user_id' => 'not-a-uuid',
-            'total_amount' => 'bad',
-            'total_quantity' => 0,
+            'total_ordered_amount' => 'bad',
+            'total_ordered_quantity' => 0,
             'lines' => [],
         ]);
 
@@ -118,8 +118,8 @@ class OrdersControllerTest extends TestCase
         $this->assertArrayHasKey('order_number', $payload['errors']);
         $this->assertArrayHasKey('account_id', $payload['errors']);
         $this->assertArrayHasKey('user_id', $payload['errors']);
-        $this->assertArrayHasKey('total_amount', $payload['errors']);
-        $this->assertArrayHasKey('total_quantity', $payload['errors']);
+        $this->assertArrayHasKey('total_ordered_amount', $payload['errors']);
+        $this->assertArrayHasKey('total_ordered_quantity', $payload['errors']);
         $this->assertArrayHasKey('lines', $payload['errors']);
     }
 
@@ -148,8 +148,8 @@ class OrdersControllerTest extends TestCase
             'order_number' => 'ORD-200',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
-            'total_amount' => 10.0,
-            'total_quantity' => 1,
+            'total_ordered_amount' => 10.0,
+            'total_ordered_quantity' => 1,
             'lines' => [
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',

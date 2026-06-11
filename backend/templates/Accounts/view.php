@@ -52,7 +52,7 @@
                                     [
                                         'method' => 'delete',
                                         'confirm' => __('Are you sure you want to delete this invoice?'),
-                                    ]
+                                    ],
                                 ) ?>
                             </td>
                         </tr>
@@ -70,8 +70,10 @@
                             <th><?= __('Order Number') ?></th>
                             <th><?= __('Placed Date') ?></th>
                             <th><?= __('Fulfilled') ?></th>
-                            <th><?= __('Total Amount') ?></th>
-                            <th><?= __('Total Quantity') ?></th>
+                            <th><?= __('Total Ordered Amount') ?></th>
+                            <th><?= __('Total Ordered Quantity') ?></th>
+                            <th><?= __('Total Fulfilled Amount') ?></th>
+                            <th><?= __('Total Fulfilled Quantity') ?></th>
                             <th class="actions"><?= __('Actions') ?></th>
                         </tr>
                         <?php foreach ($account->orders as $order) : ?>
@@ -79,8 +81,10 @@
                             <td><?= h($order->order_number) ?></td>
                             <td><?= h($order->placed_date) ?></td>
                             <td><?= h($order->fulfilled) ?></td>
-                            <td><?= h($order->total_amount) ?></td>
-                            <td><?= h($order->total_quantity) ?></td>
+                            <td><?= h($order->total_ordered_amount) ?></td>
+                            <td><?= h($order->total_ordered_quantity) ?></td>
+                            <td><?= h($order->total_fulfilled_amount) ?></td>
+                            <td><?= h($order->total_fulfilled_quantity) ?></td>
                             <td class="actions">
                                 <?= $this->Html->link(__('View'), ['controller' => 'Orders', 'action' => 'view', $order->id]) ?>
                                 <?= $this->Html->link(__('Edit'), ['controller' => 'Orders', 'action' => 'edit', $order->id]) ?>
@@ -90,7 +94,7 @@
                                     [
                                         'method' => 'delete',
                                         'confirm' => __('Are you sure you want to delete this order?'),
-                                    ]
+                                    ],
                                 ) ?>
                             </td>
                         </tr>

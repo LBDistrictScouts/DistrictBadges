@@ -25,6 +25,7 @@ class InvoiceLinesFixture extends TestFixture
                 'description' => 'Lorem ipsum dolor sit amet',
                 'quantity' => 1,
                 'unit_price' => 1.5,
+                'line_amount' => 1.5,
             ],
         ];
         parent::init();

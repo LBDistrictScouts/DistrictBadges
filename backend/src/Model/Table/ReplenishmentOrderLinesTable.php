@@ -21,6 +21,14 @@ class ReplenishmentOrderLinesTable extends StockTransactionsTable
 
         $this->setTable('stock_transactions');
         $this->setEntityClass('App\Model\Entity\ReplenishmentOrderLine');
+
+        $this->addBehavior('LineTotals', [
+            'association' => 'Replenishments',
+            'foreignKey' => 'replenishment_id',
+            'quantityField' => 'pending_quantity_change',
+            'targetAmountField' => 'total_ordered_amount',
+            'targetQuantityField' => 'total_ordered_quantity',
+        ]);
     }
 
     /**

@@ -25,7 +25,6 @@
                 <?php
                     echo $this->Form->control('invoice_date');
                     echo $this->Form->control('due_date');
-                    echo $this->Form->control('invoice_number');
                     echo $this->Form->control('account_id', ['options' => $accounts]);
                 ?>
             </fieldset>

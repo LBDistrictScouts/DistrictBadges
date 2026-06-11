@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Enum\ReplenishmentStatus;
+use ArrayObject;
+use Cake\Database\Type\EnumType;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
@@ -41,6 +46,22 @@ class ReplenishmentsTable extends Table
         $this->setTable('replenishments');
         $this->setDisplayField('wholesale_order_number');
         $this->setPrimaryKey('id');
+        $this->getSchema()->setColumnType(
+            'status',
+            EnumType::from(ReplenishmentStatus::class),
+        );
+
+        $this->addBehavior('Timestamp', [
+            'events' => [
+                'Model.beforeSave' => [
+                    'created_date' => 'new',
+                ],
+            ],
+        ]);
+        $this->addBehavior('EntityNumber', [
+            'field' => 'wholesale_order_number',
+            'prefix' => 'REP',
+        ]);
 
         $this->hasMany('StockTransactions', [
             'foreignKey' => 'replenishment_id',
@@ -62,39 +83,52 @@ class ReplenishmentsTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->dateTime('created_date')
-            ->requirePresence('created_date', 'create')
-            ->notEmptyDateTime('created_date');
-
-        $validator
-            ->boolean('order_submitted')
-            ->notEmptyString('order_submitted');
-
-        $validator
-            ->dateTime('order_submitted_date')
-            ->allowEmptyDateTime('order_submitted_date');
-
-        $validator
-            ->boolean('received')
-            ->notEmptyString('received');
-
-        $validator
-            ->dateTime('received_date')
-            ->allowEmptyDateTime('received_date');
-
-        $validator
-            ->decimal('total_amount')
-            ->notEmptyString('total_amount');
-
-        $validator
-            ->integer('total_quantity')
-            ->notEmptyString('total_quantity');
-
-        $validator
             ->scalar('wholesale_order_number')
             ->maxLength('wholesale_order_number', 64)
-            ->notEmptyString('wholesale_order_number');
+            ->allowEmptyString('wholesale_order_number');
+
+        $validator
+            ->integer('status')
+            ->inList('status', array_column(ReplenishmentStatus::cases(), 'value'))
+            ->allowEmptyString('status');
 
         return $validator;
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Replenishment.
+     * @param \ArrayObject $options Save options.
+     * @return void
+     */
+    public function beforeSave(
+        EventInterface $event,
+        EntityInterface $entity,
+        ArrayObject $options,
+    ): void {
+        $options['dispatchReplenishmentSubmitted'] = $entity->isNew();
+        if ($entity->isNew()) {
+            $entity->set('status', ReplenishmentStatus::Draft);
+            $entity->set('order_submitted', false);
+            $entity->set('received', false);
+        }
+    }
+
+    /**
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Replenishment.
+     * @param \ArrayObject $options Save options.
+     * @return void
+     */
+    public function afterSaveCommit(
+        EventInterface $event,
+        EntityInterface $entity,
+        ArrayObject $options,
+    ): void {
+        if (!($options['dispatchReplenishmentSubmitted'] ?? false)) {
+            return;
+        }
+
+        $this->dispatchEvent('Replenishment.afterSubmit', [], $entity);
     }
 }

@@ -48,8 +48,10 @@ nbproject/*
 .sass-cache/
 # node
 /node_modules/*
+/.yarn/*
 # yarn
 yarn-debug.log
 yarn-error.log
+# npm
 /package-lock.json
 .env

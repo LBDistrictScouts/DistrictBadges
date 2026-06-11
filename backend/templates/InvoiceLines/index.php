@@ -11,24 +11,24 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('invoice_id') ?></th>
                     <th><?= $this->Paginator->sort('badge_id') ?></th>
                     <th><?= $this->Paginator->sort('description') ?></th>
                     <th><?= $this->Paginator->sort('quantity') ?></th>
                     <th><?= $this->Paginator->sort('unit_price') ?></th>
+                    <th><?= $this->Paginator->sort('line_amount') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($invoiceLines as $invoiceLine): ?>
+                <?php foreach ($invoiceLines as $invoiceLine) : ?>
                 <tr>
-                    <td><?= h($invoiceLine->id) ?></td>
                     <td><?= $invoiceLine->hasValue('invoice') ? $this->Html->link($invoiceLine->invoice->invoice_number, ['controller' => 'Invoices', 'action' => 'view', $invoiceLine->invoice->id]) : '' ?></td>
                     <td><?= $invoiceLine->hasValue('badge') ? $this->Html->link($invoiceLine->badge->badge_name, ['controller' => 'Badges', 'action' => 'view', $invoiceLine->badge->id]) : '' ?></td>
                     <td><?= h($invoiceLine->description) ?></td>
                     <td><?= $this->Number->format($invoiceLine->quantity) ?></td>
                     <td><?= $this->Number->format($invoiceLine->unit_price) ?></td>
+                    <td><?= $this->Number->format($invoiceLine->line_amount) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $invoiceLine->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $invoiceLine->id]) ?>
@@ -38,7 +38,7 @@
                             [
                                 'method' => 'delete',
                                 'confirm' => __('Are you sure you want to delete # {0}?', $invoiceLine->id),
-                            ]
+                            ],
                         ) ?>
                     </td>
                 </tr>
