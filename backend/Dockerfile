@@ -12,7 +12,8 @@ WORKDIR /tmp
 RUN apk update && \
     apk add --no-cache bash zip unzip nodejs npm postgresql17-client icu-dev libpq-dev
 
-RUN corepack enable
+RUN npm install -g corepack && \
+    corepack enable
 
 RUN docker-php-ext-configure intl || true && \
     docker-php-ext-configure pgsql && \
