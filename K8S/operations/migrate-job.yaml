@@ -17,7 +17,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: ghcr.io/lbdistrictscouts/districtbadges/backend:latest
+          image: ghcr.io/lbdistrictscouts/districtbadges-backend:latest
           imagePullPolicy: Always
           command:
             - php

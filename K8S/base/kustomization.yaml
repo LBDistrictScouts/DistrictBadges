@@ -26,7 +26,7 @@ labels:
     includeTemplates: true
 
 images:
-  - name: ghcr.io/lbdistrictscouts/districtbadges/backend
+  - name: ghcr.io/lbdistrictscouts/districtbadges-backend
     newTag: latest
 
 commonAnnotations:

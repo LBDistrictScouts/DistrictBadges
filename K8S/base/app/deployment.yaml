@@ -16,7 +16,7 @@ spec:
       serviceAccountName: district-badges-runtime
       initContainers:
         - name: copy-app-code
-          image: ghcr.io/lbdistrictscouts/districtbadges/backend:latest
+          image: ghcr.io/lbdistrictscouts/districtbadges-backend:latest
           imagePullPolicy: Always
           command:
             - sh
@@ -27,7 +27,7 @@ spec:
               mountPath: /workdir
       containers:
         - name: app
-          image: ghcr.io/lbdistrictscouts/districtbadges/backend:latest
+          image: ghcr.io/lbdistrictscouts/districtbadges-backend:latest
           imagePullPolicy: Always
           command:
             - php-fpm
