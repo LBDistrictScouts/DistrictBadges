@@ -7,6 +7,7 @@ resources:
   - core/namespace.yaml
   - core/service-account.yaml
   - secrets/one-password-item.yaml
+  - secrets/ghcr-one-password-item.yaml
   - config/app-config-map.yaml
   - config/nginx-config-map.yaml
   - db/service.yaml

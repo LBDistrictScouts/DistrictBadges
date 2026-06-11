@@ -27,17 +27,27 @@ The 1Password item should expose these keys:
 - `ALGOLIA_APP_ID`
 - `ALGOLIA_ADMIN_API_KEY`
 
-Create or update the matching 1Password items referenced by the manifests with:
+The separate `ghcr-pull-secret` item is shared by every environment and points to `op://Infrastructure/ArgoCD - LBD Repo Creds/dockerconfig.json`. It is exposed as a `kubernetes.io/dockerconfigjson` Secret and attached to the runtime ServiceAccount.
+
+Create or update the matching 1Password items referenced by the manifests:
 
 ```bash
+# interactive prompt will ask for environment: base, test, prod, or all
 bash K8S/scripts/generate-1password-items.sh
 ```
 
 Useful options:
 
 ```bash
-bash K8S/scripts/generate-1password-items.sh --dry-run
-bash K8S/scripts/generate-1password-items.sh --force
+# target only one environment
+bash K8S/scripts/generate-1password-items.sh --env test
+bash K8S/scripts/generate-1password-items.sh --env prod
+
+# process all items without prompts
+bash K8S/scripts/generate-1password-items.sh --env all --force
+
+# preview actions only
+bash K8S/scripts/generate-1password-items.sh --env test --dry-run
 ```
 
 Non-secret environment variables live in `base/config/app-config-map.yaml` and are patched per environment.

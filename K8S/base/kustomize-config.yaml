@@ -15,3 +15,6 @@ nameReference:
         version: v1
         kind: StatefulSet
         path: spec/template/spec/containers/env/valueFrom/secretKeyRef/name
+      - version: v1
+        kind: ServiceAccount
+        path: imagePullSecrets/name
