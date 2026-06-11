@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Controller;
 
 use App\Model\Enum\BadgeStatus;
+use App\Model\Enum\TagCategory;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -23,6 +24,8 @@ class BadgesControllerTest extends TestCase
      */
     protected array $fixtures = [
         'app.Badges',
+        'app.BadgeTags',
+        'app.BadgesBadgeTags',
     ];
 
     /**
@@ -41,6 +44,8 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseNotContains('Replenishment Price');
         $this->assertResponseNotContains('Reserve');
         $this->assertResponseContains('All statuses');
+        $this->assertResponseContains('All sections');
+        $this->assertResponseContains('All badge types');
         $this->assertResponseNotContains(
             '/badges/delete/f525eb6d-021c-4ef2-811f-feac8db8d35d',
         );
@@ -66,6 +71,27 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseContains('Second badge');
     }
 
+    public function testIndexFiltersBySectionAndBadgeType(): void
+    {
+        $sectionId = '3bb4858e-83d2-4ddd-8f72-bab835e05a2d';
+        $typeId = '1cc59bf0-37b3-42db-a5af-47745ac381d5';
+
+        $this->get("/badges?section_tag={$sectionId}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+
+        $this->get("/badges?type_tag={$typeId}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+
+        $this->get("/badges?section_tag={$sectionId}&type_tag={$typeId}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+    }
+
     public function testIndexShowsStockActionOnlyForUnstockedBadges(): void
     {
         $badges = $this->getTableLocator()->get('Badges');
@@ -78,6 +104,20 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseContains('/badges/activate/' . $unstocked->id);
         $this->assertResponseRegExp('/<a[^>]*>Stock<\/a>/');
+    }
+
+    public function testIndexStockActionPreservesFilters(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $unstocked = $badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+        $unstocked->set('stocked', false);
+        $badges->saveOrFail($unstocked, ['skipAlgolia' => true]);
+
+        $this->get('/badges?name=Second&status=40');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('/badges/activate/' . $unstocked->id . '?name=Second');
+        $this->assertResponseContains('status=40');
     }
 
     /**
@@ -108,6 +148,12 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseContains('Stock Amounts');
         $this->assertResponseContains('Calculated Stock');
         $this->assertResponseContains('Historic Stock Movements');
+        $this->assertResponseContains('Sections');
+        $this->assertResponseContains('Beavers');
+        $this->assertResponseContains('Badge Types');
+        $this->assertResponseContains('Activity Badge');
+        $this->assertResponseContains('badge-tag--section');
+        $this->assertResponseContains('badge-tag--type');
         $this->assertResponseRegExp('/data-stock-amount="on-hand">\s*11\s*<\/strong>/');
         $this->assertResponseRegExp('/data-stock-amount="reserve">\s*10\s*<\/strong>/');
         $this->assertResponseRegExp('/data-stock-amount="pending">\s*12\s*<\/strong>/');
@@ -152,6 +198,45 @@ class BadgesControllerTest extends TestCase
         $this->assertSame(2.75, (float)$saved->replenishment_price);
     }
 
+    public function testAddAssociatesSelectedTags(): void
+    {
+        $this->enableCsrfToken();
+        $this->post('/badges/add', [
+            'badge_name' => 'Tagged Badge',
+            'stocked' => true,
+            'reserve_quantity' => 0,
+            'price' => '4.50',
+            'replenishment_price' => '2.75',
+            'badge_tags' => [
+                '_ids' => [
+                    '3bb4858e-83d2-4ddd-8f72-bab835e05a2d',
+                    '1cc59bf0-37b3-42db-a5af-47745ac381d5',
+                ],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+
+        $badge = $this->getTableLocator()->get('Badges')
+            ->find()
+            ->where(['badge_name' => 'Tagged Badge'])
+            ->contain(['BadgeTags'])
+            ->firstOrFail();
+        $this->assertCount(2, $badge->badge_tags);
+    }
+
+    public function testAddDisplaysTagsGroupedByCategory(): void
+    {
+        $this->get('/badges/add');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains(TagCategory::Sections->label());
+        $this->assertResponseContains(TagCategory::BadgeTypes->label());
+        $this->assertResponseContains('Beavers');
+        $this->assertResponseContains('Activity Badge');
+        $this->assertResponseContains('badge_tags[_ids][]');
+    }
+
     /**
      * Test edit method
      *
@@ -185,6 +270,64 @@ class BadgesControllerTest extends TestCase
         $this->assertSame(3.25, (float)$updated->replenishment_price);
     }
 
+    public function testEditReplacesSelectedTags(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->enableCsrfToken();
+        $this->put("/badges/edit/{$id}", [
+            'badge_name' => 'Updated Badge',
+            'stocked' => true,
+            'reserve_quantity' => 2,
+            'price' => '5.25',
+            'replenishment_price' => '3.25',
+            'badge_tags' => [
+                '_ids' => ['1cc59bf0-37b3-42db-a5af-47745ac381d5'],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+
+        $updated = $badges->get($id, contain: ['BadgeTags']);
+        $this->assertCount(1, $updated->badge_tags);
+        $this->assertSame('Activity Badge', $updated->badge_tags[0]->tag_name);
+    }
+
+    public function testEditDisplaysExistingTagAsSelected(): void
+    {
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->get("/badges/edit/{$id}");
+
+        $this->assertResponseOk();
+        $this->assertResponseRegExp(
+            '/value="3bb4858e-83d2-4ddd-8f72-bab835e05a2d"[^>]*checked="checked"/',
+        );
+    }
+
+    public function testEditCanClearAllTags(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->enableCsrfToken();
+        $this->put("/badges/edit/{$id}", [
+            'badge_name' => 'Updated Badge',
+            'stocked' => true,
+            'reserve_quantity' => 2,
+            'price' => '5.25',
+            'replenishment_price' => '3.25',
+            'badge_tags' => ['_ids' => ''],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $this->assertSame(
+            [],
+            $badges->get($id, contain: ['BadgeTags'])->badge_tags,
+        );
+    }
+
     public function testActivateUnstockedBadge(): void
     {
         $badges = $this->getTableLocator()->get('Badges');
@@ -203,6 +346,21 @@ class BadgesControllerTest extends TestCase
         $updated = $badges->get($id);
         $this->assertTrue($updated->stocked);
         $this->assertSame(BadgeStatus::Unavailable, $updated->status);
+    }
+
+    public function testActivatePreservesFiltersOnRedirect(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+        $badges->updateAll([
+            'stocked' => false,
+            'status' => BadgeStatus::Unstocked->value,
+        ], ['id' => $id]);
+
+        $this->enableCsrfToken();
+        $this->post("/badges/activate/{$id}?name=Second&status=40");
+
+        $this->assertRedirect('/badges?name=Second&status=40');
     }
 
     public function testActivateRejectsBadgeThatIsNotUnstocked(): void

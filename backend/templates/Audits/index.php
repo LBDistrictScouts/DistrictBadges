@@ -11,7 +11,6 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('id') ?></th>
                     <th><?= $this->Paginator->sort('user_id') ?></th>
                     <th><?= $this->Paginator->sort('audit_timestamp') ?></th>
                     <th><?= $this->Paginator->sort('audit_completed') ?></th>
@@ -19,9 +18,8 @@
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($audits as $audit): ?>
+                <?php foreach ($audits as $audit) : ?>
                 <tr>
-                    <td><?= h($audit->id) ?></td>
                     <td><?= $audit->hasValue('user') ? $this->Html->link($audit->user->full_name, ['controller' => 'Users', 'action' => 'view', $audit->user->id]) : '' ?></td>
                     <td><?= h($audit->audit_timestamp) ?></td>
                     <td><?= h($audit->audit_completed) ?></td>
@@ -33,7 +31,7 @@
                             [
                                 'method' => 'delete',
                                 'confirm' => __('Are you sure you want to delete # {0}?', $audit->id),
-                            ]
+                            ],
                         ) ?>
                     </td>
                 </tr>

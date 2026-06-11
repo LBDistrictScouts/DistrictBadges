@@ -6,6 +6,8 @@ use App\Model\Enum\BadgeStatus;
  * @var iterable<\App\Model\Entity\Badge> $badges
  * @var array<string, string> $filters
  * @var array<int, string> $statusOptions
+ * @var \Cake\Collection\CollectionInterface|array<string, string> $sectionTagOptions
+ * @var \Cake\Collection\CollectionInterface|array<string, string> $typeTagOptions
  */
 ?>
 <div class="badges index content">
@@ -22,6 +24,20 @@ use App\Model\Enum\BadgeStatus;
             'options' => $statusOptions,
             'empty' => __('All statuses'),
             'value' => $filters['status'],
+        ]) ?>
+    </div>
+    <div class="index-filters__row">
+        <?= $this->Form->control('section_tag', [
+            'label' => __('Section'),
+            'options' => $sectionTagOptions,
+            'empty' => __('All sections'),
+            'value' => $filters['section_tag'],
+        ]) ?>
+        <?= $this->Form->control('type_tag', [
+            'label' => __('Badge Type'),
+            'options' => $typeTagOptions,
+            'empty' => __('All badge types'),
+            'value' => $filters['type_tag'],
         ]) ?>
     </div>
     <div class="index-filters__actions">
@@ -61,7 +77,11 @@ use App\Model\Enum\BadgeStatus;
                         <?php if ($badge->status === BadgeStatus::Unstocked) : ?>
                             <?= $this->Form->postLink(
                                 __('Stock'),
-                                ['action' => 'activate', $badge->id],
+                                [
+                                    'action' => 'activate',
+                                    $badge->id,
+                                    '?' => $this->request->getQueryParams(),
+                                ],
                                 [
                                     'confirm' => __(
                                         'Are you sure you want to mark this badge as stocked?',

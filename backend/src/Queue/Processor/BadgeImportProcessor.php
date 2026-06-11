@@ -72,6 +72,8 @@ class BadgeImportProcessor
             $badge ??= $badges->newEmptyEntity();
 
             if (!$isNew && hash_equals((string)$badge->latest_hash, $hash)) {
+                $badges->associateTagsFromBadgeName($badge);
+
                 return self::ACK;
             }
 
@@ -106,7 +108,12 @@ class BadgeImportProcessor
                 return self::REJECT;
             }
 
-            $badges->saveOrFail($badge, ['skipNationalData' => true]);
+            $badges->saveOrFail($badge, [
+                'skipAlgolia' => true,
+                'skipNationalData' => true,
+            ]);
+            $badges->associateTagsFromBadgeName($badge, false);
+            $badges->syncBadgeToAlgolia($badge);
 
             return self::ACK;
         } catch (Throwable $exception) {

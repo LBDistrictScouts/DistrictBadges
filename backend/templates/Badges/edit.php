@@ -2,6 +2,7 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Badge $badge
+ * @var array<string, array<string, string>> $badgeTagOptions
  */
 ?>
 <div class="row">
@@ -33,7 +34,14 @@
                     echo $this->Form->control('reserve_quantity', ['min' => 0]);
                     echo $this->Form->control('price');
                     echo $this->Form->control('replenishment_price');
-                ?>
+                    echo $this->Form->control('badge_tags._ids', [
+                        'type' => 'select',
+                        'multiple' => 'checkbox',
+                        'options' => $badgeTagOptions,
+                        'label' => __('Tags'),
+                        'class' => 'badge-tag-checkboxes',
+                    ]);
+                    ?>
             </fieldset>
             <?= $this->Form->button(__('Submit')) ?>
             <?= $this->Form->end() ?>

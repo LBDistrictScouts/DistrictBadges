@@ -5,6 +5,7 @@ namespace App\Service;
 
 use Algolia\AlgoliaSearch\Api\SearchClient;
 use App\Model\Entity\Badge;
+use App\Model\Enum\BadgeStatus;
 use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
@@ -49,7 +50,7 @@ class AlgoliaService
      */
     public function upsertBadge(EntityInterface $badge): void
     {
-        if (!$this->enabled || $this->client === null) {
+        if (!$this->isEnabled()) {
             return;
         }
 
@@ -61,6 +62,45 @@ class AlgoliaService
     }
 
     /**
+     * Replace the complete badge index with the supplied searchable badges.
+     *
+     * @param iterable<\Cake\Datasource\EntityInterface> $badges Badges to index.
+     * @return int Number of indexed badges.
+     */
+    public function replaceBadges(iterable $badges): int
+    {
+        if (!$this->isEnabled()) {
+            return 0;
+        }
+
+        $payloads = [];
+        foreach ($badges as $badge) {
+            $status = $badge->get('status');
+            if (
+                $status === BadgeStatus::Unstocked
+                || $status === BadgeStatus::Unstocked->value
+            ) {
+                continue;
+            }
+
+            $this->requireObjectId($badge);
+            $payloads[] = $this->resolveBadgePayload($badge);
+        }
+
+        $this->client->replaceAllObjects($this->indexName, $payloads);
+
+        return count($payloads);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEnabled(): bool
+    {
+        return $this->enabled && $this->client !== null;
+    }
+
+    /**
      * Remove a badge that should no longer be searchable.
      *
      * @param \Cake\Datasource\EntityInterface $badge Badge entity.
@@ -68,7 +108,7 @@ class AlgoliaService
      */
     public function deleteBadge(EntityInterface $badge): void
     {
-        if (!$this->enabled || $this->client === null) {
+        if (!$this->isEnabled()) {
             return;
         }
 

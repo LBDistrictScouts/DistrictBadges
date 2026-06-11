@@ -3,6 +3,8 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Badge $badge
  */
+$badgeSections = $badge->badge_sections;
+$badgeTypes = $badge->badge_types;
 ?>
 <div class="row">
     <aside class="column">
@@ -26,6 +28,32 @@
     <div class="column column-80">
         <div class="badges view content">
             <h3><?= h($badge->badge_name) ?></h3>
+            <div class="badge-tag-groups">
+                <?php if (count($badgeSections) > 0) : ?>
+                    <section class="badge-tag-group">
+                        <span class="badge-tag-group__label"><?= __('Sections') ?></span>
+                        <div class="badge-tag-list">
+                            <?php foreach ($badgeSections as $section) : ?>
+                                <span class="badge-tag badge-tag--section">
+                                    <?= h($section->tag_name) ?>
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endif; ?>
+                <?php if (count($badgeTypes) > 0) : ?>
+                    <section class="badge-tag-group">
+                        <span class="badge-tag-group__label"><?= __('Badge Types') ?></span>
+                        <div class="badge-tag-list">
+                            <?php foreach ($badgeTypes as $type) : ?>
+                                <span class="badge-tag badge-tag--type">
+                                    <?= h($type->tag_name) ?>
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endif; ?>
+            </div>
             <table>
                 <tr>
                     <th><?= __('Status') ?></th>
@@ -41,7 +69,7 @@
                 </tr>
                 <tr>
                     <th><?= __('National Product Code') ?></th>
-                    <td><?= $badge->national_product_code === null ? '' : h((string)$badge->national_product_code) ?></td>
+                    <td><?= h((string)($badge->national_product_code ?? '')) ?></td>
                 </tr>
                 <tr>
                     <th><?= __('Stocked') ?></th>

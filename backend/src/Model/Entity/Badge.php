@@ -27,6 +27,9 @@ use Cake\ORM\Entity;
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
  * @property \App\Model\Entity\InvoiceLine[] $invoice_lines
  * @property \App\Model\Entity\OrderLine[] $order_lines
+ * @property \App\Model\Entity\BadgeTag[] $badge_tags
+ * @property \App\Model\Entity\BadgeSection[] $badge_sections
+ * @property \App\Model\Entity\BadgeType[] $badge_types
  *
  * @property ?string $image_path
  * @property ?string $image_large_url
@@ -62,6 +65,9 @@ class Badge extends Entity
         'stock_transactions' => true,
         'invoice_lines' => true,
         'order_lines' => true,
+        'badge_tags' => true,
+        'badge_sections' => true,
+        'badge_types' => true,
     ];
 
     protected array $_hidden = [
@@ -135,14 +141,35 @@ class Badge extends Entity
             'id' => (string)$this->get('id'),
             'badge_name' => $this->get('badge_name'),
             'national_product_code' => $this->get('national_product_code'),
-            'stocked' => (bool)$this->get('stocked'),
             'status' => $status instanceof BadgeStatus ? $status->label() : null,
-            'status_value' => $status instanceof BadgeStatus ? $status->value : null,
             'available' => $status === BadgeStatus::Available,
-            'price' => $this->get('price'),
+            'price' => (float)$this->get('price'),
+            'reserve_quantity' => (int)$this->get('reserve_quantity'),
+            'on_hand_quantity' => (int)$this->get('on_hand_quantity'),
             'image_large_url' => $this->get('image_large_url'),
             'image_medium_url' => $this->get('image_medium_url'),
+            'section_tags' => $this->tagNames('badge_sections'),
+            'type_tags' => $this->tagNames('badge_types'),
         ];
+    }
+
+    /**
+     * @param string $property Association property.
+     * @return list<string>
+     */
+    private function tagNames(string $property): array
+    {
+        $tags = $this->get($property);
+        if (!is_iterable($tags)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($tags as $tag) {
+            $names[] = (string)$tag->get('tag_name');
+        }
+
+        return $names;
     }
 
     /**

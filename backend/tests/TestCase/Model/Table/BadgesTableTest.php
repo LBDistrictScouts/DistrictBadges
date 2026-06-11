@@ -5,6 +5,7 @@ namespace App\Test\TestCase\Model\Table;
 
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
+use App\Model\Enum\TagCategory;
 use App\Service\AlgoliaService;
 use Cake\Datasource\EntityInterface;
 use Cake\TestSuite\TestCase;
@@ -31,6 +32,8 @@ class BadgesTableTest extends TestCase
         'app.Accounts',
         'app.Users',
         'app.Badges',
+        'app.BadgeTags',
+        'app.BadgesBadgeTags',
         'app.Orders',
         'app.OrderLines',
     ];
@@ -193,6 +196,138 @@ class BadgesTableTest extends TestCase
         $this->assertArrayNotHasKey($badgeId, $this->Badges->getReplenishmentRequirements());
     }
 
+    public function testBadgeTagsManyToManyAssociation(): void
+    {
+        $badge = $this->Badges->get(
+            'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+            contain: ['BadgeTags'],
+        );
+
+        $this->assertCount(2, $badge->badge_tags);
+        $this->assertSame('Beavers', $badge->badge_tags[0]->tag_name);
+        $this->assertSame(TagCategory::Sections, $badge->badge_tags[0]->tag_category);
+    }
+
+    public function testCategorySpecificBadgeTagAssociations(): void
+    {
+        $badge = $this->Badges->get(
+            'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+            contain: ['BadgeSections', 'BadgeTypes'],
+        );
+
+        $this->assertCount(1, $badge->badge_sections);
+        $this->assertSame('Beavers', $badge->badge_sections[0]->tag_name);
+        $this->assertCount(1, $badge->badge_types);
+        $this->assertSame('Activity Badge', $badge->badge_types[0]->tag_name);
+    }
+
+    public function testAssociateTagsFromBadgeNameIsCaseInsensitiveAndIdempotent(): void
+    {
+        $badge = $this->Badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+        $badge->set('badge_name', 'bEaVeRs Activity Badge');
+        $this->Badges->saveOrFail($badge, ['skipAlgolia' => true]);
+
+        $this->assertSame(2, $this->Badges->associateTagsFromBadgeName($badge));
+        $this->assertSame(0, $this->Badges->associateTagsFromBadgeName($badge));
+
+        $tagged = $this->Badges->get($badge->id, contain: ['BadgeTags']);
+        $this->assertSame(
+            ['Beavers', 'Activity Badge'],
+            array_map(
+                static fn($tag): string => $tag->tag_name,
+                $tagged->badge_tags,
+            ),
+        );
+    }
+
+    public function testAssociateTagsFromBadgeNameSupportsStartAnchor(): void
+    {
+        $this->Badges->BadgeTags->updateAll(
+            ['tag_search_text' => '^beavers'],
+            ['id' => '3bb4858e-83d2-4ddd-8f72-bab835e05a2d'],
+        );
+        $badge = $this->Badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+
+        $badge->set('badge_name', 'Young Beavers Award');
+        $this->assertSame(0, $this->Badges->associateTagsFromBadgeName($badge, false));
+
+        $badge->set('badge_name', 'bEaVeRs Award');
+        $this->assertSame(1, $this->Badges->associateTagsFromBadgeName($badge, false));
+    }
+
+    public function testAssociateTagsFromBadgeNameSupportsEndAnchor(): void
+    {
+        $this->Badges->BadgeTags->updateAll(
+            ['tag_search_text' => 'activity badge$'],
+            ['id' => '1cc59bf0-37b3-42db-a5af-47745ac381d5'],
+        );
+        $badge = $this->Badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+
+        $badge->set('badge_name', 'Activity Badge Staged');
+        $this->assertSame(0, $this->Badges->associateTagsFromBadgeName($badge, false));
+
+        $badge->set('badge_name', 'Explorers AcTiViTy BaDgE');
+        $this->assertSame(1, $this->Badges->associateTagsFromBadgeName($badge, false));
+    }
+
+    public function testAssociateTagsFromBadgeNameSupportsBothAnchors(): void
+    {
+        $this->Badges->BadgeTags->updateAll(
+            ['tag_search_text' => '^activity badge$'],
+            ['id' => '1cc59bf0-37b3-42db-a5af-47745ac381d5'],
+        );
+        $badge = $this->Badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+
+        $badge->set('badge_name', 'Young Activity Badge');
+        $this->assertSame(0, $this->Badges->associateTagsFromBadgeName($badge, false));
+
+        $badge->set('badge_name', 'AcTiViTy BaDgE');
+        $this->assertSame(1, $this->Badges->associateTagsFromBadgeName($badge, false));
+    }
+
+    public function testAssociateTagsFromBadgeNameTreatsInternalDollarSignLiterally(): void
+    {
+        $this->Badges->BadgeTags->updateAll(
+            ['tag_search_text' => 'Act$ivity'],
+            ['id' => '1cc59bf0-37b3-42db-a5af-47745ac381d5'],
+        );
+        $badge = $this->Badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+
+        $badge->set('badge_name', 'Activity Badge');
+        $this->assertSame(0, $this->Badges->associateTagsFromBadgeName($badge, false));
+
+        $badge->set('badge_name', 'Act$ivity Badge');
+        $this->assertSame(1, $this->Badges->associateTagsFromBadgeName($badge, false));
+    }
+
+    public function testAssociateTagsFromBadgeNameTreatsRegexCharactersLiterally(): void
+    {
+        $this->Badges->BadgeTags->updateAll(
+            ['tag_search_text' => '^Beavers.*'],
+            ['id' => '3bb4858e-83d2-4ddd-8f72-bab835e05a2d'],
+        );
+        $badge = $this->Badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+
+        $badge->set('badge_name', 'Beavers Award');
+        $this->assertSame(0, $this->Badges->associateTagsFromBadgeName($badge, false));
+
+        $badge->set('badge_name', 'Beavers.* Award');
+        $this->assertSame(1, $this->Badges->associateTagsFromBadgeName($badge, false));
+    }
+
+    public function testAssociateTagsForAllBadges(): void
+    {
+        $this->Badges->updateAll(
+            ['badge_name' => 'Beavers Activity Badge'],
+            ['id' => '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70'],
+        );
+
+        $result = $this->Badges->associateTagsForAllBadges();
+
+        $this->assertSame(2, $result['badges']);
+        $this->assertSame(2, $result['associations']);
+    }
+
     /**
      * Test afterSave triggers Algolia sync.
      *
@@ -203,7 +338,10 @@ class BadgesTableTest extends TestCase
         $service = $this->createMock(AlgoliaService::class);
         $service->expects($this->once())
             ->method('upsertBadge')
-            ->with($this->isInstanceOf(EntityInterface::class));
+            ->with($this->callback(
+                fn(EntityInterface $badge): bool => count($badge->get('badge_sections')) === 0
+                    && count($badge->get('badge_types')) === 0,
+            ));
 
         $this->Badges->setAlgoliaService($service);
 
@@ -275,5 +413,28 @@ class BadgesTableTest extends TestCase
 
         $this->Badges->saveOrFail($badge);
         $this->assertSame(BadgeStatus::Unstocked, $badge->status);
+    }
+
+    public function testRefreshAlgoliaIndexExcludesUnstockedBadges(): void
+    {
+        $this->Badges->updateAll(
+            ['status' => BadgeStatus::Unstocked->value],
+            ['id' => '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70'],
+        );
+
+        $service = $this->createMock(AlgoliaService::class);
+        $service->expects($this->once())
+            ->method('replaceBadges')
+            ->with($this->callback(function (iterable $badges): bool {
+                $badges = iterator_to_array($badges);
+
+                return count($badges) === 1
+                    && $badges[0]->id === 'f525eb6d-021c-4ef2-811f-feac8db8d35d'
+                    && count($badges[0]->badge_sections) === 1
+                    && count($badges[0]->badge_types) === 1;
+            }))
+            ->willReturn(1);
+
+        $this->assertSame(1, $this->Badges->refreshAlgoliaIndex($service));
     }
 }

@@ -11,6 +11,8 @@ class BadgeImportProcessorTest extends TestCase
 {
     protected array $fixtures = [
         'app.Badges',
+        'app.BadgeTags',
+        'app.BadgesBadgeTags',
     ];
 
     protected function setUp(): void
@@ -39,6 +41,13 @@ class BadgeImportProcessorTest extends TestCase
         $this->assertSame('100779', $badge->national_data['result'][0]['SKUCode']);
         $this->assertSame('/product/1/0/100779.jpg', $badge->image_path);
         $this->assertSame(64, strlen($badge->latest_hash));
+
+        $badge = $this->getTableLocator()->get('Badges')->get(
+            $badge->id,
+            contain: ['BadgeSections', 'BadgeTypes'],
+        );
+        $this->assertSame(['Beavers'], array_column($badge->badge_sections, 'tag_name'));
+        $this->assertSame([], $badge->badge_types);
     }
 
     public function testProcessUpdatesExistingBadgeWithoutChangingStockControls(): void
