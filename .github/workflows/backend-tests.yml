@@ -1,15 +1,13 @@
-name: Tests
+name: Backend Tests
 
 on:
   push:
     paths:
       - 'backend/**'
-      - 'webstore/**'
       - '.github/workflows/backend-tests.yml'
   pull_request:
     paths:
       - 'backend/**'
-      - 'webstore/**'
       - '.github/workflows/backend-tests.yml'
   workflow_dispatch:
 
@@ -18,7 +16,7 @@ permissions:
 
 jobs:
   backend-tests:
-    name: Backend Tests (PostgreSQL)
+    name: CakePHP Backend Tests (PostgreSQL)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -52,6 +50,26 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Cache backend Yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            backend/.yarn/cache
+            backend/.yarn/install-state.gz
+            backend/node_modules
+          key: ${{ runner.os }}-backend-yarn-${{ hashFiles('backend/package.json', 'backend/yarn.lock', 'backend/.yarnrc.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-yarn-
+
       - name: Composer install
         working-directory: backend
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -82,12 +100,12 @@ jobs:
         env:
           DATABASE_TEST_URL: postgres://postgres:postgres@127.0.0.1:5432/district_badges_test
 
-  frontend-tests:
-    name: Frontend Tests
+  backend-ui-asset-tests:
+    name: Backend UI Asset Tests
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: webstore
+        working-directory: backend
     steps:
       - uses: actions/checkout@v6
 
@@ -98,6 +116,18 @@ jobs:
 
       - name: Setup Yarn
         run: corepack enable
+
+      - name: Cache frontend Yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            backend/.yarn/cache
+            backend/.yarn/install-state.gz
+            backend/node_modules
+          key: ${{ runner.os }}-frontend-yarn-${{ hashFiles('backend/package.json', 'backend/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-yarn-
 
       - name: Yarn install
         run: yarn install --immutable
