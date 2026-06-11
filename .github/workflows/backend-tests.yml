@@ -30,6 +30,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ghcr.io
   IMAGE_NAME: lbdistrictscouts/districtbadges-backend
+  IMAGE_DESCRIPTION: CakePHP backend for the Letchworth, Baldock and Ashwell Scouts District Badges stock and ordering system.
 
 jobs:
   php-tests:
@@ -60,7 +61,7 @@ jobs:
           coverage: none
 
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
@@ -103,7 +104,7 @@ jobs:
         run: corepack enable
 
       - name: Cache backend Yarn dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.yarn/berry/cache
@@ -270,7 +271,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || 'production' }}
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -305,8 +306,50 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          docker buildx imagetools create \
+            --annotation "index:org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}" \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Create GitHub release for tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          digest="$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest.Digest}}' | jq -r '.')"
+          {
+            echo "<!-- backend-image:start -->"
+            echo "## Container Image"
+            echo ""
+            echo "Published backend image:"
+            echo ""
+            echo '```text'
+            echo "$IMAGE:$TAG"
+            echo "$IMAGE@$digest"
+            echo '```'
+            echo ""
+            echo "Package: https://github.com/${{ github.repository }}/pkgs/container/districtbadges-backend"
+            echo "<!-- backend-image:end -->"
+          } > /tmp/image-notes.md
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release view "$TAG" --json body --jq .body > /tmp/current-notes.md
+            awk '
+              /<!-- backend-image:start -->/ { skip = 1; next }
+              /<!-- backend-image:end -->/ { skip = 0; next }
+              !skip { print }
+            ' /tmp/current-notes.md > /tmp/kept-notes.md
+            {
+              cat /tmp/kept-notes.md
+              echo ""
+              cat /tmp/image-notes.md
+            } > /tmp/release-notes.md
+            gh release edit "$TAG" --notes-file /tmp/release-notes.md
+          else
+            gh release create "$TAG" --title "$TAG" --notes-file /tmp/image-notes.md
+          fi
 
       - name: Publish release guidance
         run: |

@@ -1,6 +1,9 @@
 ARG PHP_VERSION=8.5
 FROM php:${PHP_VERSION}-fpm-alpine
 LABEL authors="Jacob Tyler, Letchworth, Baldock & Ashwell Scouts"
+LABEL org.opencontainers.image.title="District Badges Backend"
+LABEL org.opencontainers.image.description="CakePHP backend for the Letchworth, Baldock and Ashwell Scouts District Badges stock and ordering system."
+LABEL org.opencontainers.image.source="https://github.com/LBDistrictScouts/DistrictBadges"
 
 ARG user=www-data
 ARG group=www-data
