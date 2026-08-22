@@ -53,4 +53,6 @@ RUN test ! -f config/app_local.php && \
     rm -f config/app_local.php && \
     ln -sf /dev/stdout logs/debug.log && \
     ln -sf /dev/stderr logs/error.log && \
+    ln -sf /dev/stdout logs/cli-debug.log && \
+    ln -sf /dev/stderr logs/cli-error.log && \
     test ! -f config/app_local.php

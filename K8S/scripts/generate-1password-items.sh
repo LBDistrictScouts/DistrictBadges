@@ -162,6 +162,25 @@ prompt_with_default() {
   fi
 }
 
+prompt_secret_with_default() {
+  local label="$1"
+  local default_value="$2"
+  local default_description="$3"
+  local value
+
+  read -r -s -p "${label} [${default_description}]: " value
+  printf '\n' >&2
+  printf '%s\n' "${value:-$default_value}"
+}
+
+existing_field() {
+  local vault="$1"
+  local item="$2"
+  local label="$3"
+
+  op item get "$item" --vault "$vault" --fields "label=${label}" --reveal 2>/dev/null || true
+}
+
 upsert_item() {
   local vault="$1"
   local item="$2"
@@ -169,23 +188,54 @@ upsert_item() {
   local db_name db_user db_pass security_salt smtp_url
   local aws_key aws_secret sqs_order sqs_badge algolia_app algolia_key
   local db_host db_url
+  local exists=false
 
-  db_name="$(prompt_with_default "POSTGRES_DB" "district_badges")"
-  db_user="$(prompt_with_default "POSTGRES_USER" "district_badges")"
-  db_pass="$(prompt_with_default "POSTGRES_PASSWORD" "$(rand_hex 16)")"
-  security_salt="$(prompt_with_default "SECURITY_SALT" "$(rand_hex 32)")"
+  if op item get "$item" --vault "$vault" >/dev/null 2>&1; then
+    exists=true
+  fi
 
-  db_host="$(default_postgres_host_for_item "$item")"
-  db_url="postgres://${db_user}:${db_pass}@${db_host}:5432/${db_name}?encoding=utf8&timezone=UTC&cacheMetadata=true"
-  db_url="$(prompt_with_default "DATABASE_URL" "$db_url")"
+  if [ "$exists" = true ]; then
+    db_name="$(existing_field "$vault" "$item" POSTGRES_DB)"
+    db_user="$(existing_field "$vault" "$item" POSTGRES_USER)"
+    db_pass="$(existing_field "$vault" "$item" POSTGRES_PASSWORD)"
+    security_salt="$(existing_field "$vault" "$item" SECURITY_SALT)"
+    db_url="$(existing_field "$vault" "$item" DATABASE_URL)"
+    smtp_url="$(existing_field "$vault" "$item" EMAIL_TRANSPORT_DEFAULT_URL)"
+    aws_key="$(existing_field "$vault" "$item" AWS_ACCESS_KEY_ID)"
+    aws_secret="$(existing_field "$vault" "$item" AWS_SECRET_ACCESS_KEY)"
+    sqs_order="$(existing_field "$vault" "$item" SQS_ORDER_QUEUE_URL)"
+    sqs_badge="$(existing_field "$vault" "$item" SQS_BADGE_IMPORT_QUEUE_URL)"
+    algolia_app="$(existing_field "$vault" "$item" ALGOLIA_APP_ID)"
+    algolia_key="$(existing_field "$vault" "$item" ALGOLIA_ADMIN_API_KEY)"
+  else
+    db_name="district_badges"
+    db_user="district_badges"
+    db_pass="$(rand_hex 16)"
+    security_salt="$(rand_hex 32)"
+    db_host="$(default_postgres_host_for_item "$item")"
+    db_url="postgres://${db_user}:${db_pass}@${db_host}:5432/${db_name}?encoding=utf8&timezone=UTC&cacheMetadata=true"
+    smtp_url=""
+    aws_key=""
+    aws_secret=""
+    sqs_order=""
+    sqs_badge=""
+    algolia_app=""
+    algolia_key=""
+  fi
 
-  smtp_url="$(prompt_with_default "EMAIL_TRANSPORT_DEFAULT_URL" "")"
-  aws_key="$(prompt_with_default "AWS_ACCESS_KEY_ID" "")"
-  aws_secret="$(prompt_with_default "AWS_SECRET_ACCESS_KEY" "")"
-  sqs_order="$(prompt_with_default "SQS_ORDER_QUEUE_URL" "")"
-  sqs_badge="$(prompt_with_default "SQS_BADGE_IMPORT_QUEUE_URL" "")"
-  algolia_app="$(prompt_with_default "ALGOLIA_APP_ID" "")"
-  algolia_key="$(prompt_with_default "ALGOLIA_ADMIN_API_KEY" "")"
+  db_name="$(prompt_with_default "POSTGRES_DB" "$db_name")"
+  db_user="$(prompt_with_default "POSTGRES_USER" "$db_user")"
+  db_pass="$(prompt_secret_with_default "POSTGRES_PASSWORD" "$db_pass" "$([ "$exists" = true ] && printf 'keep existing' || printf 'generated')")"
+  security_salt="$(prompt_secret_with_default "SECURITY_SALT" "$security_salt" "$([ "$exists" = true ] && printf 'keep existing' || printf 'generated')")"
+  db_url="$(prompt_secret_with_default "DATABASE_URL" "$db_url" "$([ "$exists" = true ] && printf 'keep existing' || printf 'generated')")"
+
+  smtp_url="$(prompt_with_default "EMAIL_TRANSPORT_DEFAULT_URL" "$smtp_url")"
+  aws_key="$(prompt_secret_with_default "AWS_ACCESS_KEY_ID" "$aws_key" "$([ "$exists" = true ] && printf 'keep existing' || printf 'empty')")"
+  aws_secret="$(prompt_secret_with_default "AWS_SECRET_ACCESS_KEY" "$aws_secret" "$([ "$exists" = true ] && printf 'keep existing' || printf 'empty')")"
+  sqs_order="$(prompt_with_default "SQS_ORDER_QUEUE_URL" "$sqs_order")"
+  sqs_badge="$(prompt_with_default "SQS_BADGE_IMPORT_QUEUE_URL" "$sqs_badge")"
+  algolia_app="$(prompt_with_default "ALGOLIA_APP_ID" "$algolia_app")"
+  algolia_key="$(prompt_secret_with_default "ALGOLIA_ADMIN_API_KEY" "$algolia_key" "$([ "$exists" = true ] && printf 'keep existing' || printf 'empty')")"
 
   local op_fields=(
     "SECURITY_SALT[text]=${security_salt}"
@@ -204,11 +254,6 @@ upsert_item() {
 
   log ""
   log "Item: ${item} (vault: ${vault})"
-
-  local exists=false
-  if op item get "$item" --vault "$vault" >/dev/null 2>&1; then
-    exists=true
-  fi
 
   if [ "$DRY_RUN" = true ]; then
     if [ "$exists" = true ]; then

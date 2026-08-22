@@ -158,7 +158,8 @@ jobs:
           docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/js/vendor/select2.min.js
           docker run --rm district-badges-backend:smoke test -f /var/www/html/webroot/css/vendor/select2.min.css
           docker run --rm district-badges-backend:smoke php -r 'require "/var/www/html/vendor/autoload.php";'
-          test "$(docker run --rm -e SECURITY_SALT=docker-smoke district-badges-backend:smoke php bin/cake.php version)" = "5.3.2"
+          expected_cake_version="$(jq -r '.packages[] | select(.name == "cakephp/cakephp") | .version' backend/composer.lock)"
+          test "$(docker run --rm -e SECURITY_SALT=docker-smoke district-badges-backend:smoke php bin/cake.php version)" = "$expected_cake_version"
 
   docker-build:
     name: Build Docker Image (${{ matrix.platform }})
