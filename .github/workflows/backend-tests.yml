@@ -319,6 +319,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           TAG: ${{ github.ref_name }}
         run: |
