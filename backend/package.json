@@ -12,7 +12,7 @@
         "sass:watch": "sass --watch webroot/css/home.scss:webroot/css/home.css webroot/css/cake.scss:webroot/css/cake.css"
     },
     "dependencies": {
-        "jquery": "^3.7.1",
+        "jquery": "^4.0.0",
         "select2": "^4.1.0"
     }
 }
