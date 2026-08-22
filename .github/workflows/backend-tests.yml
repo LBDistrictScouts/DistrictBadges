@@ -62,7 +62,7 @@ jobs:
           coverage: none
 
       - name: Cache Composer downloads
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache/files
           key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
@@ -105,7 +105,7 @@ jobs:
         run: corepack enable
 
       - name: Cache backend Yarn dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.yarn/berry/cache
