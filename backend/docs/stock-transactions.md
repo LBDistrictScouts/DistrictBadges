@@ -38,5 +38,5 @@ Notes:
 ## Enum Mapping
 
 The `TransactionType` enum is defined in
-[TransactionType.php](backend/src/Model/Enum/TransactionType.php).
+[TransactionType.php](../src/Model/Enum/TransactionType.php).
 These values are used by the derived line models as the canonical type mapping.
