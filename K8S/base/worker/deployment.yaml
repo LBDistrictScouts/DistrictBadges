@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: badge-import-worker
+  namespace: district-badges
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: badge-import-worker
+  template:
+    metadata:
+      labels:
+        app: badge-import-worker
+    spec:
+      serviceAccountName: district-badges-runtime
+      containers:
+        - name: worker
+          image: ghcr.io/lbdistrictscouts/districtbadges-backend:latest
+          imagePullPolicy: Always
+          command:
+            - php
+            - bin/cake.php
+            - badges:consume_import_queue
+          envFrom:
+            - configMapRef:
+                name: district-badges-config
+            - secretRef:
+                name: district-badges-secrets

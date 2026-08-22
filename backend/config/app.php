@@ -319,6 +319,7 @@ return [
             'flags' => [],
             'cacheMetadata' => true,
             'log' => false,
+            'url' => env('DATABASE_URL', null),
 
             /*
              * Set identifier quoting to true if you are using reserved words or
@@ -353,6 +354,7 @@ return [
             'cacheMetadata' => true,
             'quoteIdentifiers' => false,
             'log' => false,
+            'url' => env('DATABASE_TEST_URL', 'sqlite://127.0.0.1/tmp/tests.sqlite'),
             //'init' => ['SET GLOBAL innodb_stats_on_metadata = 0'],
         ],
     ],

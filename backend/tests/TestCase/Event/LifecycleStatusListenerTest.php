@@ -129,6 +129,7 @@ class LifecycleStatusListenerTest extends TestCase
     public function testReplenishmentReceiptAdvancesStatusFromTotals(): void
     {
         $replenishments = $this->getTableLocator()->get('Replenishments');
+        $stockTransactions = $this->getTableLocator()->get('StockTransactions');
         $replenishment = $replenishments->get('f6d1f429-877b-4d92-83a0-cb305d853da7');
         $replenishments->updateAll([
             'status' => ReplenishmentStatus::Submitted,
@@ -138,6 +139,10 @@ class LifecycleStatusListenerTest extends TestCase
             'total_ordered_quantity' => 4,
             'total_received_quantity' => 2,
         ], ['id' => $replenishment->id]);
+        $stockTransactions->updateAll([
+            'receipted_quantity_change' => 2,
+            'pending_quantity_change' => -2,
+        ], ['id' => '9b86a2d1-6f94-4d6b-a6b2-0f68f2f30c12']);
 
         $this->dispatch(new Event(
             'Replenishment.afterReceive',
@@ -151,6 +156,10 @@ class LifecycleStatusListenerTest extends TestCase
         $replenishments->updateAll([
             'total_received_quantity' => 4,
         ], ['id' => $replenishment->id]);
+        $stockTransactions->updateAll([
+            'receipted_quantity_change' => 4,
+            'pending_quantity_change' => -3,
+        ], ['id' => '9b86a2d1-6f94-4d6b-a6b2-0f68f2f30c12']);
         $this->dispatch(new Event(
             'Replenishment.afterReceive',
             $replenishments->get($replenishment->id),
@@ -160,6 +169,41 @@ class LifecycleStatusListenerTest extends TestCase
         $this->assertSame(ReplenishmentStatus::Received, $updated->status);
         $this->assertTrue($updated->received);
         $this->assertNotNull($updated->received_date);
+    }
+
+    public function testReplenishmentOverreceiptDoesNotCompleteAnotherLine(): void
+    {
+        $replenishments = $this->getTableLocator()->get('Replenishments');
+        $stockTransactions = $this->getTableLocator()->get('StockTransactions');
+        $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+        $replenishments->updateAll([
+            'status' => ReplenishmentStatus::Submitted,
+            'order_submitted' => true,
+            'received' => false,
+            'received_date' => null,
+            'total_ordered_quantity' => 4,
+            'total_received_quantity' => 4,
+        ], ['id' => $id]);
+        $stockTransactions->updateAll([
+            'replenishment_id' => $id,
+            'transaction_type' => TransactionType::ReplenishmentOrder->value,
+            'receipted_quantity_change' => 0,
+            'pending_quantity_change' => 2,
+        ], ['id' => 'bad57a31-305f-4398-87d6-8fcfe4600793']);
+        $stockTransactions->updateAll([
+            'receipted_quantity_change' => 4,
+            'pending_quantity_change' => -2,
+        ], ['id' => '9b86a2d1-6f94-4d6b-a6b2-0f68f2f30c12']);
+
+        $this->dispatch(new Event(
+            'Replenishment.afterReceive',
+            $replenishments->get($id),
+        ));
+
+        $updated = $replenishments->get($id);
+        $this->assertSame(ReplenishmentStatus::PartiallyReceived, $updated->status);
+        $this->assertFalse($updated->received);
+        $this->assertNull($updated->received_date);
     }
 
     public function testFulfilmentDispatchAdvancesDraftFulfilment(): void

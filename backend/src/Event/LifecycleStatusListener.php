@@ -163,11 +163,28 @@ class LifecycleStatusListener implements EventListenerInterface
             return;
         }
 
-        $received = (int)$replenishment->total_received_quantity;
-        $ordered = (int)$replenishment->total_ordered_quantity;
+        /** @var \App\Model\Table\StockTransactionsTable $stockTransactions */
+        $stockTransactions = $this->fetchModel('StockTransactions');
+        $query = $stockTransactions->find()
+            ->where([
+                'replenishment_id' => $replenishment->id,
+                'transaction_type IN' => [
+                    TransactionType::ReplenishmentOrder->value,
+                    TransactionType::ReplenishmentReceipt->value,
+                ],
+            ]);
+        $totals = $query
+            ->select([
+                'remaining' => $query->func()->sum('pending_quantity_change'),
+                'received' => $query->func()->sum('receipted_quantity_change'),
+            ])
+            ->disableHydration()
+            ->first();
+        $remaining = max(0, (int)($totals['remaining'] ?? 0));
+        $received = (int)($totals['received'] ?? 0);
         $status = match (true) {
             $received <= 0 => ReplenishmentStatus::Submitted,
-            $ordered > 0 && $received >= $ordered => ReplenishmentStatus::Received,
+            $remaining === 0 => ReplenishmentStatus::Received,
             default => ReplenishmentStatus::PartiallyReceived,
         };
 

@@ -1,0 +1,91 @@
+# District Badges Kustomize Deployment
+
+Kubernetes manifests for the District Badges CakePHP backend.
+
+The layout follows the other PHP deployments:
+
+- `base/` contains the common runtime resources.
+- `overlays/test/` and `overlays/prod/` set environment-specific hostnames, replica counts and 1Password item paths.
+- `operations/` contains one-off operational jobs such as database migrations.
+
+## Secrets
+
+Secrets are managed by the 1Password Operator. The `OnePasswordItem` named `district-badges-secrets` creates the Kubernetes Secret consumed by the app and worker deployments.
+
+The 1Password item should expose these keys:
+
+- `SECURITY_SALT`
+- `DATABASE_URL`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `EMAIL_TRANSPORT_DEFAULT_URL`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `SQS_ORDER_QUEUE_URL`
+- `SQS_BADGE_IMPORT_QUEUE_URL`
+- `ALGOLIA_APP_ID`
+- `ALGOLIA_ADMIN_API_KEY`
+
+The separate `ghcr-pull-secret` item is shared by every environment and points to `op://Infrastructure/ArgoCD - LBD Repo Creds/dockerconfig.json`. It is exposed as a `kubernetes.io/dockerconfigjson` Secret and attached to the runtime ServiceAccount.
+
+Create or update the matching 1Password items referenced by the manifests:
+
+```bash
+# interactive prompt will ask for environment: base, test, prod, or all
+bash K8S/scripts/generate-1password-items.sh
+```
+
+Useful options:
+
+```bash
+# target only one environment
+bash K8S/scripts/generate-1password-items.sh --env test
+bash K8S/scripts/generate-1password-items.sh --env prod
+
+# process all items without prompts
+bash K8S/scripts/generate-1password-items.sh --env all --force
+
+# preview actions only
+bash K8S/scripts/generate-1password-items.sh --env test --dry-run
+```
+
+Non-secret environment variables live in `base/config/app-config-map.yaml` and are patched per environment.
+
+`DATABASE_URL` should point at the environment-specific PostgreSQL service:
+
+- test: `postgres://<user>:<password>@test-district-badges-postgres:5432/<database>?encoding=utf8&timezone=UTC&cacheMetadata=true`
+- prod: `postgres://<user>:<password>@prod-district-badges-postgres:5432/<database>?encoding=utf8&timezone=UTC&cacheMetadata=true`
+
+## Database
+
+PostgreSQL runs as a StatefulSet with a `local-db-ssd-rwo` volume claim. The pod has required node affinity for `storage.homelab/db-ssd=true`, matching the Homelab SSD-backed database node convention.
+
+## Deploy
+
+Deploy the base manifest:
+
+```bash
+kubectl apply -k K8S
+```
+
+Deploy an environment overlay:
+
+```bash
+kubectl apply -k K8S/overlays/test
+kubectl apply -k K8S/overlays/prod
+```
+
+Run migrations intentionally after deploying a new image:
+
+```bash
+kubectl apply -k K8S/operations
+kubectl apply -k K8S/overlays/test/operations
+kubectl apply -k K8S/overlays/prod/operations
+```
+
+## TLS
+
+nginx serves HTTP and HTTPS directly behind a `LoadBalancer` service. cert-manager writes the TLS certificate to the `district-badges-tls` Secret used by nginx.
+
+On a new cluster, nginx will not start its HTTPS listener until that Secret exists. Bootstrap it with a temporary TLS Secret or apply the Certificate first and wait for cert-manager to issue it.
