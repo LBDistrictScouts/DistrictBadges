@@ -11,7 +11,5 @@ data:
   APP_FULL_BASE_URL: https://badges.example.com
   AWS_REGION: eu-west-1
   DEBUG: "false"
-  LOG_DEBUG_URL: php://stdout
-  LOG_ERROR_URL: php://stderr
   ALGOLIA_ENABLED: "false"
   ALGOLIA_INDEX_BADGES: BADGES

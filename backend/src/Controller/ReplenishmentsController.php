@@ -219,12 +219,6 @@ class ReplenishmentsController extends AppController
                     'associated' => ['ReplenishmentReceiptLines'],
                 ],
             );
-            if (!empty($data['_receipt_error'])) {
-                $replenishment->setError(
-                    'replenishment_receipt_lines',
-                    __('Received quantities must be between zero and the expected quantity.'),
-                );
-            }
             if (
                 !$replenishment->hasErrors()
                 && $this->Replenishments->save(
@@ -381,9 +375,7 @@ class ReplenishmentsController extends AppController
             if (
                 $quantity === false
                 || $quantity < 0
-                || $quantity > (int)$row['expected_quantity']
             ) {
-                $data['_receipt_error'] = true;
                 $data['replenishment_receipt_lines'][] = [
                     'receipted_quantity_change' => null,
                 ];
@@ -394,12 +386,13 @@ class ReplenishmentsController extends AppController
             }
 
             $unitPrice = (string)$row['unit_price'];
+            $pendingReduction = min($quantity, (int)$row['expected_quantity']);
             $data['replenishment_receipt_lines'][] = [
                 'badge_id' => $row['badge_id'],
                 'replenishment_id' => $replenishmentId,
                 'on_hand_quantity_change' => $quantity,
                 'receipted_quantity_change' => $quantity,
-                'pending_quantity_change' => -$quantity,
+                'pending_quantity_change' => -$pendingReduction,
                 'fulfilled_quantity_change' => 0,
                 'unit_price' => $unitPrice,
                 'monetary_amount' => number_format($quantity * (float)$unitPrice, 2, '.', ''),

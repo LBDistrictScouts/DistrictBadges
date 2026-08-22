@@ -51,4 +51,6 @@ RUN test ! -f config/app_local.php && \
     test -f webroot/css/vendor/select2.min.css && \
     composer run-script post-install-cmd --no-interaction && \
     rm -f config/app_local.php && \
+    ln -sf /dev/stdout logs/debug.log && \
+    ln -sf /dev/stderr logs/error.log && \
     test ! -f config/app_local.php

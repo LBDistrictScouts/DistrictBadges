@@ -417,7 +417,7 @@ class ReplenishmentsControllerTest extends TestCase
         );
     }
 
-    public function testReceiveRejectsQuantityAboveExpected(): void
+    public function testReceiveAllowsQuantityAboveExpected(): void
     {
         $replenishments = $this->getTableLocator()->get('Replenishments');
         $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
@@ -426,9 +426,6 @@ class ReplenishmentsControllerTest extends TestCase
             ->where(['replenishment_id' => $id])
             ->firstOrFail();
         $quantity = $orderLine->pending_quantity_change + 3;
-        $before = $replenishments->ReplenishmentReceiptLines->find()
-            ->where(['replenishment_id' => $id])
-            ->count();
 
         $this->enableCsrfToken();
         $this->post("/replenishments/receive/{$id}", [
@@ -437,13 +434,16 @@ class ReplenishmentsControllerTest extends TestCase
             ],
         ]);
 
-        $this->assertResponseOk();
-        $this->assertResponseContains('Receive Replenishment');
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
+        $receiptLine = $replenishments->ReplenishmentReceiptLines->find()
+            ->where(['replenishment_id' => $id])
+            ->orderByDesc('transaction_timestamp')
+            ->firstOrFail();
+        $this->assertSame($quantity, $receiptLine->receipted_quantity_change);
+        $this->assertSame($quantity, $receiptLine->on_hand_quantity_change);
         $this->assertSame(
-            $before,
-            $replenishments->ReplenishmentReceiptLines->find()
-                ->where(['replenishment_id' => $id])
-                ->count(),
+            -$orderLine->pending_quantity_change,
+            $receiptLine->pending_quantity_change,
         );
     }
 
