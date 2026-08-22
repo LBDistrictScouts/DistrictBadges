@@ -3,7 +3,7 @@
     "private": true,
     "packageManager": "yarn@4.6.0",
     "devDependencies": {
-        "sass": "^1.77.8"
+        "sass": "^1.102.0"
     },
     "scripts": {
         "assets:build": "mkdir -p webroot/js/vendor webroot/css/vendor && cp node_modules/jquery/dist/jquery.min.js webroot/js/vendor/jquery.min.js && cp node_modules/select2/dist/js/select2.min.js webroot/js/vendor/select2.min.js && cp node_modules/select2/dist/css/select2.min.css webroot/css/vendor/select2.min.css",
