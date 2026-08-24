@@ -34,11 +34,11 @@ class EntityNumberBehavior extends Behavior
         EntityInterface $entity,
         ArrayObject $options,
     ): void {
-        $field = (string)$this->getConfig('field');
-        if (!$entity->isNew() || $entity->hasValue($field)) {
+        if (!$entity->isNew()) {
             return;
         }
 
+        $field = (string)$this->getConfig('field');
         $prefix = strtoupper((string)$this->getConfig('prefix'));
         if ($field === '' || $prefix === '') {
             throw new RuntimeException('EntityNumber behavior requires field and prefix configuration.');
