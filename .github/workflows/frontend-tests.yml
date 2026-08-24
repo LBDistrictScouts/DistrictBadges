@@ -1,13 +1,8 @@
 name: Frontend Tests and Deploy
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-    paths:
-      - 'webstore/**'
-      - '.github/workflows/frontend-tests.yml'
+  schedule:
+    - cron: '0 5 * * 0'
   pull_request:
     branches:
       - '*'
