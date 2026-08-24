@@ -35,9 +35,7 @@ env:
 jobs:
   frontend-tests:
     name: Webstore Tests
-    runs-on:
-      - self-hosted
-      - linux
+    runs-on: lbdistrictscouts-runners
     defaults:
       run:
         working-directory: webstore
