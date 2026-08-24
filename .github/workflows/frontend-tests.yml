@@ -1,0 +1,137 @@
+name: Frontend Tests and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'webstore/**'
+      - '.github/workflows/frontend-tests.yml'
+  pull_request:
+    branches:
+      - '*'
+    paths:
+      - 'webstore/**'
+      - '.github/workflows/frontend-tests.yml'
+  workflow_dispatch:
+    inputs:
+      release_environment:
+        description: GitHub Environment to deploy to
+        required: true
+        default: test
+        type: choice
+        options:
+          - test
+          - production
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  frontend-tests:
+    name: Webstore Tests
+    runs-on:
+      - self-hosted
+      - linux
+    defaults:
+      run:
+        working-directory: webstore
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: yarn
+          cache-dependency-path: webstore/yarn.lock
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: yarn install --immutable
+
+      - name: Lint
+        run: yarn lint
+
+  deploy:
+    name: Deploy Webstore
+    if: github.event_name != 'pull_request'
+    needs: frontend-tests
+    runs-on:
+      - self-hosted
+      - linux
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || github.ref == 'refs/heads/dev' && 'test' || 'production' }}
+    concurrency:
+      group: webstore-${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || github.ref == 'refs/heads/dev' && 'test' || 'production' }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: webstore
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: yarn
+          cache-dependency-path: webstore/yarn.lock
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: yarn install --immutable
+
+      - name: Build webstore
+        env:
+          VITE_ALGOLIA_APP_ID: ${{ vars.VITE_ALGOLIA_APP_ID }}
+          VITE_ALGOLIA_SEARCH_API_KEY: ${{ secrets.VITE_ALGOLIA_SEARCH_API_KEY }}
+          VITE_ALGOLIA_BADGES_INDEX: ${{ vars.VITE_ALGOLIA_BADGES_INDEX }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          CATALOGUE_API_URL: ${{ vars.CATALOGUE_API_URL }}
+          CATALOGUE_BASIC_AUTH_USERNAME: ${{ secrets.CATALOGUE_BASIC_AUTH_USERNAME }}
+          CATALOGUE_BASIC_AUTH_PASSWORD: ${{ secrets.CATALOGUE_BASIC_AUTH_PASSWORD }}
+        run: yarn build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Validate deployment configuration
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          test -n "$S3_BUCKET"
+          test -n "$CLOUDFRONT_DISTRIBUTION_ID"
+
+      - name: Publish to S3
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        run: aws s3 sync dist/ "s3://$S3_BUCKET/" --delete --only-show-errors
+
+      - name: Invalidate CloudFront cache
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths '/*'

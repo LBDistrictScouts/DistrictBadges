@@ -67,7 +67,7 @@ class GroupsTableTest extends TestCase
 
         $errors = $entity->getErrors();
         $this->assertArrayHasKey('group_name', $errors);
-        $this->assertArrayHasKey('group_osm_id', $errors);
+        $this->assertArrayNotHasKey('group_osm_id', $errors);
 
         $valid = $this->Groups->newEntity([
             'group_name' => 'Test Group',

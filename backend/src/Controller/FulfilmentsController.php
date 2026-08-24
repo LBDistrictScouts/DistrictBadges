@@ -51,7 +51,9 @@ class FulfilmentsController extends AppController
             $query->where(['fulfilment_date <' => date('Y-m-d', strtotime($createdTo . ' +1 day'))]);
         }
 
-        $fulfilments = $this->paginate($query);
+        $fulfilments = $this->paginate($query, [
+            'order' => ['Fulfilments.fulfilment_number' => 'DESC'],
+        ]);
         $statusOptions = [];
         foreach (FulfilmentStatus::cases() as $case) {
             $statusOptions[$case->value] = $case->label();

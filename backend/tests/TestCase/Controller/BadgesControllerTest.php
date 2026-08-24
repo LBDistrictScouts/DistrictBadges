@@ -43,7 +43,10 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseNotContains('National Product Code');
         $this->assertResponseNotContains('Replenishment Price');
         $this->assertResponseNotContains('Reserve');
-        $this->assertResponseContains('All statuses');
+        $this->assertResponseContains('All availability statuses');
+        $this->assertResponseContains('Availability Status');
+        $this->assertResponseContains('Stocking');
+        $this->assertResponseContains('All badges');
         $this->assertResponseContains('All sections');
         $this->assertResponseContains('All badge types');
         $this->assertResponseNotContains(
@@ -69,6 +72,56 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Second badge');
+    }
+
+    public function testIndexFiltersStockedSeparatelyFromAvailability(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $unstocked = $badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+        $unstocked->set('stocked', false);
+        $badges->saveOrFail($unstocked, ['skipAlgolia' => true]);
+
+        $this->get('/badges?stocked=1');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+
+        $this->get('/badges?stocked=0');
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Second badge');
+
+        $this->get('/badges?stocked=0&status=' . BadgeStatus::Available->value);
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+    }
+
+    public function testIndexDefaultsToStockedBadges(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $unstocked = $badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+        $unstocked->set('stocked', false);
+        $badges->saveOrFail($unstocked, ['skipAlgolia' => true]);
+
+        $this->get('/badges');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+
+        $this->get('/badges?stocked=');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Second badge');
+    }
+
+    public function testIndexAvailabilityFilterExcludesStockingStatuses(): void
+    {
+        $this->get('/badges?stocked=');
+
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('<option value="30">Deprecated</option>');
+        $this->assertResponseNotContains('<option value="40">Unstocked</option>');
     }
 
     public function testIndexFiltersBySectionAndBadgeType(): void
@@ -99,7 +152,7 @@ class BadgesControllerTest extends TestCase
         $unstocked->set('stocked', false);
         $badges->saveOrFail($unstocked, ['skipAlgolia' => true]);
 
-        $this->get('/badges');
+        $this->get('/badges?stocked=0');
 
         $this->assertResponseOk();
         $this->assertResponseContains('/badges/activate/' . $unstocked->id);
@@ -113,11 +166,11 @@ class BadgesControllerTest extends TestCase
         $unstocked->set('stocked', false);
         $badges->saveOrFail($unstocked, ['skipAlgolia' => true]);
 
-        $this->get('/badges?name=Second&status=40');
+        $this->get('/badges?name=Second&stocked=0');
 
         $this->assertResponseOk();
         $this->assertResponseContains('/badges/activate/' . $unstocked->id . '?name=Second');
-        $this->assertResponseContains('status=40');
+        $this->assertResponseContains('stocked=0');
     }
 
     /**

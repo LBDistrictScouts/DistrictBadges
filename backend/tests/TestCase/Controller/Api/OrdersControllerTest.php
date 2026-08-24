@@ -3,12 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller\Api;
 
-use Aws\Command;
-use Aws\Exception\AwsException;
-use Aws\MockHandler;
-use Aws\Result;
-use Aws\Sqs\SqsClient;
-use Cake\Core\Configure;
+use App\Model\Enum\OrderStatus;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -21,16 +16,13 @@ class OrdersControllerTest extends TestCase
      */
     protected array $fixtures = [
         'app.Groups',
+        'app.Sections',
         'app.Accounts',
         'app.Users',
         'app.Badges',
+        'app.Orders',
+        'app.OrderLines',
     ];
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-        Configure::delete('Sqs');
-    }
 
     public function testDependenciesReturnsData(): void
     {
@@ -42,125 +34,177 @@ class OrdersControllerTest extends TestCase
         $payload = json_decode((string)$this->_response->getBody(), true);
 
         $this->assertIsArray($payload);
-        $this->assertArrayHasKey('accounts', $payload);
-        $this->assertArrayHasKey('users', $payload);
+        $this->assertArrayHasKey('groups', $payload);
+        $this->assertArrayHasKey('sections', $payload);
         $this->assertArrayHasKey('badges', $payload);
-        $this->assertNotEmpty($payload['accounts']);
-        $this->assertNotEmpty($payload['users']);
+        $this->assertNotEmpty($payload['groups']);
+        $this->assertNotEmpty($payload['sections']);
         $this->assertNotEmpty($payload['badges']);
 
-        $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $payload['accounts'][0]['id']);
-        $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $payload['users'][0]['id']);
+        $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $payload['groups'][0]['id']);
+        $this->assertSame('d9534dcb-a846-5a22-a2fe-b67580555563', $payload['sections'][0]['id']);
         $this->assertSame('f525eb6d-021c-4ef2-811f-feac8db8d35d', $payload['badges'][0]['id']);
     }
 
-    public function testPlaceQueuesOrder(): void
+    public function testPlaceCreatesOrder(): void
     {
-        $mock = new MockHandler([new Result(['MessageId' => 'msg-123'])]);
-        $client = new SqsClient([
-            'region' => 'us-east-1',
-            'version' => '2012-11-05',
-            'credentials' => [
-                'key' => 'test',
-                'secret' => 'test',
-            ],
-            'handler' => $mock,
-        ]);
-
-        Configure::write('Sqs', [
-            'queueUrl' => 'https://example.com/queue',
-            'region' => 'us-east-1',
-            'client' => $client,
-        ]);
-
+        $users = $this->getTableLocator()->get('Users');
+        $beforeUsers = $users->find()->count();
         $this->enableCsrfToken();
         $this->post('/api/orders.json', [
-            'order_number' => 'ORD-100',
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
-            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
-            'total_ordered_amount' => 15.25,
-            'total_ordered_quantity' => 2,
+            'first_name' => 'Alex',
+            'last_name' => 'Leader',
+            'email' => 'alex@example.org',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
             'lines' => [
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                     'quantity' => 2,
-                    'amount' => 15.25,
                 ],
             ],
         ]);
 
-        $this->assertResponseCode(202);
+        $this->assertResponseCode(201);
 
         $payload = json_decode((string)$this->_response->getBody(), true);
-        $this->assertSame('queued', $payload['status']);
-        $this->assertSame('msg-123', $payload['message_id']);
-        $command = $mock->getLastCommand();
-        $this->assertNotNull($command);
-        $this->assertSame('https://example.com/queue', $command->get('QueueUrl'));
-        $this->assertStringContainsString('ORD-100', (string)$command->get('MessageBody'));
+        $this->assertSame('created', $payload['status']);
+        $this->assertStringStartsWith('ORD-', $payload['order_number']);
+        $order = $this->getTableLocator()->get('Orders')->get($payload['order_id'], contain: ['OrderLines']);
+        $this->assertSame(OrderStatus::Placed, $order->status);
+        $this->assertSame('d9534dcb-a846-5a22-a2fe-b67580555563', $order->section_id);
+        $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $order->account_id);
+        $this->assertSame(2, $order->total_ordered_quantity);
+        $this->assertEquals(3.0, $order->total_ordered_amount);
+        $this->assertCount(1, $order->order_lines);
+        $this->assertSame(2, $order->order_lines[0]->quantity);
+        $this->assertSame('1.50', $order->order_lines[0]->unit_price);
+        $this->assertSame('3.00', $order->order_lines[0]->amount);
+        $this->assertSame($beforeUsers + 1, $users->find()->count());
+        $createdUser = $users->find()->where(['email' => 'alex@example.org'])->firstOrFail();
+        $this->assertSame($createdUser->id, $order->user_id);
+        $this->assertSame('Alex', $createdUser->first_name);
+        $this->assertSame('Leader', $createdUser->last_name);
+        $this->assertSame($order->account_id, $createdUser->account_id);
+    }
+
+    public function testPlaceReusesExistingUserByEmail(): void
+    {
+        $users = $this->getTableLocator()->get('Users');
+        $accountId = 'ae471706-04cc-4c9c-8916-e4be1f913edf';
+        $user = $users->newEntity([
+            'first_name' => 'Existing',
+            'last_name' => 'Leader',
+            'email' => 'existing@example.org',
+            'account_id' => $accountId,
+            'admin_role' => 0,
+            'can_login' => false,
+        ]);
+        $users->saveOrFail($user);
+        $beforeUsers = $users->find()->count();
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $this->validOrderPayload([
+            'first_name' => 'Changed',
+            'last_name' => 'Name',
+            'email' => 'EXISTING@example.org',
+        ]));
+
+        $this->assertResponseCode(201);
+        $payload = json_decode((string)$this->_response->getBody(), true);
+        $order = $this->getTableLocator()->get('Orders')->get($payload['order_id']);
+        $this->assertSame($beforeUsers, $users->find()->count());
+        $this->assertSame($user->id, $order->user_id);
+        $this->assertSame($accountId, $order->account_id);
+    }
+
+    public function testPlaceUsesSectionAccount(): void
+    {
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $sections = $this->getTableLocator()->get('Sections');
+        $account = $accounts->newEntity([
+            'account_name' => 'Example Beavers',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+        ]);
+        $accounts->saveOrFail($account);
+        $section = $sections->get('d9534dcb-a846-5a22-a2fe-b67580555563');
+        $section->set('account_id', $account->id);
+        $sections->saveOrFail($section);
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $this->validOrderPayload([
+            'email' => 'section@example.org',
+        ]));
+
+        $this->assertResponseCode(201);
+        $payload = json_decode((string)$this->_response->getBody(), true);
+        $order = $this->getTableLocator()->get('Orders')->get($payload['order_id']);
+        $this->assertSame($account->id, $order->account_id);
+        $this->assertSame(
+            $account->id,
+            $this->getTableLocator()->get('Users')->get($order->user_id)->account_id,
+        );
+    }
+
+    public function testPlaceCreatesGroupAccountWhenMissing(): void
+    {
+        $users = $this->getTableLocator()->get('Users');
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $this->getTableLocator()->get('OrderLines')->deleteAll([]);
+        $this->getTableLocator()->get('Orders')->deleteAll([]);
+        $users->deleteAll([]);
+        $accounts->deleteAll([]);
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $this->validOrderPayload([
+            'email' => 'new-account@example.org',
+        ]));
+
+        $this->assertResponseCode(201);
+        $payload = json_decode((string)$this->_response->getBody(), true);
+        $order = $this->getTableLocator()->get('Orders')->get($payload['order_id']);
+        $account = $accounts->get($order->account_id);
+        $this->assertSame('Lorem ipsum dolor sit amet', $account->account_name);
+        $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $account->group_id);
+        $this->assertSame($account->id, $users->get($order->user_id)->account_id);
     }
 
     public function testPlaceValidatesPayload(): void
     {
         $this->enableCsrfToken();
         $this->post('/api/orders.json', [
-            'order_number' => '',
-            'account_id' => 'not-a-uuid',
-            'user_id' => 'not-a-uuid',
-            'total_ordered_amount' => 'bad',
-            'total_ordered_quantity' => 0,
+            'first_name' => '',
+            'last_name' => '',
+            'email' => 'bad',
+            'group_id' => 'not-a-uuid',
+            'section_id' => 'not-a-uuid',
             'lines' => [],
         ]);
 
         $this->assertResponseCode(422);
         $payload = json_decode((string)$this->_response->getBody(), true);
         $this->assertArrayHasKey('errors', $payload);
-        $this->assertArrayHasKey('order_number', $payload['errors']);
-        $this->assertArrayHasKey('account_id', $payload['errors']);
-        $this->assertArrayHasKey('user_id', $payload['errors']);
-        $this->assertArrayHasKey('total_ordered_amount', $payload['errors']);
-        $this->assertArrayHasKey('total_ordered_quantity', $payload['errors']);
+        $this->assertArrayHasKey('first_name', $payload['errors']);
+        $this->assertArrayHasKey('last_name', $payload['errors']);
+        $this->assertArrayHasKey('email', $payload['errors']);
+        $this->assertArrayHasKey('group_id', $payload['errors']);
+        $this->assertArrayHasKey('section_id', $payload['errors']);
         $this->assertArrayHasKey('lines', $payload['errors']);
     }
 
-    public function testPlaceReturnsQueueUnavailable(): void
+    /**
+     * @param array<string, mixed> $overrides Payload overrides.
+     * @return array<string, mixed>
+     */
+    private function validOrderPayload(array $overrides = []): array
     {
-        $command = new Command('SendMessage', []);
-        $mock = new MockHandler([new AwsException('fail', $command)]);
-        $client = new SqsClient([
-            'region' => 'us-east-1',
-            'version' => '2012-11-05',
-            'credentials' => [
-                'key' => 'test',
-                'secret' => 'test',
-            ],
-            'handler' => $mock,
-        ]);
-
-        Configure::write('Sqs', [
-            'queueUrl' => 'https://example.com/queue',
-            'region' => 'us-east-1',
-            'client' => $client,
-        ]);
-
-        $this->enableCsrfToken();
-        $this->post('/api/orders.json', [
-            'order_number' => 'ORD-200',
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
-            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
-            'total_ordered_amount' => 10.0,
-            'total_ordered_quantity' => 1,
-            'lines' => [
-                [
-                    'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
-                    'quantity' => 1,
-                    'amount' => 10.0,
-                ],
-            ],
-        ]);
-
-        $this->assertResponseCode(503);
-        $payload = json_decode((string)$this->_response->getBody(), true);
-        $this->assertSame('QueueUnavailable', $payload['error']);
+        return $overrides + [
+            'first_name' => 'Alex',
+            'last_name' => 'Leader',
+            'email' => 'alex@example.org',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
+            'lines' => [[
+                'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                'quantity' => 2,
+            ]],
+        ];
     }
 }

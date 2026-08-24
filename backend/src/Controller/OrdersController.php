@@ -59,7 +59,9 @@ class OrdersController extends AppController
             $query->where(['Orders.user_id' => $filters['user_id']]);
         }
 
-        $orders = $this->paginate($query);
+        $orders = $this->paginate($query, [
+            'order' => ['Orders.order_number' => 'DESC'],
+        ]);
         $statusOptions = [];
         foreach (OrderStatus::cases() as $case) {
             $statusOptions[$case->value] = $case->label();

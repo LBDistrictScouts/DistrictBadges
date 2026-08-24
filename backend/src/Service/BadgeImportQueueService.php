@@ -6,7 +6,9 @@ namespace App\Service;
 use App\Queue\Processor\BadgeImportProcessor;
 use Aws\Sqs\SqsClient;
 use Cake\Core\Configure;
+use Cake\Log\Log;
 use RuntimeException;
+use Throwable;
 
 class BadgeImportQueueService
 {
@@ -70,14 +72,22 @@ class BadgeImportQueueService
         $messages = $result->get('Messages') ?? [];
 
         foreach ($messages as $message) {
-            $result = $processor->process((string)($message['Body'] ?? ''));
-            if (
-                in_array($result, [BadgeImportProcessor::ACK, BadgeImportProcessor::REJECT], true)
-                && !empty($message['ReceiptHandle'])
-            ) {
-                $this->client->deleteMessage([
-                    'QueueUrl' => $this->queueUrl,
-                    'ReceiptHandle' => (string)$message['ReceiptHandle'],
+            try {
+                $result = $processor->process((string)($message['Body'] ?? ''));
+                if (
+                    in_array($result, [BadgeImportProcessor::ACK, BadgeImportProcessor::REJECT], true)
+                    && !empty($message['ReceiptHandle'])
+                ) {
+                    $this->client->deleteMessage([
+                        'QueueUrl' => $this->queueUrl,
+                        'ReceiptHandle' => (string)$message['ReceiptHandle'],
+                    ]);
+                }
+            } catch (Throwable $exception) {
+                Log::error('Unhandled badge import message error: {message}', [
+                    'message' => $exception->getMessage(),
+                    'receiveCount' => $message['Attributes']['ApproximateReceiveCount'] ?? null,
+                    'scope' => ['badge_import'],
                 ]);
             }
         }

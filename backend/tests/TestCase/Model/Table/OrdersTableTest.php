@@ -29,6 +29,7 @@ class OrdersTableTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
+        'app.Sections',
         'app.Users',
         'app.Orders',
         'app.Badges',
@@ -104,12 +105,14 @@ class OrdersTableTest extends TestCase
             'status' => OrderStatus::Placed->value,
             'account_id' => '11111111-1111-1111-1111-111111111111',
             'user_id' => '11111111-1111-1111-1111-111111111111',
+            'section_id' => '11111111-1111-1111-1111-111111111111',
         ]);
 
         $result = $this->Orders->save($entity);
         $this->assertFalse($result);
         $this->assertArrayHasKey('account_id', $entity->getErrors());
         $this->assertArrayHasKey('user_id', $entity->getErrors());
+        $this->assertArrayHasKey('section_id', $entity->getErrors());
     }
 
     /**
@@ -128,6 +131,7 @@ class OrdersTableTest extends TestCase
             'order_number' => 'ORD-3000',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
         ]);
 
         try {
@@ -149,5 +153,6 @@ class OrdersTableTest extends TestCase
         $this->assertSame(0, (int)$saved->total_fulfilled_quantity);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
+        $this->assertSame('d9534dcb-a846-5a22-a2fe-b67580555563', $saved->section_id);
     }
 }

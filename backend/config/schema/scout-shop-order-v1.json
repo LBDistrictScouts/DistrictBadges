@@ -1,0 +1,69 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://districtbadges.lbdscouts.org.uk/schema/scout-shop-order-v1.json",
+    "title": "District Badges shop order",
+    "description": "Canonical request and SQS message contract for a District Badges webstore order.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "first_name",
+        "last_name",
+        "email",
+        "group_id",
+        "section_id",
+        "lines"
+    ],
+    "properties": {
+        "first_name": {
+            "type": "string",
+            "pattern": "\\S",
+            "maxLength": 255
+        },
+        "last_name": {
+            "type": "string",
+            "pattern": "\\S",
+            "maxLength": 255
+        },
+        "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255
+        },
+        "group_id": {
+            "$ref": "#/definitions/uuid"
+        },
+        "section_id": {
+            "$ref": "#/definitions/uuid"
+        },
+        "lines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/definitions/orderLine"
+            }
+        }
+    },
+    "definitions": {
+        "uuid": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "orderLine": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "badge_id",
+                "quantity"
+            ],
+            "properties": {
+                "badge_id": {
+                    "$ref": "#/definitions/uuid"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        }
+    }
+}

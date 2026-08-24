@@ -17,6 +17,7 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
  * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
+ * @property \App\Model\Table\SectionsTable&\Cake\ORM\Association\BelongsTo $Sections
  * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\HasMany $OrderLines
  * @method \App\Model\Entity\Order newEmptyEntity()
  * @method \App\Model\Entity\Order newEntity(array $data, array $options = [])
@@ -69,6 +70,10 @@ class OrdersTable extends Table
             'foreignKey' => 'user_id',
             'joinType' => 'INNER',
         ]);
+        $this->belongsTo('Sections', [
+            'foreignKey' => 'section_id',
+            'joinType' => 'LEFT',
+        ]);
         $this->hasMany('OrderLines', [
             'foreignKey' => 'order_id',
         ]);
@@ -100,6 +105,10 @@ class OrdersTable extends Table
             ->uuid('user_id')
             ->notEmptyString('user_id');
 
+        $validator
+            ->uuid('section_id')
+            ->allowEmptyString('section_id');
+
         return $validator;
     }
 
@@ -114,6 +123,10 @@ class OrdersTable extends Table
     {
         $rules->add($rules->existsIn(['account_id'], 'Accounts'), ['errorField' => 'account_id']);
         $rules->add($rules->existsIn(['user_id'], 'Users'), ['errorField' => 'user_id']);
+        $rules->add(
+            $rules->existsIn(['section_id'], 'Sections', ['allowNullableNulls' => true]),
+            ['errorField' => 'section_id'],
+        );
 
         return $rules;
     }

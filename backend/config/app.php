@@ -88,6 +88,19 @@ return [
         'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
     ],
 
+    'DistrictCoreData' => [
+        'url' => env('DISTRICT_CORE_DATA_URL', ''),
+        'username' => env('DISTRICT_CORE_DATA_USERNAME', ''),
+        'password' => env('DISTRICT_CORE_DATA_PASSWORD', ''),
+    ],
+
+    'Webstore' => [
+        'allowedOrigins' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string)env('WEBSTORE_ALLOWED_ORIGINS', 'http://localhost:5173')),
+        ))),
+    ],
+
     'Sqs' => [
         'region' => env('AWS_REGION', 'eu-west-1'),
         'profile' => env('AWS_PROFILE', null),
@@ -378,6 +391,14 @@ return [
             'url' => env('LOG_ERROR_URL', null),
             'scopes' => null,
             'levels' => ['warning', 'error', 'critical', 'alert', 'emergency'],
+        ],
+        'badge_import' => [
+            'className' => FileLog::class,
+            'path' => LOGS,
+            'file' => 'badge-import',
+            'url' => env('LOG_BADGE_IMPORT_URL', null),
+            'scopes' => ['badge_import'],
+            'levels' => ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'],
         ],
         // To enable this dedicated query log, you need to set your datasource's log flag to true
         'queries' => [

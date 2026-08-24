@@ -63,6 +63,29 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseContains('Created To');
     }
 
+    public function testIndexDefaultsToFulfilmentNumberDescending(): void
+    {
+        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        $fulfilments->updateAll(
+            ['fulfilment_number' => 'FUL-0001'],
+            ['id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a'],
+        );
+        $newer = $fulfilments->newEmptyEntity();
+        $fulfilments->saveOrFail($newer);
+        $fulfilments->updateAll(['fulfilment_number' => 'FUL-9999'], ['id' => $newer->id]);
+
+        $this->get('/fulfilments');
+
+        $this->assertResponseOk();
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(strpos($body, 'FUL-0001'), strpos($body, 'FUL-9999'));
+
+        $this->get('/fulfilments?sort=fulfilment_number&direction=asc');
+
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(strpos($body, 'FUL-9999'), strpos($body, 'FUL-0001'));
+    }
+
     public function testIndexFilters(): void
     {
         $this->get('/fulfilments?number=Lorem&status=' . FulfilmentStatus::Dispatched->value);

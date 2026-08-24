@@ -18,6 +18,7 @@ namespace App;
 
 use App\Event\LifecycleStatusListener;
 use App\Event\OrderLineFulfilmentListener;
+use App\Middleware\ApiCorsMiddleware;
 use App\Middleware\HostHeaderMiddleware;
 use Cake\Core\Configure;
 use Cake\Core\ContainerInterface;
@@ -74,6 +75,9 @@ class Application extends BaseApplication
             // the incoming Host header against it.
             ->add(new HostHeaderMiddleware())
 
+            // Allow configured webstore origins to use the JSON API.
+            ->add(new ApiCorsMiddleware())
+
             // Handle plugin/theme assets like CakePHP normally does.
             ->add(new AssetMiddleware([
                 'cacheTime' => Configure::read('Asset.cacheTime'),
@@ -92,9 +96,11 @@ class Application extends BaseApplication
 
             // Cross Site Request Forgery (CSRF) Protection Middleware
             // https://book.cakephp.org/5/en/security/csrf.html#cross-site-request-forgery-csrf-middleware
-            ->add(new CsrfProtectionMiddleware([
+            ->add((new CsrfProtectionMiddleware([
                 'httponly' => true,
-            ]));
+            ]))->skipCheckCallback(
+                fn($request): bool => str_starts_with($request->getUri()->getPath(), '/api/'),
+            ));
 
         return $middlewareQueue;
     }

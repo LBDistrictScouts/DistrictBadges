@@ -4,6 +4,7 @@ metadata:
   name: district-badges-config
   namespace: district-badges
 data:
-  APP_FULL_BASE_URL: https://badges-test.lbdscouts.org.uk
+  APP_FULL_BASE_URL: https://badge-system-test.lbdscouts.org.uk
+  WEBSTORE_ALLOWED_ORIGINS: https://badges-test.lbdscouts.org.uk
   DEBUG: "false"
   ALGOLIA_INDEX_BADGES: BADGES_TEST

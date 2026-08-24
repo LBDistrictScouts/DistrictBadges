@@ -22,6 +22,7 @@ class GroupsFixture extends TestFixture
                 'id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
                 'group_name' => 'Lorem ipsum dolor sit amet',
                 'group_osm_id' => 1,
+                'sort_order' => 1,
             ],
         ];
         parent::init();

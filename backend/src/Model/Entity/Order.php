@@ -19,9 +19,11 @@ use Cake\ORM\Entity;
  * @property int $total_fulfilled_quantity
  * @property string $account_id
  * @property string $user_id
+ * @property string|null $section_id
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\User $user
+ * @property \App\Model\Entity\Section|null $section
  * @property \App\Model\Entity\OrderLine[] $order_lines
  */
 class Order extends Entity
@@ -39,8 +41,10 @@ class Order extends Entity
         'fulfilled' => false,
         'account_id' => true,
         'user_id' => true,
+        'section_id' => true,
         'account' => true,
         'user' => true,
+        'section' => true,
         'order_lines' => true,
     ];
 }

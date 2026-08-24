@@ -2,14 +2,14 @@
 
 > Part of the [District Badges](../README.md) system. See also: [Webstore](../webstore/README.md) · [Design](../design/README.md) · [Postman](../postman/README.md)
 
-The backend is a [CakePHP 5](https://cakephp.org) PHP application that provides the data management layer for the District Badges system. It handles badge stock, orders, invoices, accounts, groups, users and the audit trail that keeps the stock ledger accurate.
+The backend is a [CakePHP 5](https://cakephp.org) PHP application that provides the data management layer for the District Badges system. It handles badge stock, orders, invoices, groups, sections, users and the audit trail that keeps the stock ledger accurate.
 
 ## Requirements
 
 | Dependency | Version |
 |------------|---------|
 | PHP        | ≥ 8.2   |
-| MySQL / MariaDB | any recent release |
+| PostgreSQL | any recent supported release |
 | [Composer](https://getcomposer.org) | ≥ 2.x |
 
 ## Getting Started
@@ -38,17 +38,27 @@ Key variables to set in `config/.env`:
 | `APP_FULL_BASE_URL` | Full URL of this application (e.g. `https://badges.example.com`) |
 | `DATABASE_URL` | Full DSN for the primary database (see below) |
 | `DATABASE_TEST_URL` | Full DSN for the test database |
+| `DISTRICT_CORE_DATA_URL` | Basic Auth-protected DistrictCoreData base/landing URL |
+| `DISTRICT_CORE_DATA_USERNAME` | DistrictCoreData username |
+| `DISTRICT_CORE_DATA_PASSWORD` | DistrictCoreData password |
+| `WEBSTORE_ALLOWED_ORIGINS` | Comma-separated webstore origins permitted by CORS |
 
 **Database DSN format:**
 
 ```
-mysql://username:password@hostname/database_name?encoding=utf8mb4&timezone=UTC&cacheMetadata=true
+postgres://username:password@hostname/database_name?timezone=UTC
 ```
 
 ### 3. Run database migrations
 
 ```bash
 bin/cake migrations migrate
+```
+
+Import the canonical groups, sections and their shared UUIDs after migrating:
+
+```bash
+bin/cake district_core_data:sync
 ```
 
 ### 4. Start the development server
@@ -85,7 +95,8 @@ backend/
 | Resource | Description |
 |----------|-------------|
 | **Badges** | Scout badge catalogue with stock levels (`on_hand_quantity`, `pending_quantity`, `receipted_quantity`) |
-| **Groups** | Scout groups that hold accounts |
+| **Groups** | Scout groups imported from DistrictCoreData using stable shared UUIDs |
+| **Sections** | Sections imported from DistrictCoreData and associated with a group |
 | **Accounts** | A purchasing account within a group |
 | **Orders** | An order placed by an account for one or more badges |
 | **Order Lines** | Individual badge line items within an order |
@@ -116,6 +127,14 @@ erDiagram
         uuid id PK
         string group_name
         integer group_osm_id
+        integer sort_order
+    }
+    sections {
+        uuid id PK
+        uuid group_id FK
+        integer section_osm_id
+        string section_name
+        string section_type
     }
     accounts {
         uuid id PK
@@ -203,6 +222,7 @@ erDiagram
     }
 
     groups ||--o{ accounts : "has"
+    groups ||--o{ sections : "has"
     accounts ||--o{ users : "has"
     accounts ||--o{ orders : "places"
     accounts ||--o{ invoices : "receives"
@@ -219,6 +239,16 @@ erDiagram
 ```
 
 > For a detailed explanation of how stock transactions are recorded and the derived line models (AuditLines, FulfilmentLines, ReplenishmentOrderLines, ReplenishmentReceiptLines), see [docs/stock-transactions.md](docs/stock-transactions.md).
+
+## Webstore order API
+
+`POST /api/orders.json` accepts a contact name and email, shared `group_id` and `section_id` UUIDs, and order lines containing only `badge_id` and `quantity`. It verifies that the section belongs to the group and calculates prices and totals from backend badge records; client-supplied totals are not trusted. The account, user, order, and lines are persisted synchronously in one transaction, and successful requests return HTTP `201`.
+
+The API Gateway/SQS route accepts the identical JSON payload. The `orders:consume_queue` worker passes each SQS message body through the same `OrderPlacementService` used by the synchronous controller, so validation, party resolution, pricing, and persistence remain consistent across both entry points.
+
+[`config/schema/scout-shop-order-v1.json`](config/schema/scout-shop-order-v1.json) is the canonical, versioned transport contract for both the `POST /api/orders.json` request body and the unchanged SQS message body. Edge services must reject payloads that fail this schema before enqueueing them. Database-backed checks, including group/section relationships and badge existence, are performed when the backend processes the valid payload.
+
+Run `bin/cake district_core_data:sync` whenever the canonical group or section data changes. Deploy and sync DistrictCoreData changes before deploying a webstore build that contains the new UUIDs.
 
 ## Running Tests
 

@@ -102,6 +102,19 @@ return [
         'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
     ],
 
+    'DistrictCoreData' => [
+        'url' => env('DISTRICT_CORE_DATA_URL', ''),
+        'username' => env('DISTRICT_CORE_DATA_USERNAME', ''),
+        'password' => env('DISTRICT_CORE_DATA_PASSWORD', ''),
+    ],
+
+    'Webstore' => [
+        'allowedOrigins' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string)env('WEBSTORE_ALLOWED_ORIGINS', 'http://localhost:5173')),
+        ))),
+    ],
+
     'Sqs' => [
         'region' => env('AWS_REGION', 'eu-west-1'),
         'profile' => env('AWS_PROFILE', null),
