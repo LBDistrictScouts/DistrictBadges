@@ -218,8 +218,20 @@ class OrderPlacementService
         $accounts = $this->getTableLocator()->get('Accounts');
         $users = $this->getTableLocator()->get('Users');
         $section = $sections->get($data['section_id'], contain: ['Groups', 'Accounts']);
-        $account = $section->account ?? $accounts->find()
-            ->where(['Accounts.group_id' => $section->group_id])->orderByAsc('Accounts.account_name')->first();
+        $account = $section->account;
+        if (!$account instanceof Account) {
+            // Serialize fallback selection and creation for this group. Without the row lock,
+            // concurrent first orders can both observe no account and create duplicates.
+            $this->getTableLocator()->get('Groups')->find()
+                ->select(['id'])
+                ->where(['id' => $section->group_id])
+                ->epilog('FOR UPDATE')
+                ->firstOrFail();
+            $account = $accounts->find()
+                ->where(['Accounts.group_id' => $section->group_id])
+                ->orderByAsc('Accounts.account_name')
+                ->first();
+        }
         if (!$account instanceof Account) {
             $account = $accounts->newEntity([
                 'account_name' => $section->group->group_name,

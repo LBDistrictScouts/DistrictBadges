@@ -37,7 +37,8 @@ env:
 jobs:
   frontend-tests:
     name: Webstore Tests
-    runs-on: lbdistrictscouts-runners
+    # Pull requests can contain untrusted code, so validation must not use a self-hosted runner.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: webstore
@@ -61,8 +62,14 @@ jobs:
       - name: Lint
         run: yarn lint
 
+      - name: Type check
+        run: yarn tsc -b
+
   deploy:
     name: Deploy Webstore
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     needs: frontend-tests
     runs-on: lbdistrictscouts-runners
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') && 'test' || 'production' }}
