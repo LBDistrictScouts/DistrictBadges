@@ -25,6 +25,7 @@ use Cake\ORM\Entity;
  * @property string|null $contact_first_name
  * @property string|null $contact_last_name
  * @property string|null $contact_email
+ * @property \Cake\I18n\DateTime|null $last_notification_sent_at
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\User $user

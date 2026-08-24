@@ -28,7 +28,7 @@ class AuditsControllerTest extends TestCase
         'app.Badges',
         'app.Fulfilments',
         'app.Replenishments',
-        'app.StockTransactions',
+        'app.AuditLines',
     ];
 
     /**
@@ -77,14 +77,35 @@ class AuditsControllerTest extends TestCase
             'audit_completed' => true,
         ]);
 
-        $this->assertRedirect(['controller' => 'Audits', 'action' => 'index']);
-        $this->assertFlashMessage('The audit has been saved.');
-        $this->assertSame($before + 1, $audits->find()->count());
-
         $saved = $audits->find()
-            ->where(['audit_timestamp' => '2026-02-22 10:00:00'])
+            ->where(['user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1'])
+            ->orderByDesc('audit_timestamp')
             ->firstOrFail();
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $saved->id]);
+        $this->assertFlashMessage('The audit has started.');
+        $this->assertSame($before + 1, $audits->find()->count());
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
+        $this->assertFalse($saved->audit_completed);
+    }
+
+    public function testCannotBeginSecondAuditWhileOneIsOpen(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $openAudit = $audits->newEntity([
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'audit_completed' => false,
+        ]);
+        $audits->saveOrFail($openAudit);
+        $before = $audits->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post('/audits/add', [
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $openAudit->id]);
+        $this->assertSame($before, $audits->find()->count());
+        $this->assertFlashMessage('An audit is already open. Complete it before beginning another.');
     }
 
     /**
@@ -99,7 +120,7 @@ class AuditsControllerTest extends TestCase
         $entity = $audits->newEntity([
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
             'audit_timestamp' => '2026-02-22 12:00:00',
-            'audit_completed' => true,
+            'audit_completed' => false,
         ]);
         $audits->saveOrFail($entity);
         $id = $entity->id;
@@ -112,5 +133,79 @@ class AuditsControllerTest extends TestCase
         $this->assertFlashMessage('The audit has been deleted.');
         $this->assertSame($before - 1, $audits->find()->count());
         $this->assertFalse($audits->exists(['id' => $id]));
+    }
+
+    public function testAuditWithLinesCannotBeDeleted(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $audit = $audits->get('003b39f5-34f6-4f49-b1ff-97204ffc4336');
+        $audit->audit_completed = false;
+        $audits->saveOrFail($audit);
+
+        $this->enableCsrfToken();
+        $this->post('/audits/delete/' . $audit->id);
+
+        $this->assertResponseCode(405);
+        $this->assertTrue($audits->exists(['id' => $audit->id]));
+    }
+
+    public function testOpenAuditCountDoesNotApplyUntilCompletionAndThenLocks(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $badges = $this->getTableLocator()->get('Badges');
+        $lines = $this->getTableLocator()->get('AuditLines');
+        $audit = $audits->newEntity([
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'audit_completed' => false,
+        ]);
+        $audits->saveOrFail($audit);
+        $badgeId = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+
+        $this->enableCsrfToken();
+        $this->post('/audits/count/' . $audit->id, [
+            'badge_id' => $badgeId,
+            'actual_quantity' => 7,
+        ]);
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $audit->id]);
+        $this->assertSame(0, (int)$badges->get($badgeId)->on_hand_quantity);
+        $line = $lines->find()->where(['audit_id' => $audit->id, 'badge_id' => $badgeId])->firstOrFail();
+        $this->assertSame(0, (int)$line->audit_expected_quantity);
+        $this->assertSame(7, (int)$line->audit_actual_quantity);
+        $this->assertSame(7, (int)$line->on_hand_quantity_change);
+
+        $this->enableCsrfToken();
+        $this->post('/audits/complete/' . $audit->id);
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $audit->id]);
+        $this->assertTrue($audits->get($audit->id)->audit_completed);
+        $this->assertSame(7, (int)$badges->get($badgeId)->on_hand_quantity);
+
+        $this->enableCsrfToken();
+        $this->post('/audits/count/' . $audit->id, [
+            'badge_id' => $badgeId,
+            'actual_quantity' => 9,
+        ]);
+        $this->assertResponseCode(405);
+        $this->assertSame(7, (int)$lines->get($line->id)->audit_actual_quantity);
+    }
+
+    public function testOpenAuditCanStockAnUnstockedBadge(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $badges = $this->getTableLocator()->get('Badges');
+        $audit = $audits->newEntity([
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'audit_completed' => false,
+        ]);
+        $audits->saveOrFail($audit);
+        $badge = $badges->get('0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70');
+        $badge->stocked = false;
+        $badges->saveOrFail($badge);
+
+        $this->enableCsrfToken();
+        $this->post('/audits/stock-badge/' . $audit->id, ['badge_id' => $badge->id]);
+
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $audit->id]);
+        $this->assertTrue($badges->get($badge->id)->stocked);
+        $this->assertFlashMessage('Second badge is now stocked and ready to count.');
     }
 }

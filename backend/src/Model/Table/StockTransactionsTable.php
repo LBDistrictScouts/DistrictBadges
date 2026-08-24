@@ -145,6 +145,14 @@ class StockTransactionsTable extends Table
             ->notEmptyString('fulfilled_quantity_change');
 
         $validator
+            ->integer('audit_expected_quantity')
+            ->allowEmptyString('audit_expected_quantity');
+
+        $validator
+            ->integer('audit_actual_quantity')
+            ->allowEmptyString('audit_actual_quantity');
+
+        $validator
             ->decimal('monetary_amount')
             ->allowEmptyString('monetary_amount');
 
@@ -278,6 +286,7 @@ class StockTransactionsTable extends Table
 
         $query = $stockTransactions->find()
             ->leftJoinWith('Fulfilments')
+            ->leftJoinWith('Audits')
             ->where(['StockTransactions.badge_id' => $badgeId])
             ->where(function ($exp) {
                 return $exp->or([
@@ -285,6 +294,12 @@ class StockTransactionsTable extends Table
                     'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
                 ]);
             });
+        $query->where(function ($exp) {
+            return $exp->or([
+                'StockTransactions.audit_id IS' => null,
+                'Audits.audit_completed' => true,
+            ]);
+        });
 
         $totals = $query
             ->select([
@@ -298,12 +313,19 @@ class StockTransactionsTable extends Table
 
         $latest = $stockTransactions->find()
             ->leftJoinWith('Fulfilments')
+            ->leftJoinWith('Audits')
             ->select(['audit_hash'])
             ->where(['StockTransactions.badge_id' => $badgeId])
             ->where(function ($exp) {
                 return $exp->or([
                     'StockTransactions.fulfilment_id IS' => null,
                     'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
+                ]);
+            })
+            ->where(function ($exp) {
+                return $exp->or([
+                    'StockTransactions.audit_id IS' => null,
+                    'Audits.audit_completed' => true,
                 ]);
             })
             ->orderBy([

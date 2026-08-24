@@ -36,6 +36,7 @@ class OrdersFixture extends TestFixture
                 'contact_first_name' => null,
                 'contact_last_name' => null,
                 'contact_email' => null,
+                'last_notification_sent_at' => null,
             ],
         ];
         parent::init();

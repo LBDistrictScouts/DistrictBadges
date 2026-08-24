@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Enum\TagCategory;
+
 /**
  * BadgeTags Controller
  *
@@ -17,13 +19,18 @@ class BadgeTagsController extends AppController
      */
     public function index()
     {
+        $categoryValue = $this->request->getQuery('category');
+        $category = is_numeric($categoryValue) ? TagCategory::tryFrom((int)$categoryValue) : null;
         $query = $this->BadgeTags->find()
             ->orderByAsc('tag_category')
             ->orderByAsc('tag_order')
             ->orderByAsc('tag_name');
+        if ($category !== null) {
+            $query->where(['tag_category' => $category->value]);
+        }
         $badgeTags = $this->paginate($query);
 
-        $this->set(compact('badgeTags'));
+        $this->set(compact('badgeTags', 'category'));
     }
 
     /**

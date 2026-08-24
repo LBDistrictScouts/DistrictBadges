@@ -15,6 +15,7 @@ use Cake\ORM\Entity;
  * @property \App\Model\Enum\FulfilmentStatus $status
  * @property string $total_amount
  * @property int $total_quantity
+ * @property \Cake\I18n\DateTime|null $last_notification_sent_at
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
  * @property \App\Model\Entity\FulfilmentLine[] $fulfilment_lines

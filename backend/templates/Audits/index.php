@@ -2,10 +2,15 @@
 /**
  * @var \App\View\AppView $this
  * @var iterable<\App\Model\Entity\Audit> $audits
+ * @var \App\Model\Entity\Audit|null $openAudit
  */
 ?>
 <div class="audits index content">
-    <?= $this->Html->link(__('New Audit'), ['action' => 'add'], ['class' => 'button float-right']) ?>
+    <?= $this->Html->link(
+        $openAudit ? __('Continue Open Audit') : __('New Audit'),
+        $openAudit ? ['action' => 'view', $openAudit->id] : ['action' => 'add'],
+        ['class' => 'button float-right'],
+    ) ?>
     <h3><?= __('Audits') ?></h3>
     <div class="table-responsive">
         <table>
@@ -22,17 +27,17 @@
                 <tr>
                     <td><?= $audit->hasValue('user') ? $this->Html->link($audit->user->full_name, ['controller' => 'Users', 'action' => 'view', $audit->user->id]) : '' ?></td>
                     <td><?= h($audit->audit_timestamp) ?></td>
-                    <td><?= h($audit->audit_completed) ?></td>
+                    <td><?= $audit->audit_completed ? __('Completed') : __('Open') ?></td>
                     <td class="actions">
-                        <?= $this->Html->link(__('View'), ['action' => 'view', $audit->id]) ?>
-                        <?= $this->Form->postLink(
+                        <?= $this->Html->link($audit->audit_completed ? __('View') : __('Continue'), ['action' => 'view', $audit->id]) ?>
+                        <?php if (!$audit->audit_completed && empty($audit->audit_lines)) : ?><?= $this->Form->postLink(
                             __('Delete'),
                             ['action' => 'delete', $audit->id],
                             [
                                 'method' => 'delete',
                                 'confirm' => __('Are you sure you want to delete # {0}?', $audit->id),
                             ],
-                        ) ?>
+                        ) ?><?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

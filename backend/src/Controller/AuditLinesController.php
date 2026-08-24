@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Cake\Http\Exception\MethodNotAllowedException;
+
 /**
  * AuditLines Controller
  *
@@ -46,6 +48,10 @@ class AuditLinesController extends AppController
     {
         $auditLine = $this->AuditLines->newEmptyEntity();
         if ($this->request->is('post')) {
+            $audit = $this->AuditLines->Audits->get($this->request->getData('audit_id'));
+            if ($audit->audit_completed) {
+                throw new MethodNotAllowedException('Completed audits cannot be edited.');
+            }
             $auditLine = $this->AuditLines->patchEntity($auditLine, $this->request->getData());
             if ($this->AuditLines->save($auditLine)) {
                 $this->Flash->success(__('The audit line has been saved.'));
@@ -71,6 +77,10 @@ class AuditLinesController extends AppController
     public function edit(?string $id = null)
     {
         $auditLine = $this->AuditLines->get($id, contain: []);
+        $audit = $this->AuditLines->Audits->get($auditLine->audit_id);
+        if ($audit->audit_completed) {
+            throw new MethodNotAllowedException('Completed audits cannot be edited.');
+        }
         if ($this->request->is(['patch', 'post', 'put'])) {
             $auditLine = $this->AuditLines->patchEntity($auditLine, $this->request->getData());
             if ($this->AuditLines->save($auditLine)) {
@@ -98,6 +108,10 @@ class AuditLinesController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $auditLine = $this->AuditLines->get($id);
+        $audit = $this->AuditLines->Audits->get($auditLine->audit_id);
+        if ($audit->audit_completed) {
+            throw new MethodNotAllowedException('Completed audits cannot be edited.');
+        }
         if ($this->AuditLines->delete($auditLine)) {
             $this->Flash->success(__('The audit line has been deleted.'));
         } else {

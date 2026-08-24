@@ -16,11 +16,15 @@ declare(strict_types=1);
  */
 namespace App\Controller;
 
+use App\Model\Enum\FulfilmentStatus;
+use App\Model\Enum\OrderStatus;
+use App\Model\Enum\ReplenishmentStatus;
 use Cake\Core\Configure;
 use Cake\Http\Exception\ForbiddenException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
 use Cake\View\Exception\MissingTemplateException;
+use DateTimeImmutable;
 
 /**
  * Static content controller
@@ -60,6 +64,30 @@ class PagesController extends AppController
             $subpage = $path[1];
         }
         $this->set(compact('page', 'subpage'));
+
+        if ($page === 'home' && $subpage === null) {
+            $dashboardCounts = [
+                'orders' => $this->fetchTable('Orders')->find()
+                    ->where(['status IN' => [
+                        OrderStatus::Placed->value,
+                        OrderStatus::PartiallyFulfilled->value,
+                    ]])
+                    ->count(),
+                'replenishments' => $this->fetchTable('Replenishments')->find()
+                    ->where(['status IN' => [
+                        ReplenishmentStatus::Submitted->value,
+                        ReplenishmentStatus::PartiallyReceived->value,
+                    ]])
+                    ->count(),
+                'fulfilments' => $this->fetchTable('Fulfilments')->find()
+                    ->where([
+                        'status' => FulfilmentStatus::Dispatched->value,
+                        'dispatched_date >=' => new DateTimeImmutable('-7 days'),
+                    ])
+                    ->count(),
+            ];
+            $this->set(compact('dashboardCounts'));
+        }
 
         try {
             return $this->render(implode('/', $path));
