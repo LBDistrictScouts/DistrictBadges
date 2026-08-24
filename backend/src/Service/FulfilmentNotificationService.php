@@ -29,8 +29,11 @@ class FulfilmentNotificationService
         ]);
 
         $user = null;
+        $contactEmail = null;
+        $contactName = null;
         foreach ($fulfilment->fulfilment_lines as $line) {
-            $lineUser = $line->order_line?->order?->user;
+            $lineOrder = $line->order_line?->order;
+            $lineUser = $lineOrder?->user;
             if ($lineUser === null) {
                 continue;
             }
@@ -38,17 +41,28 @@ class FulfilmentNotificationService
                 throw new RuntimeException('A fulfilment cannot notify more than one user.');
             }
             $user = $lineUser;
+            $lineEmail = trim((string)$lineOrder->contact_email) ?: (string)$lineUser->email;
+            if ($contactEmail !== null && mb_strtolower($contactEmail) !== mb_strtolower($lineEmail)) {
+                throw new RuntimeException('A fulfilment cannot notify more than one contact email.');
+            }
+            $contactEmail = $lineEmail;
+            $snapshotName = trim(sprintf(
+                '%s %s',
+                $lineOrder->contact_first_name ?? '',
+                $lineOrder->contact_last_name ?? '',
+            ));
+            $contactName = $snapshotName !== '' ? $snapshotName : $lineUser->full_name;
         }
-        if ($user === null || trim((string)$user->email) === '') {
+        if ($user === null || trim((string)$contactEmail) === '') {
             throw new RuntimeException('The fulfilment has no customer email address.');
         }
 
         $mailer = new Mailer('default');
         $mailer
-            ->setTo($user->email, $user->full_name)
+            ->setTo($contactEmail, $contactName)
             ->setSubject('Badges ready to collect: ' . $fulfilment->fulfilment_number)
             ->setEmailFormat('both')
-            ->setViewVars(compact('fulfilment', 'user'));
+            ->setViewVars(compact('fulfilment', 'user', 'contactName'));
         $mailer->viewBuilder()
             ->setTemplate('fulfilment_dispatched')
             ->setLayout('default');

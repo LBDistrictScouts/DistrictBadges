@@ -22,6 +22,9 @@ use Cake\ORM\Entity;
  * @property string|null $section_id
  * @property string $idempotency_key
  * @property string|null $request_fingerprint
+ * @property string|null $contact_first_name
+ * @property string|null $contact_last_name
+ * @property string|null $contact_email
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\User $user
@@ -46,6 +49,9 @@ class Order extends Entity
         'section_id' => true,
         'idempotency_key' => true,
         'request_fingerprint' => true,
+        'contact_first_name' => true,
+        'contact_last_name' => true,
+        'contact_email' => true,
         'account' => true,
         'user' => true,
         'section' => true,

@@ -57,10 +57,17 @@
                     <td>
                         <?= $order->hasValue('user')
                             ? $this->Html->link(
-                                $order->user->full_name,
+                                trim(sprintf(
+                                    '%s %s',
+                                    $order->contact_first_name ?? '',
+                                    $order->contact_last_name ?? '',
+                                )) ?: $order->user->full_name,
                                 ['controller' => 'Users', 'action' => 'view', $order->user->id],
                             )
                             : __('No user') ?>
+                        <?php if ($order->contact_email) : ?>
+                            <br><?= h($order->contact_email) ?>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <tr>

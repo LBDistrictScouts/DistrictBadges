@@ -33,6 +33,9 @@ class OrdersFixture extends TestFixture
                 'section_id' => null,
                 'idempotency_key' => null,
                 'request_fingerprint' => null,
+                'contact_first_name' => null,
+                'contact_last_name' => null,
+                'contact_email' => null,
             ],
         ];
         parent::init();

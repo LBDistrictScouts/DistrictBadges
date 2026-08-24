@@ -119,8 +119,11 @@ class OrdersControllerTest extends TestCase
         $this->assertSame($user->id, $order->user_id);
         $this->assertSame($accountId, $order->account_id);
         $updatedUser = $users->get($user->id);
-        $this->assertSame('Changed', $updatedUser->first_name);
-        $this->assertSame('Name', $updatedUser->last_name);
+        $this->assertSame('Existing', $updatedUser->first_name);
+        $this->assertSame('Leader', $updatedUser->last_name);
+        $this->assertSame('Changed', $order->contact_first_name);
+        $this->assertSame('Name', $order->contact_last_name);
+        $this->assertSame('existing@example.org', $order->contact_email);
     }
 
     public function testPlaceUsesSectionAccount(): void
@@ -241,6 +244,37 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseCode(422);
         $response = json_decode((string)$this->_response->getBody(), true);
         $this->assertArrayHasKey('idempotency_key', $response['errors']);
+    }
+
+    public function testPlaceReturnsExistingOrderAfterCatalogueChanges(): void
+    {
+        $payload = $this->validOrderPayload(['email' => 'retry@example.org']);
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $payload);
+        $this->assertResponseCode(201);
+        $first = json_decode((string)$this->_response->getBody(), true);
+
+        $this->getTableLocator()->get('Badges')->updateAll(['price' => 9.99, 'status' => 40], [
+            'id' => $payload['lines'][0]['badge_id'],
+        ]);
+        $this->post('/api/orders.json', $payload);
+
+        $this->assertResponseCode(201);
+        $second = json_decode((string)$this->_response->getBody(), true);
+        $this->assertSame($first['order_id'], $second['order_id']);
+    }
+
+    public function testPlaceRejectsQuantityBeyondStorageLimit(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['lines'][0]['quantity'] = 1000001;
+        $this->enableCsrfToken();
+
+        $this->post('/api/orders.json', $payload);
+
+        $this->assertResponseCode(422);
+        $response = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('quantity', $response['errors']['lines'][0]);
     }
 
     public function testPlaceRejectsChangedBadgePrice(): void

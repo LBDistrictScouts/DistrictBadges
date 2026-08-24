@@ -50,7 +50,7 @@ job="${prefix}district-badges-migrate-$(date -u +%Y%m%d%H%M%S)"
 echo "Running migrations from $image before updating any workloads."
 kubectl create job "$job" -n "$namespace" --image="$image" \
     --dry-run=client -o json -- \
-    php bin/cake.php migrations migrate \
+    sh -c 'php bin/cake.php migrations migrate && php bin/cake.php district_core_data:sync' \
     | jq \
         --arg service_account "${prefix}district-badges-runtime" \
         --arg config_map "${prefix}district-badges-config" \

@@ -94,7 +94,8 @@ class DistrictCoreDataService
 
             foreach ($sectionData as $record) {
                 $id = (string)$record['id'];
-                $entity = $sections->find()->where(['section_osm_id' => $record['section_id']])->first();
+                $entity = $sections->find()->where(['id' => $id])->first()
+                    ?? $sections->find()->where(['section_osm_id' => $record['section_id']])->first();
 
                 if ($entity !== null && $entity->id !== $id) {
                     $sections->updateAll(['id' => $id], ['id' => $entity->id]);

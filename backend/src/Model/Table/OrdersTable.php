@@ -107,6 +107,19 @@ class OrdersTable extends Table
             ->allowEmptyString('request_fingerprint');
 
         $validator
+            ->scalar('contact_first_name')
+            ->maxLength('contact_first_name', 255)
+            ->allowEmptyString('contact_first_name');
+        $validator
+            ->scalar('contact_last_name')
+            ->maxLength('contact_last_name', 255)
+            ->allowEmptyString('contact_last_name');
+        $validator
+            ->email('contact_email')
+            ->maxLength('contact_email', 255)
+            ->allowEmptyString('contact_email');
+
+        $validator
             ->uuid('account_id')
             ->notEmptyString('account_id');
 

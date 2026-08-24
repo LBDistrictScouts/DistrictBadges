@@ -6,8 +6,10 @@ namespace App\Controller;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\TransactionType;
+use App\Service\FulfilmentNotificationService;
 use Cake\Datasource\EntityInterface;
 use Cake\Utility\Text;
+use Throwable;
 
 /**
  * Fulfilments Controller
@@ -73,6 +75,37 @@ class FulfilmentsController extends AppController
     {
         $fulfilment = $this->Fulfilments->get($id, contain: ['FulfilmentLines.Badges']);
         $this->set(compact('fulfilment'));
+    }
+
+    /**
+     * Retry the customer notification for a dispatched fulfilment.
+     *
+     * @return \Cake\Http\Response
+     */
+    public function resendNotification(?string $id = null)
+    {
+        $this->request->allowMethod(['post']);
+        $fulfilment = $this->Fulfilments->get($id);
+        if ($fulfilment->status !== FulfilmentStatus::Dispatched) {
+            $this->Flash->error(__('Only dispatched fulfilments can be notified.'));
+
+            return $this->redirect(['action' => 'view', $fulfilment->id]);
+        }
+
+        $service = new FulfilmentNotificationService();
+        $service->setTableLocator($this->getTableLocator());
+        try {
+            if ($service->sendDispatched($fulfilment)) {
+                $this->Flash->success(__('The fulfilment notification email has been resent.'));
+            } else {
+                $this->Flash->error(__('Order notification emails are disabled.'));
+            }
+        } catch (Throwable $exception) {
+            $this->log('Could not resend fulfilment notification: ' . $exception->getMessage(), LOG_ERR);
+            $this->Flash->error(__('The fulfilment notification email could not be sent.'));
+        }
+
+        return $this->redirect(['action' => 'view', $fulfilment->id]);
     }
 
     /**

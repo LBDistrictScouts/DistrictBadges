@@ -95,4 +95,33 @@ class DistrictCoreDataServiceTest extends TestCase
         $this->assertSame('Renamed Scout Group', $groups->get($groupId)->group_name);
         $this->assertSame(1, $groups->find()->where(['id' => $groupId])->count());
     }
+
+    public function testSyncUpdatesSectionWhenLegacyIdChanges(): void
+    {
+        $groupId = '4d5149f3-6214-4457-a04d-e428dc1200d7';
+        $sectionId = 'd9534dcb-a846-5a22-a2fe-b67580555563';
+        $service = new DistrictCoreDataService([
+            'url' => 'https://example.org/index.html',
+            'username' => 'test',
+            'password' => 'test',
+        ]);
+
+        $service->sync([[
+            'id' => $groupId,
+            'group_name' => 'Lorem ipsum dolor sit amet',
+            'sort_order' => 1,
+        ]], [[
+            'id' => $sectionId,
+            'group_id' => $groupId,
+            'group' => 'Lorem ipsum dolor sit amet',
+            'section_id' => 99999,
+            'section_name' => 'Renamed Section',
+            'section_type' => 'scouts',
+        ]]);
+
+        $sections = $this->getTableLocator()->get('Sections');
+        $this->assertSame(99999, $sections->get($sectionId)->section_osm_id);
+        $this->assertSame('Renamed Section', $sections->get($sectionId)->section_name);
+        $this->assertSame(1, $sections->find()->where(['id' => $sectionId])->count());
+    }
 }

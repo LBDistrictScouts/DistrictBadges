@@ -45,6 +45,7 @@ type ApiErrorResponse = {
 
 const BASKET_STORAGE_KEY = 'district-badges:basket'
 const CHECKOUT_DETAILS_STORAGE_KEY = 'district-badges:checkout-details'
+const IDEMPOTENCY_KEY_STORAGE_KEY = 'district-badges:checkout-idempotency-key'
 const appId = import.meta.env.VITE_ALGOLIA_APP_ID?.trim()
 const searchApiKey = import.meta.env.VITE_ALGOLIA_SEARCH_API_KEY?.trim()
 const indexName = import.meta.env.VITE_ALGOLIA_BADGES_INDEX?.trim() || 'BADGES-DEV'
@@ -91,6 +92,18 @@ function readCheckoutDetails(): CheckoutDetails {
   }
 }
 
+function readIdempotencyKey(): string {
+  try {
+    const stored = window.localStorage.getItem(IDEMPOTENCY_KEY_STORAGE_KEY)
+    if (stored && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored)) {
+      return stored
+    }
+  } catch {
+    // A session-only key still provides retry protection while this page remains open.
+  }
+  return crypto.randomUUID()
+}
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(price)
 }
@@ -127,7 +140,15 @@ function App() {
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'submitting' | 'success'>('idle')
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutDetails, setCheckoutDetails] = useState<CheckoutDetails>(readCheckoutDetails)
-  const idempotencyKey = useRef(crypto.randomUUID())
+  const idempotencyKey = useRef(readIdempotencyKey())
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(IDEMPOTENCY_KEY_STORAGE_KEY, idempotencyKey.current)
+    } catch {
+      // Keep the key in memory when browser storage is unavailable.
+    }
+  }, [])
 
   useEffect(() => {
     try {
@@ -300,6 +321,11 @@ function App() {
 
       setBasket([])
       idempotencyKey.current = crypto.randomUUID()
+      try {
+        window.localStorage.setItem(IDEMPOTENCY_KEY_STORAGE_KEY, idempotencyKey.current)
+      } catch {
+        // Keep the replacement key in memory when browser storage is unavailable.
+      }
       setCheckoutStatus('success')
     } catch (submissionError) {
       setCheckoutStatus('idle')

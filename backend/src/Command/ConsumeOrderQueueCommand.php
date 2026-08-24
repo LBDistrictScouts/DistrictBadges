@@ -9,6 +9,8 @@ use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
+use Cake\Log\Log;
+use Throwable;
 
 class ConsumeOrderQueueCommand extends Command
 {
@@ -42,15 +44,35 @@ class ConsumeOrderQueueCommand extends Command
      */
     public function execute(Arguments $args, ConsoleIo $io): int
     {
-        $service = new OrderQueueService();
+        $service = $this->buildQueueService();
         $processor = new OrderProcessor();
+        $waitTime = (int)$args->getOption('wait-time');
         do {
-            $count = $service->consumeBatch($processor, (int)$args->getOption('wait-time'));
+            try {
+                $count = $service->consumeBatch($processor, $waitTime);
+            } catch (Throwable $exception) {
+                Log::error('Order queue polling failed: {message}', [
+                    'message' => $exception->getMessage(),
+                    'scope' => ['orders'],
+                ]);
+                if ($args->getOption('once')) {
+                    return self::CODE_ERROR;
+                }
+
+                sleep(5);
+                continue;
+            }
             if ($count > 0) {
                 $io->verbose(sprintf('Processed %d order message(s).', $count));
             }
         } while (!$args->getOption('once'));
 
         return self::CODE_SUCCESS;
+    }
+
+    /** @return \App\Service\OrderQueueService */
+    protected function buildQueueService(): OrderQueueService
+    {
+        return new OrderQueueService();
     }
 }

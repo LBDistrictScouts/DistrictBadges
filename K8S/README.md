@@ -129,12 +129,12 @@ bash K8S/scripts/rolling-update.sh \
 The script performs the update in this order:
 
 1. Start a migration Job with the requested image, causing Kubernetes to pull it.
-2. Run the CakePHP schema migrations and stop immediately if they fail.
+2. Run the CakePHP schema migrations and DistrictCoreData sync, stopping immediately if either fails.
 3. Resolve the successfully migrated image to an immutable digest.
 4. Roll the app Deployment to that digest without taking an existing replica down.
 5. Roll both queue workers to the same digest.
 
-If migration fails, no workloads are changed. `kubectl` and `jq` are required. Run
+If migration or CoreData sync fails, no workloads are changed. `kubectl` and `jq` are required. Run
 only one update per environment at a time. Database changes must remain compatible
 with the previous application version while the rolling update is in progress.
 

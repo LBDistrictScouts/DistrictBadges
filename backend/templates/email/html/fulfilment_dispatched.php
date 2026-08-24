@@ -3,9 +3,10 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Fulfilment $fulfilment
  * @var \App\Model\Entity\User $user
+ * @var string|null $contactName
  */
 
-$customerName = trim((string)$user->full_name) ?: 'there';
+$customerName = trim((string)($contactName ?? $user->full_name)) ?: 'there';
 $dispatchedDate = $fulfilment->dispatched_date?->i18nFormat('d MMMM yyyy, HH:mm') ?? '';
 $orderNumbers = [];
 $linesByOrder = [];

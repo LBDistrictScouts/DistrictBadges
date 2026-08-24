@@ -34,8 +34,11 @@ class OrderNotificationService
 
         $mailer = $this->createMailer();
         $template = $this->receivedTemplate($order);
+        $contactName = trim(sprintf('%s %s', $order->contact_first_name ?? '', $order->contact_last_name ?? ''));
+        $contactName = $contactName !== '' ? $contactName : $order->user->full_name;
+        $contactEmail = trim((string)$order->contact_email) ?: $order->user->email;
         $mailer
-            ->setTo($order->user->email, $order->user->full_name)
+            ->setTo($contactEmail, $contactName)
             ->setSubject('Order received: ' . $order->order_number)
             ->setEmailFormat('both')
             ->setViewVars(compact('order'));

@@ -13,11 +13,12 @@ if (!localPath && (!endpoint || !username || !password)) {
 }
 
 const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+const datasetBaseUrl = endpoint ? new URL(endpoint.endsWith('/') ? endpoint : `${endpoint}/`) : null
 
 async function fetchDataset(filename) {
   if (localPath) return JSON.parse(await readFile(resolve(localPath, filename), 'utf8'))
 
-  const response = await fetch(new URL(filename, endpoint), {
+  const response = await fetch(new URL(filename, datasetBaseUrl), {
     headers: { Authorization: authorization, Accept: 'application/json' },
   })
 

@@ -17,6 +17,9 @@ class OrderPlacementService
 {
     use LocatorAwareTrait;
 
+    private const MAX_QUANTITY = 1000000;
+    private const MAX_MONEY = 99999999.99;
+
     /**
      * Validate and synchronously persist an order and its related records.
      *
@@ -26,20 +29,28 @@ class OrderPlacementService
      */
     public function place(array $data): Order
     {
+        $orders = $this->getTableLocator()->get('Orders');
+        $validKey = isset($data['idempotency_key'])
+            && is_string($data['idempotency_key'])
+            && Validation::uuid($data['idempotency_key']);
+        if ($validKey) {
+            $existing = $orders->find()->where(['idempotency_key' => $data['idempotency_key']])->first();
+            if ($existing instanceof Order) {
+                $errors = $this->validate($data, false);
+                if ($errors !== []) {
+                    throw new OrderValidationException($errors);
+                }
+                $this->assertMatchingFingerprint($existing, $this->requestFingerprint($data));
+
+                return $existing;
+            }
+        }
+
         $errors = $this->validate($data);
         if ($errors !== []) {
             throw new OrderValidationException($errors);
         }
-
-        $orders = $this->getTableLocator()->get('Orders');
         $requestFingerprint = $this->requestFingerprint($data);
-
-        $existing = $orders->find()->where(['idempotency_key' => $data['idempotency_key']])->first();
-        if ($existing instanceof Order) {
-            $this->assertMatchingFingerprint($existing, $requestFingerprint);
-
-            return $existing;
-        }
 
         try {
             $order = $orders->getConnection()->transactional(function () use (
@@ -56,6 +67,9 @@ class OrderPlacementService
                 ], ['associated' => ['OrderLines']]);
                 $order->set('idempotency_key', $data['idempotency_key']);
                 $order->set('request_fingerprint', $requestFingerprint);
+                $order->set('contact_first_name', trim((string)$data['first_name']));
+                $order->set('contact_last_name', trim((string)$data['last_name']));
+                $order->set('contact_email', mb_strtolower(trim((string)$data['email'])));
                 $order->set('status', OrderStatus::Placed);
                 $orders->saveOrFail($order, [
                     'associated' => ['OrderLines'],
@@ -88,7 +102,7 @@ class OrderPlacementService
      * @param array<string, mixed> $data Order API payload.
      * @return array<string, mixed>
      */
-    public function validate(array $data): array
+    public function validate(array $data, bool $validateCatalogue = true): array
     {
         $errors = [];
         if (
@@ -152,8 +166,12 @@ class OrderPlacementService
                 !isset($line['quantity'])
                 || filter_var($line['quantity'], FILTER_VALIDATE_INT) === false
                 || (int)$line['quantity'] <= 0
+                || (int)$line['quantity'] > self::MAX_QUANTITY
             ) {
-                $errors['lines'][$index]['quantity'] = 'Quantity must be a positive integer.';
+                $errors['lines'][$index]['quantity'] = sprintf(
+                    'Quantity must be a positive integer no greater than %d.',
+                    self::MAX_QUANTITY,
+                );
             }
             if (
                 !isset($line['unit_price'])
@@ -163,7 +181,7 @@ class OrderPlacementService
                 $errors['lines'][$index]['unit_price'] = 'Unit price must be a non-negative number.';
             }
         }
-        if (!isset($errors['lines'])) {
+        if ($validateCatalogue && !isset($errors['lines'])) {
             $uniqueBadgeIds = array_values(array_unique($badgeIds));
             $badges = $this->getTableLocator()->get('Badges')->find()
                 ->select(['id', 'price'])
@@ -182,6 +200,9 @@ class OrderPlacementService
                     $serverPrice = round((float)$badges[$line['badge_id']]['price'], 2);
                     if (round((float)$line['unit_price'], 2) !== $serverPrice) {
                         $errors['lines'][$index]['unit_price'] = 'The badge price has changed. Refresh your basket.';
+                    }
+                    if ($serverPrice * (int)$line['quantity'] > self::MAX_MONEY) {
+                        $errors['lines'][$index]['quantity'] = 'The line total exceeds the maximum order value.';
                     }
                 }
             }
@@ -219,14 +240,6 @@ class OrderPlacementService
                 'can_login' => false,
             ]);
             $users->saveOrFail($user);
-        } else {
-            $user->patch([
-                'first_name' => trim((string)$data['first_name']),
-                'last_name' => trim((string)$data['last_name']),
-            ]);
-            if ($user->isDirty('first_name') || $user->isDirty('last_name')) {
-                $users->saveOrFail($user);
-            }
         }
 
         return [$account, $user];

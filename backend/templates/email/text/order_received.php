@@ -5,7 +5,8 @@
  */
 
 $backendCreated = (bool)($this->get('backendCreated') ?? false);
-$customerName = trim((string)($order->user->full_name ?? '')) ?: 'there';
+$customerName = trim(sprintf('%s %s', $order->contact_first_name ?? '', $order->contact_last_name ?? ''))
+    ?: (trim((string)($order->user->full_name ?? '')) ?: 'there');
 $placedDate = $order->placed_date?->i18nFormat('d MMMM yyyy, HH:mm') ?? '';
 $totalQuantity = (int)$order->total_ordered_quantity;
 ?>
