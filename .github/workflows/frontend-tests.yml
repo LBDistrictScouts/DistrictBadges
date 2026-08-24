@@ -67,9 +67,7 @@ jobs:
     name: Deploy Webstore
     if: github.event_name != 'pull_request'
     needs: frontend-tests
-    runs-on:
-      - self-hosted
-      - linux
+    runs-on: lbdistrictscouts-runners
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || github.ref == 'refs/heads/dev' && 'test' || 'production' }}
     concurrency:
       group: webstore-${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || github.ref == 'refs/heads/dev' && 'test' || 'production' }}
