@@ -446,10 +446,13 @@ function App() {
               <Form.Control
                 type="number"
                 min="1"
+                step="1"
                 inputMode="numeric"
                 value={selectedQuantity}
                 onFocus={(event) => event.currentTarget.select()}
-                onChange={(event) => setSelectedQuantity(Math.max(1, Number(event.currentTarget.value) || 1))}
+                onChange={(event) => setSelectedQuantity(
+                  Math.max(1, Math.trunc(Number(event.currentTarget.value)) || 1),
+                )}
                 aria-label={`Quantity of ${selectedProduct.badge_name}`}
               />
               <Button variant="outline-secondary" onClick={() => setSelectedQuantity((quantity) => quantity + 1)} aria-label="Increase quantity">+</Button>

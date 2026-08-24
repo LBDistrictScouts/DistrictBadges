@@ -72,6 +72,37 @@ class OrderProcessorTest extends TestCase
         $this->assertSame($before + 1, $orders->find()->count());
     }
 
+    public function testProcessPreservesLegacyQueuedOrderAndIsIdempotent(): void
+    {
+        $processor = new OrderProcessor();
+        $processor->setTableLocator($this->getTableLocator());
+        $payload = [
+            'order_number' => 'WEB-LEGACY-123',
+            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'total_ordered_amount' => 3.0,
+            'total_ordered_quantity' => 2,
+            'lines' => [[
+                'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                'quantity' => 2,
+                'amount' => 3.0,
+            ]],
+        ];
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        $this->assertSame(OrderProcessor::ACK, $processor->process($body));
+        $this->assertSame(OrderProcessor::ACK, $processor->process($body));
+
+        $orders = $this->getTableLocator()->get('Orders');
+        $order = $orders->find()->where(['order_number' => 'WEB-LEGACY-123'])
+            ->contain(['OrderLines'])
+            ->firstOrFail();
+        $this->assertSame(1, $orders->find()->where(['order_number' => 'WEB-LEGACY-123'])->count());
+        $this->assertSame(OrderStatus::Placed, $order->status);
+        $this->assertSame('1.50', $order->order_lines[0]->unit_price);
+        $this->assertSame('3.00', $order->order_lines[0]->amount);
+    }
+
     /** @return array<string, mixed> */
     private function validPayload(): array
     {
