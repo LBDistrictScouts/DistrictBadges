@@ -51,7 +51,9 @@ class ReplenishmentsController extends AppController
             $query->where(['created_date <' => date('Y-m-d', strtotime($createdTo . ' +1 day'))]);
         }
 
-        $replenishments = $this->paginate($query);
+        $replenishments = $this->paginate($query, [
+            'order' => ['Replenishments.created_date' => 'DESC'],
+        ]);
         $statusOptions = [];
         foreach (ReplenishmentStatus::cases() as $case) {
             $statusOptions[$case->value] = $case->label();

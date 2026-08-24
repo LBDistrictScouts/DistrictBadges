@@ -20,6 +20,8 @@ use Cake\ORM\Entity;
  * @property int $receipted_quantity_change
  * @property int $pending_quantity_change
  * @property int $fulfilled_quantity_change
+ * @property int|null $audit_expected_quantity
+ * @property int|null $audit_actual_quantity
  * @property string|null $monetary_amount
  * @property string|null $unit_price
  * @property \App\Model\Enum\TransactionType $transaction_type
@@ -51,6 +53,8 @@ class StockTransaction extends Entity
         'receipted_quantity_change' => true,
         'pending_quantity_change' => true,
         'fulfilled_quantity_change' => true,
+        'audit_expected_quantity' => true,
+        'audit_actual_quantity' => true,
         'monetary_amount' => true,
         'unit_price' => true,
         'transaction_type' => true,

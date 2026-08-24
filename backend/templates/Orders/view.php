@@ -14,14 +14,6 @@
                 ['class' => 'side-nav-item'],
             ) ?>
             <?= $this->Form->postLink(
-                __('Resend Order Email'),
-                ['action' => 'resendNotification', $order->id],
-                [
-                    'confirm' => __('Resend the order notification email to this user?'),
-                    'class' => 'side-nav-item',
-                ],
-            ) ?>
-            <?= $this->Form->postLink(
                 __('Delete Order'),
                 ['action' => 'delete', $order->id],
                 [
@@ -73,6 +65,22 @@
                 <tr>
                     <th><?= __('Placed') ?></th>
                     <td><?= h($order->placed_date?->i18nFormat('dd MMM yyyy HH:mm')) ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('Last Order Email Sent') ?></th>
+                    <td>
+                        <?= $order->last_notification_sent_at
+                            ? h($order->last_notification_sent_at->i18nFormat('dd MMM yyyy HH:mm'))
+                            : __('Not sent') ?>
+                        <?= $this->Form->postLink(
+                            __('Resend Order Email'),
+                            ['action' => 'resendNotification', $order->id],
+                            [
+                                'confirm' => __('Resend the order notification email to this user?'),
+                                'class' => 'button button-outline float-right',
+                            ],
+                        ) ?>
+                    </td>
                 </tr>
                 <tr>
                     <th><?= __('Ordered Total') ?></th>

@@ -158,7 +158,7 @@ th {
   font-weight: bold;
 }
 
-@media (max-width: 820px) {
+@media (max-width: 900px) {
   .top-nav {
     flex-wrap: wrap;
     align-items: center;
@@ -203,6 +203,192 @@ th {
   .top-nav-overlay--open {
     opacity: 1;
     pointer-events: auto;
+  }
+}
+/* District visual system — shared with the customer-facing badge shop. */
+:root {
+  --district-ink: #172329;
+  --district-muted: #66747b;
+  --district-teal: #088486;
+  --district-teal-dark: #05696c;
+  --district-purple: #7413dc;
+  --district-green: #25b755;
+  --district-surface: #fff;
+  --district-surface-alt: #f5f8f8;
+  --district-border: #dfe7e7;
+  --district-shadow: 0 1.6rem 4.5rem rgba(19, 54, 56, 0.1);
+  --color-main-bg: var(--district-surface);
+  --color-links: var(--district-teal);
+  --color-links-active: var(--district-teal-dark);
+  --color-headings: var(--district-ink);
+}
+
+body {
+  color: var(--district-ink);
+  background: var(--district-surface);
+  font-family: "Raleway", "Segoe UI", sans-serif;
+}
+
+.button, button, input[type=button], input[type=reset], input[type=submit] {
+  border-color: var(--district-purple);
+  border-radius: 0.8rem;
+  background-color: var(--district-purple);
+  font-weight: 700;
+}
+
+input[type=email], input[type=number], input[type=password], input[type=search],
+input[type=tel], input[type=text], input[type=url], input:not([type]), textarea, select {
+  border-color: var(--district-border);
+  border-radius: 0.8rem;
+  background-color: #fff;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--district-teal) !important;
+  box-shadow: 0 0 0 0.3rem rgba(8, 132, 134, 0.12);
+}
+
+.top-nav {
+  position: sticky;
+  z-index: 100;
+  top: 0;
+  max-width: none;
+  min-height: 8.6rem;
+  padding: 1.4rem max(2rem, (100vw - 120rem) / 2 + 2rem);
+  border-bottom: 1px solid rgba(223, 231, 231, 0.8);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.district-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2rem;
+  color: var(--district-ink) !important;
+  text-decoration: none;
+}
+
+.district-brand__mark {
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  place-items: center;
+  border-radius: 1.6rem 0.5rem 1.6rem 0.5rem;
+  background: var(--district-purple);
+  box-shadow: 0 0.8rem 2.2rem rgba(116, 19, 220, 0.22);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 900;
+  transform: rotate(-3deg);
+}
+
+.district-brand__copy {
+  display: grid;
+  line-height: 1.05;
+}
+
+.district-brand__copy strong {
+  font-size: 1.75rem;
+  font-weight: 900;
+}
+
+.district-brand__copy small {
+  margin-top: 0.5rem;
+  color: var(--district-muted);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.top-nav-links {
+  margin-left: auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.top-nav-links a {
+  margin: 0;
+  padding: 1.3rem 0;
+  border-bottom: 2px solid transparent;
+  color: var(--district-muted);
+  font-size: 1.35rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.top-nav-links a + a {
+  margin-left: clamp(2.8rem, 3.2vw, 5rem);
+}
+
+.top-nav-links a:hover, .top-nav-links a:focus {
+  border-bottom-color: var(--district-teal);
+  color: var(--district-teal);
+}
+
+.top-nav-toggle {
+  border-color: var(--district-border);
+}
+
+.top-nav-toggle__bar {
+  background: var(--district-ink);
+}
+
+.main .container {
+  max-width: 120rem;
+}
+
+.main {
+  padding-top: 2.5rem;
+}
+
+.content {
+  border: 1px solid var(--district-border);
+  border-radius: 1.4rem;
+  box-shadow: 0 0.8rem 2.8rem rgba(19, 54, 56, 0.07);
+}
+
+th {
+  color: var(--district-muted);
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+td, th {
+  border-bottom-color: var(--district-border);
+}
+
+.side-nav a, .actions a, th a {
+  color: var(--district-teal-dark);
+}
+
+.message {
+  border-radius: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .top-nav {
+    min-height: 7.4rem;
+    flex-direction: row;
+  }
+  .district-brand__mark {
+    width: 4.3rem;
+    height: 4.3rem;
+  }
+  .district-brand__copy small {
+    display: none;
+  }
+  .top-nav-links {
+    padding-top: 8rem;
+    background: rgba(12, 52, 54, 0.98);
+  }
+  .top-nav-links a {
+    color: #e7f2f2;
+  }
+  .top-nav-links a + a {
+    margin-left: 0;
   }
 }
 .side-nav-item {
@@ -419,6 +605,31 @@ input[type=color] {
   height: 3.6rem;
 }
 
+.stock-line-bulk-loader {
+  display: grid;
+  width: 100%;
+  margin: 0 0 2rem;
+  align-items: end;
+  grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+  gap: 2rem;
+}
+
+.stock-line-bulk-loader > .column {
+  max-width: none;
+  padding: 0;
+}
+
+.stock-line-bulk-loader .input,
+.stock-line-bulk-loader .select2-container,
+.stock-line-bulk-loader .button {
+  margin-bottom: 0;
+}
+
+.stock-line-bulk-action {
+  display: flex;
+  align-items: flex-end;
+}
+
 @media (min-width: 40rem) {
   .stock-line-builder > .stock-line-badge-column {
     flex: 2 1 0;
@@ -607,6 +818,10 @@ input[type=color] {
   }
 }
 @media screen and (max-width: 640px) {
+  .stock-line-bulk-loader {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
   .index-filters__row {
     grid-template-columns: 1fr;
   }
@@ -636,6 +851,337 @@ input[type=color] {
   }
   .desc:after {
     content: " ←";
+  }
+}
+/* Entity families retain one accent throughout their complete workflow. */
+body {
+  --entity-accent: var(--district-teal);
+  --entity-accent-dark: var(--district-teal-dark);
+  --entity-accent-soft: rgba(0, 184, 163, 0.10);
+}
+
+body[data-entity-category=audits] {
+  --entity-accent: #ed3f23;
+  --entity-accent-dark: #b52a16;
+  --entity-accent-soft: rgba(237, 63, 35, 0.09);
+}
+
+body[data-entity-category=replenishments] {
+  --entity-accent: var(--district-teal);
+  --entity-accent-dark: var(--district-teal-dark);
+  --entity-accent-soft: rgba(0, 184, 163, 0.10);
+}
+
+body[data-entity-category=fulfilments] {
+  --entity-accent: var(--district-green);
+  --entity-accent-dark: #17873a;
+  --entity-accent-soft: rgba(37, 183, 85, 0.10);
+}
+
+body[data-entity-category=orders] {
+  --entity-accent: var(--district-purple);
+  --entity-accent-dark: #5c0faf;
+  --entity-accent-soft: rgba(116, 19, 220, 0.09);
+}
+
+body[data-entity-category=badges] {
+  --entity-accent: #ffe627;
+  --entity-accent-dark: #715f00;
+  --entity-accent-soft: rgba(255, 230, 39, 0.16);
+}
+
+body[data-entity-category=audits] .main .content,
+body[data-entity-category=replenishments] .main .content,
+body[data-entity-category=fulfilments] .main .content {
+  border-top: 0.5rem solid var(--entity-accent);
+}
+
+body[data-entity-category=orders] .main .content,
+body[data-entity-category=badges] .main .content {
+  border-top: 0.5rem solid var(--entity-accent);
+}
+
+body[data-entity-category=audits] .main h1,
+body[data-entity-category=audits] .main h2,
+body[data-entity-category=audits] .main h3,
+body[data-entity-category=replenishments] .main h1,
+body[data-entity-category=replenishments] .main h2,
+body[data-entity-category=replenishments] .main h3,
+body[data-entity-category=fulfilments] .main h1,
+body[data-entity-category=fulfilments] .main h2,
+body[data-entity-category=fulfilments] .main h3 {
+  color: var(--entity-accent-dark);
+}
+
+body[data-entity-category=orders] .main h1,
+body[data-entity-category=orders] .main h2,
+body[data-entity-category=orders] .main h3,
+body[data-entity-category=badges] .main h1,
+body[data-entity-category=badges] .main h2,
+body[data-entity-category=badges] .main h3 {
+  color: var(--entity-accent-dark);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main a:not(.button) {
+  color: var(--entity-accent-dark);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main .button:not(.button-outline):not(.button-clear):not(.audit-sort),
+body[data-entity-category]:not([data-entity-category=default]) .main button:not(.button-outline):not(.button-clear):not(.audit-sort),
+body[data-entity-category]:not([data-entity-category=default]) .main input[type=button],
+body[data-entity-category]:not([data-entity-category=default]) .main input[type=submit] {
+  border-color: var(--entity-accent);
+  background-color: var(--entity-accent);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main .button.button-outline {
+  border-color: var(--entity-accent);
+  background: transparent;
+  color: var(--entity-accent-dark);
+}
+
+body[data-entity-category=badges] .main .button:not(.button-outline):not(.button-clear),
+body[data-entity-category=badges] .main button:not(.button-outline):not(.button-clear),
+body[data-entity-category=badges] .main input[type=button],
+body[data-entity-category=badges] .main input[type=submit] {
+  color: var(--entity-accent-dark);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main .button:not(.button-outline):not(.button-clear):not(.audit-sort):hover,
+body[data-entity-category]:not([data-entity-category=default]) .main button:not(.button-outline):not(.button-clear):not(.audit-sort):hover {
+  border-color: var(--entity-accent-dark);
+  background-color: var(--entity-accent-dark);
+}
+
+body[data-entity-category=badges] .main .button:not(.button-outline):not(.button-clear):hover,
+body[data-entity-category=badges] .main button:not(.button-outline):not(.button-clear):hover {
+  color: #fff;
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main .button.button-clear,
+body[data-entity-category]:not([data-entity-category=default]) .main button.button-clear {
+  border-color: transparent;
+  background: transparent;
+  color: var(--entity-accent-dark);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main .button.button-clear:hover,
+body[data-entity-category]:not([data-entity-category=default]) .main button.button-clear:hover {
+  background: var(--entity-accent-soft);
+  color: var(--entity-accent-dark);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main input:focus,
+body[data-entity-category]:not([data-entity-category=default]) .main textarea:focus,
+body[data-entity-category]:not([data-entity-category=default]) .main select:focus {
+  border-color: var(--entity-accent) !important;
+  box-shadow: 0 0 0 0.3rem var(--entity-accent-soft);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main thead {
+  background: var(--entity-accent-soft);
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .main .pagination .active a {
+  border-color: var(--entity-accent);
+  background: var(--entity-accent);
+  color: #fff;
+}
+
+body[data-entity-category]:not([data-entity-category=default]) .top-nav-links a.is-active {
+  border-bottom-color: var(--entity-accent);
+  color: var(--entity-accent-dark);
+}
+
+/* Milligram removes the first cell inset; data grids need a consistent edge gutter. */
+.main table th:first-child,
+.main table td:first-child,
+.orders-index-table th:first-child,
+.orders-index-table td:first-child,
+.replenishments-index-table th:first-child,
+.replenishments-index-table td:first-child {
+  padding-left: 1.5rem;
+}
+
+.main table th:last-child,
+.main table td:last-child {
+  padding-right: 1.5rem;
+}
+
+.audit-lines-table th .audit-sort,
+.audit-lines-table th .audit-sort:hover,
+.audit-lines-table th .audit-sort:focus,
+.audit-lines-table th .audit-sort:active {
+  display: inline;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-align: left;
+  text-transform: inherit;
+}
+
+.audit-lines-table th .audit-sort:hover,
+.audit-lines-table th .audit-sort:focus {
+  color: var(--entity-accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+.audit-sort[data-sort-direction=asc]::after {
+  content: " ↑";
+}
+
+.audit-sort[data-sort-direction=desc]::after {
+  content: " ↓";
+}
+
+button.audit-dialog-close {
+  display: grid;
+  width: 4rem;
+  min-width: 4rem;
+  height: 4rem;
+  min-height: 4rem;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--district-muted);
+  font-family: Arial, sans-serif;
+  font-size: 3rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+}
+
+button.audit-dialog-close:hover,
+button.audit-dialog-close:focus {
+  border: 0;
+  background: var(--entity-accent-soft);
+  color: var(--entity-accent-dark);
+}
+
+.audit-count-dialog {
+  position: relative;
+  overflow: visible;
+  width: min(52rem, 100% - 3rem);
+  max-width: 52rem;
+  min-height: 0;
+  padding: 3.2rem;
+  border: 1px solid var(--district-border);
+  border-top: 0.5rem solid var(--entity-accent);
+  border-radius: 1.8rem;
+  background: var(--district-surface);
+  box-shadow: 0 2.4rem 7rem rgba(19, 54, 56, 0.24);
+  color: var(--district-ink);
+}
+
+.audit-count-dialog::backdrop {
+  background: rgba(12, 52, 54, 0.55);
+  backdrop-filter: blur(0.3rem);
+}
+
+#audit-stock-dialog {
+  width: min(64rem, 100% - 3rem);
+  max-width: 64rem;
+  min-height: 0;
+}
+
+.audit-count-dialog form {
+  margin: 0;
+}
+
+.audit-count-dialog__heading {
+  display: block;
+  padding-right: 4.5rem;
+}
+
+.audit-count-dialog__heading h4 {
+  margin: 0.5rem 0 2.2rem;
+  color: var(--district-ink);
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.audit-count-dialog__eyebrow {
+  color: var(--entity-accent-dark);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+button.audit-dialog-close {
+  position: absolute;
+  top: 1.6rem;
+  right: 1.6rem;
+}
+
+.audit-count-dialog > form > p {
+  margin: -0.6rem 0 2.4rem;
+  color: var(--district-muted);
+  line-height: 1.6;
+}
+
+.audit-expected {
+  margin-bottom: 2.4rem;
+  padding: 1.6rem 1.8rem;
+  gap: 2rem;
+  border-left: 0.4rem solid var(--entity-accent);
+  border-radius: 0 1rem 1rem 0;
+  background: var(--entity-accent-soft);
+}
+
+.audit-expected span {
+  color: var(--district-muted);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.audit-expected strong {
+  color: var(--entity-accent-dark);
+  font-size: 2.8rem;
+  font-weight: 900;
+}
+
+.audit-count-difference {
+  margin: -0.4rem 0 2.4rem;
+  color: var(--district-muted);
+  font-weight: 800;
+}
+
+.audit-dialog-actions {
+  margin: 2.8rem -3.2rem -3.2rem;
+  padding: 2rem 3.2rem;
+  border-top: 1px solid var(--district-border);
+  border-radius: 0 0 1.8rem 1.8rem;
+  background: var(--district-surface-alt);
+  gap: 1.2rem;
+}
+
+@media (max-width: 520px) {
+  .audit-count-dialog {
+    padding: 2.4rem;
+  }
+  .audit-dialog-actions {
+    margin: 2.4rem -2.4rem -2.4rem;
+    padding: 1.8rem 2.4rem;
   }
 }
 

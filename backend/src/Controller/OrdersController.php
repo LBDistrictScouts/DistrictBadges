@@ -24,13 +24,13 @@ class OrdersController extends AppController
     public function index()
     {
         $query = $this->Orders->find()
-            ->contain(['Accounts', 'Users']);
+            ->contain(['Accounts.Groups', 'Users']);
         $filters = [
             'number' => trim((string)$this->request->getQuery('number')),
             'status' => (string)$this->request->getQuery('status'),
             'created_from' => (string)$this->request->getQuery('created_from'),
             'created_to' => (string)$this->request->getQuery('created_to'),
-            'account_id' => (string)$this->request->getQuery('account_id'),
+            'group_id' => (string)$this->request->getQuery('group_id'),
             'user_id' => (string)$this->request->getQuery('user_id'),
         ];
 
@@ -53,8 +53,8 @@ class OrdersController extends AppController
             $query->where(['placed_date <' => date('Y-m-d', strtotime($createdTo . ' +1 day'))]);
         }
 
-        if ($filters['account_id'] !== '') {
-            $query->where(['Orders.account_id' => $filters['account_id']]);
+        if ($filters['group_id'] !== '') {
+            $query->where(['Accounts.group_id' => $filters['group_id']]);
         }
 
         if ($filters['user_id'] !== '') {
@@ -63,13 +63,24 @@ class OrdersController extends AppController
 
         $orders = $this->paginate($query, [
             'order' => ['Orders.placed_date' => 'DESC'],
+            'sortableFields' => [
+                'order_number',
+                'Groups.group_name',
+                'user_id',
+                'placed_date',
+                'status',
+                'total_ordered_quantity',
+                'total_ordered_amount',
+                'total_fulfilled_quantity',
+                'total_fulfilled_amount',
+            ],
         ]);
         $statusOptions = [];
         foreach (OrderStatus::cases() as $case) {
             $statusOptions[$case->value] = $case->label();
         }
-        $accountOptions = $this->Orders->Accounts->find('list')
-            ->orderByAsc('account_name')
+        $groupOptions = $this->Orders->Accounts->Groups->find('list')
+            ->orderByAsc('group_name')
             ->all();
         $userOptions = $this->Orders->Users->find(
             'list',
@@ -83,7 +94,7 @@ class OrdersController extends AppController
             'orders',
             'filters',
             'statusOptions',
-            'accountOptions',
+            'groupOptions',
             'userOptions',
         ));
     }

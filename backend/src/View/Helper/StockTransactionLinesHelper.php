@@ -127,7 +127,7 @@ class StockTransactionLinesHelper extends Helper
                 $this->Url->build($bulkLoader['url']),
                 JSON_THROW_ON_ERROR,
             );
-            $bulkLoaderHtml = '<div class="row"><div class="column">'
+            $bulkLoaderHtml = '<div class="row stock-line-bulk-loader"><div class="column stock-line-bulk-source">'
                 . $this->Form->control((string)$bulkLoader['field'], [
                     'label' => $bulkLoader['label'],
                     'options' => $bulkLoader['options'],
@@ -135,7 +135,7 @@ class StockTransactionLinesHelper extends Helper
                     'value' => '',
                     'data-stock-line-bulk-source' => true,
                 ])
-                . '</div><div class="column">'
+                . '</div><div class="column stock-line-bulk-action">'
                 . '<button type="button" class="button button-outline" data-stock-line-bulk-add>'
                 . h($bulkLoader['addLabel'] ?? __('Add'))
                 . '</button></div></div>';
@@ -157,7 +157,8 @@ class StockTransactionLinesHelper extends Helper
             . '<button type="button" class="button button-outline" data-stock-line-add>'
             . h($config['addLabel'] ?? __('Add Line')) . '</button>' : '')
             . '<p class="error-message" data-stock-line-error hidden></p>'
-            . '<div class="table-responsive"><table><thead><tr><th>' . __('Badge') . '</th>'
+            . '<div class="table-responsive"><table class="stock-transaction-grid">'
+            . '<thead><tr><th>' . __('Badge') . '</th>'
             . $selectorHeaders . $headers
             . '<th class="actions">' . __('Actions') . '</th></tr></thead>'
             . '<tbody data-stock-line-grid>' . $rows . '</tbody></table></div>'
@@ -170,6 +171,84 @@ class StockTransactionLinesHelper extends Helper
                 $fields,
                 $selectors,
             );
+    }
+
+    /**
+     * Render persisted audit transactions using the shared stock grid structure.
+     * Audit rows are saved individually, so they intentionally do not use the
+     * nested editable inputs produced by grid().
+     *
+     * @param \Cake\Datasource\EntityInterface $audit Audit with AuditLines.Badges loaded.
+     * @return string
+     */
+    public function auditGrid(EntityInterface $audit): string
+    {
+        $editable = !$audit->get('audit_completed');
+        $rows = '';
+
+        foreach ($audit->get('audit_lines') ?? [] as $line) {
+            $expected = (int)$line->get('audit_expected_quantity');
+            $actual = (int)$line->get('audit_actual_quantity');
+            $difference = $actual - $expected;
+            $badgeName = (string)$line->badge->badge_name;
+            $action = '';
+            if ($editable) {
+                $action = sprintf(
+                    '<td class="actions"><button type="button" '
+                    . 'class="button button-outline audit-count-button" '
+                    . 'data-badge-id="%s" data-badge-name="%s" '
+                    . 'data-expected="%d" data-actual="%d">%s</button></td>',
+                    h((string)$line->get('badge_id')),
+                    h($badgeName),
+                    $expected,
+                    $actual,
+                    __('Count'),
+                );
+            }
+            $rows .= sprintf(
+                '<tr data-created="%s" data-badge="%s" data-expected="%d" '
+                . 'data-actual="%d" data-difference="%d"><td>%s</td><td>%d</td>'
+                . '<td>%d</td><td><strong>%s</strong></td>%s</tr>',
+                h($line->transaction_timestamp->format('Y-m-d H:i:s.u')),
+                h(mb_strtolower($badgeName)),
+                $expected,
+                $actual,
+                $difference,
+                h($badgeName),
+                $expected,
+                $actual,
+                h(sprintf('%+d', $difference)),
+                $action,
+            );
+        }
+
+        $actionHeader = $editable ? '<th class="actions">' . __('Actions') . '</th>' : '';
+
+        return '<div class="table-responsive"><table class="stock-transaction-grid audit-lines-table">'
+            . '<thead><tr>'
+            . $this->auditSortHeader('badge', 'text', __('Badge'))
+            . $this->auditSortHeader('expected', 'number', __('Expected'))
+            . $this->auditSortHeader('actual', 'number', __('Actual'))
+            . $this->auditSortHeader('difference', 'number', __('Difference'))
+            . $actionHeader
+            . '</tr></thead><tbody id="audit-lines-body">' . $rows . '</tbody></table></div>';
+    }
+
+    /**
+     * @param string $key Sort key.
+     * @param string $type Sort value type.
+     * @param string $label Heading label.
+     * @return string
+     */
+    private function auditSortHeader(string $key, string $type, string $label): string
+    {
+        return sprintf(
+            '<th><button type="button" class="audit-sort" data-audit-sort="%s" '
+            . 'data-sort-type="%s">%s</button></th>',
+            h($key),
+            h($type),
+            h($label),
+        );
     }
 
     /**

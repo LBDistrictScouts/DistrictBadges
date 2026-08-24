@@ -26,6 +26,7 @@ class FulfilmentsFixture extends TestFixture
                 'status' => 10,
                 'total_amount' => 0,
                 'total_quantity' => 0,
+                'last_notification_sent_at' => null,
             ],
         ];
         parent::init();

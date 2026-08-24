@@ -5,6 +5,7 @@ namespace App\Service;
 
 use App\Model\Entity\Fulfilment;
 use Cake\Core\Configure;
+use Cake\I18n\DateTime;
 use Cake\Mailer\Mailer;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use RuntimeException;
@@ -57,7 +58,7 @@ class FulfilmentNotificationService
             throw new RuntimeException('The fulfilment has no customer email address.');
         }
 
-        $mailer = new Mailer('default');
+        $mailer = $this->createMailer();
         $mailer
             ->setTo($contactEmail, $contactName)
             ->setSubject('Badges ready to collect: ' . $fulfilment->fulfilment_number)
@@ -68,6 +69,21 @@ class FulfilmentNotificationService
             ->setLayout('default');
         $mailer->deliver();
 
+        $sentAt = DateTime::now();
+        $fulfilments->updateAll(
+            ['last_notification_sent_at' => $sentAt],
+            ['id' => $fulfilment->id],
+        );
+        $fulfilment->set('last_notification_sent_at', $sentAt);
+
         return true;
+    }
+
+    /**
+     * @return \Cake\Mailer\Mailer
+     */
+    protected function createMailer(): Mailer
+    {
+        return new Mailer('default');
     }
 }

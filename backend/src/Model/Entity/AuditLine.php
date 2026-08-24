@@ -17,6 +17,8 @@ use App\Model\Enum\TransactionType;
  * @property int $receipted_quantity_change
  * @property int $pending_quantity_change
  * @property int $fulfilled_quantity_change
+ * @property int|null $audit_expected_quantity
+ * @property int|null $audit_actual_quantity
  * @property \App\Model\Enum\TransactionType $transaction_type
  *
  * @property \App\Model\Entity\Badge $badge

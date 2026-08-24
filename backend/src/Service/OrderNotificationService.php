@@ -5,6 +5,7 @@ namespace App\Service;
 
 use App\Model\Entity\Order;
 use Cake\Core\Configure;
+use Cake\I18n\DateTime;
 use Cake\Mailer\Mailer;
 use Cake\ORM\Locator\LocatorAwareTrait;
 
@@ -46,6 +47,13 @@ class OrderNotificationService
             ->setTemplate($template)
             ->setLayout('default');
         $mailer->deliver();
+
+        $sentAt = DateTime::now();
+        $orders->updateAll(
+            ['last_notification_sent_at' => $sentAt],
+            ['id' => $order->id],
+        );
+        $order->set('last_notification_sent_at', $sentAt);
 
         return true;
     }

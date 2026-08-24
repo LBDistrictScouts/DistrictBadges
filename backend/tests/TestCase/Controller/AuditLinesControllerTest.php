@@ -65,6 +65,9 @@ class AuditLinesControllerTest extends TestCase
      */
     public function testAdd(): void
     {
+        $audit = $this->getTableLocator()->get('Audits')->get('003b39f5-34f6-4f49-b1ff-97204ffc4336');
+        $audit->audit_completed = false;
+        $this->getTableLocator()->get('Audits')->saveOrFail($audit);
         $lines = $this->getTableLocator()->get('AuditLines');
         $before = $lines->find()->count();
 
@@ -93,6 +96,9 @@ class AuditLinesControllerTest extends TestCase
      */
     public function testEdit(): void
     {
+        $audit = $this->getTableLocator()->get('Audits')->get('003b39f5-34f6-4f49-b1ff-97204ffc4336');
+        $audit->audit_completed = false;
+        $this->getTableLocator()->get('Audits')->saveOrFail($audit);
         $lines = $this->getTableLocator()->get('AuditLines');
         $id = '1d2e3f40-1111-4b2a-8c3d-0a1b2c3d4e5f';
 
@@ -122,6 +128,9 @@ class AuditLinesControllerTest extends TestCase
      */
     public function testDelete(): void
     {
+        $audit = $this->getTableLocator()->get('Audits')->get('003b39f5-34f6-4f49-b1ff-97204ffc4336');
+        $audit->audit_completed = false;
+        $this->getTableLocator()->get('Audits')->saveOrFail($audit);
         $lines = $this->getTableLocator()->get('AuditLines');
         $before = $lines->find()->count();
 

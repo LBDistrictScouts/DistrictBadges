@@ -18,16 +18,6 @@
                 ],
             ) ?>
             <?php endif; ?>
-            <?php if ($fulfilment->status === \App\Model\Enum\FulfilmentStatus::Dispatched) : ?>
-            <?= $this->Form->postLink(
-                __('Resend Dispatch Email'),
-                ['action' => 'resendNotification', $fulfilment->id],
-                [
-                    'confirm' => __('Resend the dispatch notification email?'),
-                    'class' => 'side-nav-item',
-                ],
-            ) ?>
-            <?php endif; ?>
             <?= $this->Html->link(
                 __('List Fulfilments'),
                 ['action' => 'index'],
@@ -58,6 +48,24 @@
                         <?= $fulfilment->dispatched_date
                             ? h($fulfilment->dispatched_date->i18nFormat('dd MMM yyyy HH:mm'))
                             : __('Not dispatched') ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th><?= __('Last Dispatch Email Sent') ?></th>
+                    <td>
+                        <?= $fulfilment->last_notification_sent_at
+                            ? h($fulfilment->last_notification_sent_at->i18nFormat('dd MMM yyyy HH:mm'))
+                            : __('Not sent') ?>
+                        <?php if ($fulfilment->status === \App\Model\Enum\FulfilmentStatus::Dispatched) : ?>
+                        <?= $this->Form->postLink(
+                            __('Resend Dispatch Email'),
+                            ['action' => 'resendNotification', $fulfilment->id],
+                            [
+                                'confirm' => __('Resend the dispatch notification email?'),
+                                'class' => 'button button-outline float-right',
+                            ],
+                        ) ?>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <tr>

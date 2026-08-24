@@ -2,11 +2,12 @@
 /**
  * @var \App\View\AppView $this
  * @var iterable<\App\Model\Entity\BadgeTag> $badgeTags
+ * @var \App\Model\Enum\TagCategory|null $category
  */
 ?>
 <div class="badgeTags index content">
     <?= $this->Html->link(__('New Badge Tag'), ['action' => 'add'], ['class' => 'button float-right']) ?>
-    <h3><?= __('Badge Tags') ?></h3>
+    <h3><?= h($category?->label() ?? __('Badge Tags')) ?></h3>
     <div class="table-responsive">
         <table>
             <thead>

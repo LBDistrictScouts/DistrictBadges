@@ -4,7 +4,7 @@
  * @var iterable<\App\Model\Entity\Order> $orders
  * @var array<string, string> $filters
  * @var array<int, string> $statusOptions
- * @var iterable<string, string> $accountOptions
+ * @var iterable<string, string> $groupOptions
  * @var iterable<string, string> $userOptions
  */
 ?>
@@ -37,11 +37,11 @@
         ]) ?>
     </div>
     <div class="index-filters__row">
-        <?= $this->Form->control('account_id', [
-            'label' => __('Account'),
-            'options' => $accountOptions,
-            'empty' => __('All accounts'),
-            'value' => $filters['account_id'],
+        <?= $this->Form->control('group_id', [
+            'label' => __('Group'),
+            'options' => $groupOptions,
+            'empty' => __('All groups'),
+            'value' => $filters['group_id'],
         ]) ?>
         <?= $this->Form->control('user_id', [
             'label' => __('User'),
@@ -60,7 +60,7 @@
             <thead>
                 <tr>
                     <th><?= $this->Paginator->sort('order_number', __('Order')) ?></th>
-                    <th><?= $this->Paginator->sort('account_id', __('Account')) ?></th>
+                    <th><?= $this->Paginator->sort('Groups.group_name', __('Group')) ?></th>
                     <th><?= $this->Paginator->sort('user_id', __('User')) ?></th>
                     <th><?= $this->Paginator->sort('placed_date', __('Placed')) ?></th>
                     <th><?= $this->Paginator->sort('status') ?></th>
@@ -81,12 +81,14 @@
                         ) ?>
                     </td>
                     <td>
-                        <?= $order->hasValue('account')
+                        <?php $group = $order->account?->group; ?>
+                        <?= $group !== null
                             ? $this->Html->link(
-                                $order->account->account_name,
-                                ['controller' => 'Accounts', 'action' => 'view', $order->account->id],
+                                $this->Text->truncate($group->group_name, 8, ['ellipsis' => '…', 'exact' => true]),
+                                ['controller' => 'Groups', 'action' => 'view', $group->id],
+                                ['title' => $group->group_name],
                             )
-                            : __('No account') ?>
+                            : __('No group') ?>
                     </td>
                     <td>
                         <?= $order->hasValue('user')

@@ -39,6 +39,9 @@ class PagesControllerTest extends TestCase
         $this->get('/pages/home');
         $this->assertResponseOk();
         $this->assertResponseContains('District Badges');
+        $this->assertResponseContains('orders awaiting fulfilment');
+        $this->assertResponseContains('replenishments awaiting stock');
+        $this->assertResponseContains('fulfilments sent in 7 days');
         $this->assertResponseContains('<html lang="EN-GB">');
     }
 
