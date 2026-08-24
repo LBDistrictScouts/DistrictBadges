@@ -8,6 +8,10 @@ namePrefix: test-
 resources:
   - ../../../operations
 
+images:
+  - name: ghcr.io/lbdistrictscouts/districtbadges-backend
+    newTag: dev
+
 labels:
   - pairs:
       environment: test
