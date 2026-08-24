@@ -16,13 +16,12 @@ class OrderNotificationService
      * Send an order receipt using the requested customer-facing variant.
      *
      * @param \App\Model\Entity\Order $order Newly-created order.
-     * @param string $template Email template name.
-     * @return void
+     * @return bool Whether delivery was attempted.
      */
-    public function sendReceived(Order $order, string $template): void
+    public function sendReceived(Order $order): bool
     {
         if (!Configure::read('OrderNotifications.enabled', true)) {
-            return;
+            return false;
         }
 
         $orders = $this->getTableLocator()->get('Orders');
@@ -34,6 +33,7 @@ class OrderNotificationService
         ]);
 
         $mailer = $this->createMailer();
+        $template = $this->receivedTemplate($order);
         $mailer
             ->setTo($order->user->email, $order->user->full_name)
             ->setSubject('Order received: ' . $order->order_number)
@@ -43,6 +43,18 @@ class OrderNotificationService
             ->setTemplate($template)
             ->setLayout('default');
         $mailer->deliver();
+
+        return true;
+    }
+
+    /**
+     * Select the receipt copy from the persisted order origin marker.
+     */
+    public function receivedTemplate(Order $order): string
+    {
+        return $order->hasValue('idempotency_key')
+            ? 'order_received'
+            : 'backend_order_received';
     }
 
     /**

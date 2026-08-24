@@ -8,6 +8,10 @@ namePrefix: test-
 resources:
   - ../../base
 
+images:
+  - name: ghcr.io/lbdistrictscouts/districtbadges-backend
+    newTag: dev
+
 replicas:
   - name: district-badges
     count: 1

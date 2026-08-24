@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Model\Enum\OrderStatus;
+use App\Service\OrderNotificationService;
 use Cake\Utility\Text;
+use Throwable;
 
 /**
  * Orders Controller
@@ -101,6 +103,33 @@ class OrdersController extends AppController
             'OrderLines.Badges',
         ]);
         $this->set(compact('order'));
+    }
+
+    /**
+     * Resend the received-order email using the order's original creation path.
+     *
+     * @param string|null $id Order id.
+     * @return \Cake\Http\Response
+     */
+    public function resendNotification(?string $id = null)
+    {
+        $this->request->allowMethod(['post']);
+        $order = $this->Orders->get($id);
+        $service = new OrderNotificationService();
+        $service->setTableLocator($this->getTableLocator());
+
+        try {
+            if ($service->sendReceived($order)) {
+                $this->Flash->success(__('The order notification email has been resent.'));
+            } else {
+                $this->Flash->error(__('Order notification emails are disabled.'));
+            }
+        } catch (Throwable $exception) {
+            $this->log('Could not resend order notification: ' . $exception->getMessage(), LOG_ERR);
+            $this->Flash->error(__('The order notification email could not be sent.'));
+        }
+
+        return $this->redirect(['action' => 'view', $order->id]);
     }
 
     /**

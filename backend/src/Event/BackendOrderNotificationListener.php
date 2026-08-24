@@ -39,7 +39,7 @@ class BackendOrderNotificationListener implements EventListenerInterface
 
         try {
             $service = $this->notificationService();
-            $service->sendReceived($order, 'backend_order_received');
+            $service->sendReceived($order);
         } catch (Throwable $exception) {
             $this->log('Could not send backend order receipt: ' . $exception->getMessage(), LOG_ERR);
         }

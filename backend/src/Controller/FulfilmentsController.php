@@ -275,24 +275,25 @@ class FulfilmentsController extends AppController
             'FulfilmentLines.Badges',
             'FulfilmentLines.OrderLines',
         ]);
+        $redirect = $this->referer(['action' => 'view', $fulfilment->id], true);
 
         if ($fulfilment->status !== FulfilmentStatus::Draft) {
             $this->Flash->error(__('Only draft fulfilments can be dispatched.'));
 
-            return $this->redirect(['action' => 'view', $fulfilment->id]);
+            return $this->redirect($redirect);
         }
         if (!$this->fulfilmentCanDispatch($fulfilment->fulfilment_lines ?? [])) {
             $this->Flash->error(__(
                 'This fulfilment can no longer be dispatched because stock or order quantities changed.',
             ));
 
-            return $this->redirect(['action' => 'view', $fulfilment->id]);
+            return $this->redirect($redirect);
         }
 
         $this->Fulfilments->dispatchEvent('Fulfilment.afterDispatch', [], $fulfilment);
         $this->Flash->success(__('The fulfilment has been dispatched.'));
 
-        return $this->redirect(['action' => 'view', $fulfilment->id]);
+        return $this->redirect($redirect);
     }
 
     /**

@@ -49,6 +49,7 @@ class OrdersControllerTest extends TestCase
     public function testPlaceCreatesOrder(): void
     {
         $users = $this->getTableLocator()->get('Users');
+        $orders = $this->getTableLocator()->get('Orders');
         $beforeUsers = $users->find()->count();
         $this->enableCsrfToken();
         $this->post('/api/orders.json', [
@@ -72,7 +73,7 @@ class OrdersControllerTest extends TestCase
         $payload = json_decode((string)$this->_response->getBody(), true);
         $this->assertSame('created', $payload['status']);
         $this->assertStringStartsWith('ORD-', $payload['order_number']);
-        $order = $this->getTableLocator()->get('Orders')->get($payload['order_id'], contain: ['OrderLines']);
+        $order = $orders->get($payload['order_id'], contain: ['OrderLines']);
         $this->assertSame(OrderStatus::Placed, $order->status);
         $this->assertSame('d9534dcb-a846-5a22-a2fe-b67580555563', $order->section_id);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $order->account_id);

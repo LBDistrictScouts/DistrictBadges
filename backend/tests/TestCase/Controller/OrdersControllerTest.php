@@ -131,6 +131,17 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains('Unit Price');
         $this->assertResponseContains('Line Amount');
         $this->assertResponseContains('Edit Order');
+        $this->assertResponseContains('Resend Order Email');
+    }
+
+    public function testResendNotificationReportsDisabledDelivery(): void
+    {
+        $id = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $this->enableCsrfToken();
+        $this->post("/orders/resend-notification/{$id}");
+
+        $this->assertRedirect(['controller' => 'Orders', 'action' => 'view', $id]);
+        $this->assertFlashMessage('Order notification emails are disabled.');
     }
 
     public function testAddDisplaysUserFullNames(): void

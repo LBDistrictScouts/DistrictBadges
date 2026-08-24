@@ -19,7 +19,7 @@ $this->assign('preheader', $backendCreated
     : 'Your district badge order has been received and is now with our team.');
 ?>
 <div style="margin:0 0 13px; color:#25b755; font-size:12px; font-weight:900; letter-spacing:1.8px; line-height:1.3; text-transform:uppercase;"><?= $backendCreated ? 'Order created' : 'Order received' ?></div>
-<h1 class="email-heading" style="margin:0; color:#172329; font-size:40px; font-weight:900; letter-spacing:-1.5px; line-height:1.08;">Hi, <?= h($customerName) ?>.<br><span style="color:#7413dc;"><?= $backendCreated ? 'We’ve created an order for you.' : 'We have your order.' ?></span></h1>
+<h1 class="email-heading" style="margin:0; color:#172329; font-size:40px; font-weight:900; letter-spacing:-1.5px; line-height:1.08;">Hi, <?= h($customerName) ?>.<br><span style="color:#7413dc;"><?= $backendCreated ? 'Our team has placed<br>your order.' : 'We have your order.' ?></span></h1>
 <p style="margin:22px 0 28px; color:#66747b; font-size:16px; line-height:1.65;"><?= $backendCreated ? 'The district badge shop team has placed the order below on your behalf. We’ll email you again when it is ready to collect.' : 'Your badge order has reached the district team. We’ll prepare it and email you again when it is ready to collect.' ?></p>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; margin:0 0 30px; border-collapse:collapse; border-radius:12px; background:#f5f8f8;">
     <tr>

@@ -281,6 +281,36 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertEquals($before->dispatched_date, $updated->dispatched_date);
     }
 
+    public function testDispatchRedirectsBackToIndexReferrer(): void
+    {
+        $id = 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a';
+        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        $this->getTableLocator()->get('OrderLines')->updateAll([
+            'quantity' => 2,
+            'fulfilled_quantity' => 0,
+            'fulfilled' => false,
+        ], ['id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db']);
+        $this->getTableLocator()->get('Badges')->updateAll([
+            'on_hand_quantity' => 2,
+        ], ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d']);
+        $this->getTableLocator()->get('StockTransactions')->updateAll([
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+            'transaction_type' => 2,
+            'fulfilled_quantity_change' => 1,
+            'on_hand_quantity_change' => -1,
+        ], ['id' => 'bad57a31-305f-4398-87d6-8fcfe4600793']);
+        $fulfilments->updateAll([
+            'status' => FulfilmentStatus::Draft->value,
+            'dispatched_date' => null,
+        ], ['id' => $id]);
+
+        $this->configRequest(['headers' => ['Referer' => 'http://localhost/fulfilments']]);
+        $this->enableCsrfToken();
+        $this->post("/fulfilments/dispatch/{$id}");
+
+        $this->assertRedirect('/fulfilments');
+    }
+
     public function testAddRequiresAtLeastOneLine(): void
     {
         $this->enableCsrfToken();

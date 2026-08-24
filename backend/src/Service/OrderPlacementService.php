@@ -42,7 +42,7 @@ class OrderPlacementService
         }
 
         try {
-            return $orders->getConnection()->transactional(function () use (
+            $order = $orders->getConnection()->transactional(function () use (
                 $orders,
                 $data,
                 $requestFingerprint,
@@ -59,11 +59,18 @@ class OrderPlacementService
                 $order->set('status', OrderStatus::Placed);
                 $orders->saveOrFail($order, [
                     'associated' => ['OrderLines'],
-                    'orderNotificationSource' => 'webstore',
                 ]);
 
                 return $order;
             });
+
+            // The save is nested inside the transaction above, so CakePHP does
+            // not emit Model.afterSaveCommit for it. Dispatch placement events
+            // only after the outer transaction has committed successfully.
+            $orders->dispatchEvent('Order.afterPlace', [], $order);
+            $orders->dispatchEvent('Order.afterWebstorePlace', [], $order);
+
+            return $order;
         } catch (QueryException $exception) {
             // A concurrent request may win the unique-key race after our initial lookup.
             $existing = $orders->find()->where(['idempotency_key' => $data['idempotency_key']])->first();

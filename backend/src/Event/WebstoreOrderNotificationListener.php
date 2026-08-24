@@ -39,7 +39,7 @@ class WebstoreOrderNotificationListener implements EventListenerInterface
 
         try {
             $service = $this->notificationService();
-            $service->sendReceived($order, 'order_received');
+            $service->sendReceived($order);
         } catch (Throwable $exception) {
             $this->log('Could not send webstore order receipt: ' . $exception->getMessage(), LOG_ERR);
         }

@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App;
 
 use App\Event\BackendOrderNotificationListener;
+use App\Event\FulfilmentDispatchNotificationListener;
 use App\Event\LifecycleStatusListener;
 use App\Event\OrderLineFulfilmentListener;
 use App\Event\WebstoreOrderNotificationListener;
@@ -130,6 +131,7 @@ class Application extends BaseApplication
     public function events(EventManagerInterface $eventManager): EventManagerInterface
     {
         $eventManager->on(new LifecycleStatusListener());
+        $eventManager->on(new FulfilmentDispatchNotificationListener());
         $eventManager->on(new OrderLineFulfilmentListener());
         $eventManager->on(new WebstoreOrderNotificationListener());
         $eventManager->on(new BackendOrderNotificationListener());

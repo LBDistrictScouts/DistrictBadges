@@ -11,7 +11,7 @@ $totalQuantity = (int)$order->total_ordered_quantity;
 ?>
 <?= $backendCreated ? 'ORDER CREATED' : 'ORDER RECEIVED' ?>
 
-Hi, <?= $customerName ?>. <?= $backendCreated ? 'We’ve created an order for you.' : 'We have your order.' ?>
+Hi, <?= $customerName ?>. <?= $backendCreated ? 'Our team has placed your order.' : 'We have your order.' ?>
 
 <?= $backendCreated ? 'The district badge shop team has placed the order below on your behalf.' : 'Your badge order has reached the district team.' ?> We’ll email you again when it is ready to collect.
 

@@ -14,6 +14,14 @@
                 ['class' => 'side-nav-item'],
             ) ?>
             <?= $this->Form->postLink(
+                __('Resend Order Email'),
+                ['action' => 'resendNotification', $order->id],
+                [
+                    'confirm' => __('Resend the order notification email to this user?'),
+                    'class' => 'side-nav-item',
+                ],
+            ) ?>
+            <?= $this->Form->postLink(
                 __('Delete Order'),
                 ['action' => 'delete', $order->id],
                 [

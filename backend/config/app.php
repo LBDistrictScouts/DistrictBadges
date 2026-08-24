@@ -281,8 +281,8 @@ return [
         'default' => [
             'transport' => 'default',
             'from' => [
-                env('EMAIL_FROM_ADDRESS', 'badge-shop@lbdscouts.org.uk') =>
-                    env('EMAIL_FROM_NAME', 'LBA Scouts District Badge Shop'),
+                env('EMAIL_FROM_ADDRESS', 'orders@badges-dev.lbdscouts.org.uk') =>
+                    env('EMAIL_FROM_NAME', 'LBA Scouts District Badge Shop (Development)'),
             ],
             /*
              * Will by default be set to config value of App.encoding, if that exists otherwise to UTF-8.

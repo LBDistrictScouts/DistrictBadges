@@ -18,7 +18,7 @@ class OrderNotificationListenerTest extends TestCase
         $service = $this->createMock(OrderNotificationService::class);
         $service->expects($this->once())
             ->method('sendReceived')
-            ->with($order, 'order_received');
+            ->with($order);
         $listener = new class ($service) extends WebstoreOrderNotificationListener {
             public function __construct(private readonly OrderNotificationService $service)
             {
@@ -39,7 +39,7 @@ class OrderNotificationListenerTest extends TestCase
         $service = $this->createMock(OrderNotificationService::class);
         $service->expects($this->once())
             ->method('sendReceived')
-            ->with($order, 'backend_order_received');
+            ->with($order);
         $listener = new class ($service) extends BackendOrderNotificationListener {
             public function __construct(private readonly OrderNotificationService $service)
             {
@@ -52,5 +52,19 @@ class OrderNotificationListenerTest extends TestCase
         };
 
         $listener->orderPlaced(new Event('Order.afterBackendPlace', $order));
+    }
+
+    public function testReceiptTemplateUsesIdempotencyKeyAsOrderOrigin(): void
+    {
+        $service = new OrderNotificationService();
+
+        $this->assertSame(
+            'order_received',
+            $service->receivedTemplate(new Order(['idempotency_key' => 'webstore-request'])),
+        );
+        $this->assertSame(
+            'backend_order_received',
+            $service->receivedTemplate(new Order(['idempotency_key' => null])),
+        );
     }
 }
