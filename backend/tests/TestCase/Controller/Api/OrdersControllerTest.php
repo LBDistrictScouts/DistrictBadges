@@ -52,6 +52,7 @@ class OrdersControllerTest extends TestCase
         $beforeUsers = $users->find()->count();
         $this->enableCsrfToken();
         $this->post('/api/orders.json', [
+            'idempotency_key' => '22fa039a-9ca7-455d-96be-6db2158b1a48',
             'first_name' => 'Alex',
             'last_name' => 'Leader',
             'email' => 'alex@example.org',
@@ -189,6 +190,39 @@ class OrdersControllerTest extends TestCase
         $this->assertArrayHasKey('lines', $payload['errors']);
     }
 
+    public function testPlaceReturnsExistingOrderForSameIdempotencyKey(): void
+    {
+        $payload = $this->validOrderPayload(['email' => 'retry@example.org']);
+        $orders = $this->getTableLocator()->get('Orders');
+        $before = $orders->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $payload);
+        $this->assertResponseCode(201);
+        $first = json_decode((string)$this->_response->getBody(), true);
+        $this->assertSame($payload['idempotency_key'], $orders->get($first['order_id'])->idempotency_key);
+
+        $this->post('/api/orders.json', $payload);
+        $this->assertResponseCode(201);
+        $second = json_decode((string)$this->_response->getBody(), true);
+
+        $this->assertSame($first['order_id'], $second['order_id']);
+        $this->assertSame($before + 1, $orders->find()->count());
+    }
+
+    public function testPlaceRejectsFractionalQuantity(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['lines'][0]['quantity'] = 1.5;
+        $this->enableCsrfToken();
+
+        $this->post('/api/orders.json', $payload);
+
+        $this->assertResponseCode(422);
+        $response = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('quantity', $response['errors']['lines'][0]);
+    }
+
     /**
      * @param array<string, mixed> $overrides Payload overrides.
      * @return array<string, mixed>
@@ -196,6 +230,7 @@ class OrdersControllerTest extends TestCase
     private function validOrderPayload(array $overrides = []): array
     {
         return $overrides + [
+            'idempotency_key' => '64bbc85a-7994-4b66-962d-1f4daf1c85ae',
             'first_name' => 'Alex',
             'last_name' => 'Leader',
             'email' => 'alex@example.org',

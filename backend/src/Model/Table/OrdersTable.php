@@ -98,6 +98,10 @@ class OrdersTable extends Table
             ->allowEmptyString('status');
 
         $validator
+            ->uuid('idempotency_key')
+            ->notEmptyString('idempotency_key');
+
+        $validator
             ->uuid('account_id')
             ->notEmptyString('account_id');
 

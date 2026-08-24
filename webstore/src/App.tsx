@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Badge, Button, Container, Form, Modal, Offcanvas, Spinner } from 'react-bootstrap'
 import coreData from './generated/core-data.json'
 import './App.css'
@@ -28,7 +28,7 @@ type BasketItem = {
   quantity: number
 }
 
-type AlgoliaResponse = { hits: Product[]; nbHits: number }
+type AlgoliaResponse = { hits: Product[]; nbHits: number; nbPages: number }
 
 type CheckoutDetails = {
   firstName: string
@@ -115,6 +115,7 @@ function App() {
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'submitting' | 'success'>('idle')
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutDetails, setCheckoutDetails] = useState<CheckoutDetails>(readCheckoutDetails)
+  const idempotencyKey = useRef(crypto.randomUUID())
 
   useEffect(() => {
     try {
@@ -146,23 +147,30 @@ function App() {
       setLoading(true)
       setError(null)
       try {
-        const response = await fetch(`https://${appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(indexName)}/query`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Algolia-Application-Id': appId,
-            'X-Algolia-API-Key': searchApiKey,
-          },
-          body: JSON.stringify({ query, hitsPerPage: 80 }),
-          signal: controller.signal,
-        })
-        if (!response.ok) throw new Error(`Algolia returned ${response.status}`)
-        const result = await response.json() as AlgoliaResponse
-        setProducts(result.hits)
-        setTotalHits(result.nbHits)
+        const fetchPage = async (page: number) => {
+          const response = await fetch(`https://${appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(indexName)}/query`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Algolia-Application-Id': appId,
+              'X-Algolia-API-Key': searchApiKey,
+            },
+            body: JSON.stringify({ query, hitsPerPage: 80, page }),
+            signal: controller.signal,
+          })
+          if (!response.ok) throw new Error(`Algolia returned ${response.status}`)
+          return response.json() as Promise<AlgoliaResponse>
+        }
+        const firstPage = await fetchPage(0)
+        const remainingPages = await Promise.all(
+          Array.from({ length: Math.max(0, firstPage.nbPages - 1) }, (_, index) => fetchPage(index + 1)),
+        )
+        const hits = [firstPage, ...remainingPages].flatMap((page) => page.hits)
+        setProducts(hits)
+        setTotalHits(firstPage.nbHits)
         setHeroBadgeImages((currentImages) => {
           if (currentImages.length > 0) return currentImages
-          return Array.from(new Set(result.hits
+          return Array.from(new Set(hits
             .map((product) => product.image_medium_url)
             .filter((imageUrl): imageUrl is string => Boolean(imageUrl))))
             .slice(0, 8)
@@ -258,6 +266,7 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
+          idempotency_key: idempotencyKey.current,
           first_name: checkoutDetails.firstName,
           last_name: checkoutDetails.lastName,
           email: checkoutDetails.email,
@@ -273,6 +282,7 @@ function App() {
       }
 
       setBasket([])
+      idempotencyKey.current = crypto.randomUUID()
       setCheckoutStatus('success')
     } catch (submissionError) {
       setCheckoutStatus('idle')

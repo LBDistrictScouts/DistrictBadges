@@ -58,10 +58,25 @@ class OrderProcessorTest extends TestCase
         $this->assertSame(OrderProcessor::REJECT, (new OrderProcessor())->process('{'));
     }
 
+    public function testProcessIsIdempotentWhenMessageIsRedelivered(): void
+    {
+        $processor = new OrderProcessor();
+        $processor->setTableLocator($this->getTableLocator());
+        $body = json_encode($this->validPayload(), JSON_THROW_ON_ERROR);
+        $orders = $this->getTableLocator()->get('Orders');
+        $before = $orders->find()->count();
+
+        $this->assertSame(OrderProcessor::ACK, $processor->process($body));
+        $this->assertSame(OrderProcessor::ACK, $processor->process($body));
+
+        $this->assertSame($before + 1, $orders->find()->count());
+    }
+
     /** @return array<string, mixed> */
     private function validPayload(): array
     {
         return [
+            'idempotency_key' => 'ef479a61-9278-4d83-b1ca-b86680f59d0e',
             'first_name' => 'Queue',
             'last_name' => 'Leader',
             'email' => 'queue@example.org',

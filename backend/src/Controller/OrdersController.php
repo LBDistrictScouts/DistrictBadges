@@ -60,7 +60,7 @@ class OrdersController extends AppController
         }
 
         $orders = $this->paginate($query, [
-            'order' => ['Orders.order_number' => 'DESC'],
+            'order' => ['Orders.placed_date' => 'DESC'],
         ]);
         $statusOptions = [];
         foreach (OrderStatus::cases() as $case) {

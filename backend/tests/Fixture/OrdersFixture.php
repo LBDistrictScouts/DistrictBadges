@@ -31,6 +31,7 @@ class OrdersFixture extends TestFixture
                 'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
                 'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
                 'section_id' => null,
+                'idempotency_key' => null,
             ],
         ];
         parent::init();

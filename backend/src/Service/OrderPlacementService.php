@@ -8,6 +8,7 @@ use App\Model\Entity\Account;
 use App\Model\Entity\Order;
 use App\Model\Entity\User;
 use App\Model\Enum\OrderStatus;
+use Cake\Database\Exception\QueryException;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\Validation\Validation;
 
@@ -31,19 +32,35 @@ class OrderPlacementService
 
         $orders = $this->getTableLocator()->get('Orders');
 
-        return $orders->getConnection()->transactional(function () use ($orders, $data): Order {
-            [$account, $user] = $this->resolveParties($data);
-            $order = $orders->newEntity([
-                'account_id' => $account->id,
-                'user_id' => $user->id,
-                'section_id' => $data['section_id'],
-                'order_lines' => $this->buildLines($data),
-            ], ['associated' => ['OrderLines']]);
-            $order->set('status', OrderStatus::Placed);
-            $orders->saveOrFail($order, ['associated' => ['OrderLines']]);
+        $existing = $orders->find()->where(['idempotency_key' => $data['idempotency_key']])->first();
+        if ($existing instanceof Order) {
+            return $existing;
+        }
 
-            return $order;
-        });
+        try {
+            return $orders->getConnection()->transactional(function () use ($orders, $data): Order {
+                [$account, $user] = $this->resolveParties($data);
+                $order = $orders->newEntity([
+                    'account_id' => $account->id,
+                    'user_id' => $user->id,
+                    'section_id' => $data['section_id'],
+                    'order_lines' => $this->buildLines($data),
+                ], ['associated' => ['OrderLines']]);
+                $order->set('idempotency_key', $data['idempotency_key']);
+                $order->set('status', OrderStatus::Placed);
+                $orders->saveOrFail($order, ['associated' => ['OrderLines']]);
+
+                return $order;
+            });
+        } catch (QueryException $exception) {
+            // A concurrent request may win the unique-key race after our initial lookup.
+            $existing = $orders->find()->where(['idempotency_key' => $data['idempotency_key']])->first();
+            if ($existing instanceof Order) {
+                return $existing;
+            }
+
+            throw $exception;
+        }
     }
 
     /**
@@ -53,6 +70,13 @@ class OrderPlacementService
     public function validate(array $data): array
     {
         $errors = [];
+        if (
+            !isset($data['idempotency_key'])
+            || !is_string($data['idempotency_key'])
+            || !Validation::uuid($data['idempotency_key'])
+        ) {
+            $errors['idempotency_key'] = 'Idempotency key must be a valid UUID.';
+        }
         foreach (['first_name' => 'First name', 'last_name' => 'Last name'] as $field => $label) {
             if (!isset($data[$field]) || !is_string($data[$field]) || trim($data[$field]) === '') {
                 $errors[$field] = sprintf('%s is required.', $label);
@@ -103,7 +127,11 @@ class OrderPlacementService
             } else {
                 $badgeIds[] = $line['badge_id'];
             }
-            if (!isset($line['quantity']) || !is_numeric($line['quantity']) || (int)$line['quantity'] <= 0) {
+            if (
+                !isset($line['quantity'])
+                || filter_var($line['quantity'], FILTER_VALIDATE_INT) === false
+                || (int)$line['quantity'] <= 0
+            ) {
                 $errors['lines'][$index]['quantity'] = 'Quantity must be a positive integer.';
             }
         }

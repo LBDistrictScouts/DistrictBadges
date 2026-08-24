@@ -52,7 +52,7 @@ class FulfilmentsController extends AppController
         }
 
         $fulfilments = $this->paginate($query, [
-            'order' => ['Fulfilments.fulfilment_number' => 'DESC'],
+            'order' => ['Fulfilments.fulfilment_date' => 'DESC'],
         ]);
         $statusOptions = [];
         foreach (FulfilmentStatus::cases() as $case) {

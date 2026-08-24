@@ -20,6 +20,7 @@ use Cake\ORM\Entity;
  * @property string $account_id
  * @property string $user_id
  * @property string|null $section_id
+ * @property string $idempotency_key
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\User $user
@@ -42,6 +43,7 @@ class Order extends Entity
         'account_id' => true,
         'user_id' => true,
         'section_id' => true,
+        'idempotency_key' => true,
         'account' => true,
         'user' => true,
         'section' => true,
