@@ -1,6 +1,13 @@
 name: Frontend Tests and Deploy
 
 on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'webstore/**'
+      - '.github/workflows/frontend-tests.yml'
   schedule:
     - cron: '0 5 * * 0'
   pull_request:
@@ -58,12 +65,11 @@ jobs:
 
   deploy:
     name: Deploy Webstore
-    if: github.event_name != 'pull_request'
     needs: frontend-tests
     runs-on: lbdistrictscouts-runners
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || github.ref == 'refs/heads/dev' && 'test' || 'production' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') && 'test' || 'production' }}
     concurrency:
-      group: webstore-${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || github.ref == 'refs/heads/dev' && 'test' || 'production' }}
+      group: webstore-${{ github.event_name == 'workflow_dispatch' && inputs.release_environment || (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') && 'test' || 'production' }}
       cancel-in-progress: false
     defaults:
       run:
