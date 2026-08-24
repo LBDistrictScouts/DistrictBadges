@@ -21,6 +21,7 @@ use Cake\ORM\Entity;
  * @property string $user_id
  * @property string|null $section_id
  * @property string $idempotency_key
+ * @property string|null $request_fingerprint
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\User $user
@@ -44,6 +45,7 @@ class Order extends Entity
         'user_id' => true,
         'section_id' => true,
         'idempotency_key' => true,
+        'request_fingerprint' => true,
         'account' => true,
         'user' => true,
         'section' => true,

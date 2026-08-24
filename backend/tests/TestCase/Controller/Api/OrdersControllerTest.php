@@ -62,6 +62,7 @@ class OrdersControllerTest extends TestCase
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                     'quantity' => 2,
+                    'unit_price' => 1.5,
                 ],
             ],
         ]);
@@ -223,6 +224,49 @@ class OrdersControllerTest extends TestCase
         $this->assertArrayHasKey('quantity', $response['errors']['lines'][0]);
     }
 
+    public function testPlaceRejectsChangedPayloadForReusedIdempotencyKey(): void
+    {
+        $payload = $this->validOrderPayload(['email' => 'retry@example.org']);
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $payload);
+        $this->assertResponseCode(201);
+
+        $payload['lines'][0]['quantity'] = 3;
+        $this->post('/api/orders.json', $payload);
+
+        $this->assertResponseCode(422);
+        $response = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('idempotency_key', $response['errors']);
+    }
+
+    public function testPlaceRejectsChangedBadgePrice(): void
+    {
+        $payload = $this->validOrderPayload();
+        $payload['lines'][0]['unit_price'] = 1.25;
+        $this->enableCsrfToken();
+
+        $this->post('/api/orders.json', $payload);
+
+        $this->assertResponseCode(422);
+        $response = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('unit_price', $response['errors']['lines'][0]);
+    }
+
+    public function testPlaceRejectsUnstockedBadge(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $badges->updateAll(['status' => 40, 'stocked' => false], [
+            'id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+        ]);
+        $this->enableCsrfToken();
+
+        $this->post('/api/orders.json', $this->validOrderPayload());
+
+        $this->assertResponseCode(422);
+        $response = json_decode((string)$this->_response->getBody(), true);
+        $this->assertIsString($response['errors']['lines']);
+    }
+
     /**
      * @param array<string, mixed> $overrides Payload overrides.
      * @return array<string, mixed>
@@ -239,6 +283,7 @@ class OrdersControllerTest extends TestCase
             'lines' => [[
                 'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                 'quantity' => 2,
+                'unit_price' => 1.5,
             ]],
         ];
     }

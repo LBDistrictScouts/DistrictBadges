@@ -7,6 +7,7 @@ use App\Exception\OrderValidationException;
 use App\Model\Entity\Account;
 use App\Model\Entity\Order;
 use App\Model\Entity\User;
+use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
 use Cake\Database\Exception\QueryException;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -31,14 +32,21 @@ class OrderPlacementService
         }
 
         $orders = $this->getTableLocator()->get('Orders');
+        $requestFingerprint = $this->requestFingerprint($data);
 
         $existing = $orders->find()->where(['idempotency_key' => $data['idempotency_key']])->first();
         if ($existing instanceof Order) {
+            $this->assertMatchingFingerprint($existing, $requestFingerprint);
+
             return $existing;
         }
 
         try {
-            return $orders->getConnection()->transactional(function () use ($orders, $data): Order {
+            return $orders->getConnection()->transactional(function () use (
+                $orders,
+                $data,
+                $requestFingerprint,
+            ): Order {
                 [$account, $user] = $this->resolveParties($data);
                 $order = $orders->newEntity([
                     'account_id' => $account->id,
@@ -47,6 +55,7 @@ class OrderPlacementService
                     'order_lines' => $this->buildLines($data),
                 ], ['associated' => ['OrderLines']]);
                 $order->set('idempotency_key', $data['idempotency_key']);
+                $order->set('request_fingerprint', $requestFingerprint);
                 $order->set('status', OrderStatus::Placed);
                 $orders->saveOrFail($order, ['associated' => ['OrderLines']]);
 
@@ -56,6 +65,8 @@ class OrderPlacementService
             // A concurrent request may win the unique-key race after our initial lookup.
             $existing = $orders->find()->where(['idempotency_key' => $data['idempotency_key']])->first();
             if ($existing instanceof Order) {
+                $this->assertMatchingFingerprint($existing, $requestFingerprint);
+
                 return $existing;
             }
 
@@ -134,12 +145,35 @@ class OrderPlacementService
             ) {
                 $errors['lines'][$index]['quantity'] = 'Quantity must be a positive integer.';
             }
+            if (
+                !isset($line['unit_price'])
+                || !is_numeric($line['unit_price'])
+                || (float)$line['unit_price'] < 0
+            ) {
+                $errors['lines'][$index]['unit_price'] = 'Unit price must be a non-negative number.';
+            }
         }
         if (!isset($errors['lines'])) {
             $uniqueBadgeIds = array_values(array_unique($badgeIds));
-            $count = $this->getTableLocator()->get('Badges')->find()->where(['id IN' => $uniqueBadgeIds])->count();
-            if ($count !== count($uniqueBadgeIds)) {
-                $errors['lines'] = 'One or more selected badges do not exist.';
+            $badges = $this->getTableLocator()->get('Badges')->find()
+                ->select(['id', 'price'])
+                ->where([
+                    'id IN' => $uniqueBadgeIds,
+                    'status !=' => BadgeStatus::Unstocked->value,
+                ])
+                ->enableHydration(false)
+                ->all()
+                ->indexBy('id')
+                ->toArray();
+            if (count($badges) !== count($uniqueBadgeIds)) {
+                $errors['lines'] = 'One or more selected badges are no longer available.';
+            } else {
+                foreach ($data['lines'] as $index => $line) {
+                    $serverPrice = round((float)$badges[$line['badge_id']]['price'], 2);
+                    if (round((float)$line['unit_price'], 2) !== $serverPrice) {
+                        $errors['lines'][$index]['unit_price'] = 'The badge price has changed. Refresh your basket.';
+                    }
+                }
             }
         }
 
@@ -201,5 +235,47 @@ class OrderPlacementService
         }
 
         return $lines;
+    }
+
+    /**
+     * Build a stable fingerprint for the customer-confirmed order payload.
+     *
+     * @param array<string, mixed> $data Validated order API payload.
+     * @return string
+     */
+    private function requestFingerprint(array $data): string
+    {
+        $lines = array_map(static fn(array $line): array => [
+            'badge_id' => (string)$line['badge_id'],
+            'quantity' => (int)$line['quantity'],
+            'unit_price' => number_format((float)$line['unit_price'], 2, '.', ''),
+        ], $data['lines']);
+        usort($lines, static fn(array $left, array $right): int => $left['badge_id'] <=> $right['badge_id']);
+
+        return hash('sha256', json_encode([
+            'first_name' => trim((string)$data['first_name']),
+            'last_name' => trim((string)$data['last_name']),
+            'email' => mb_strtolower(trim((string)$data['email'])),
+            'group_id' => (string)$data['group_id'],
+            'section_id' => (string)$data['section_id'],
+            'lines' => $lines,
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Reject reuse of an idempotency key for a different order payload.
+     *
+     * @param \App\Model\Entity\Order $order Existing order.
+     * @param string $requestFingerprint Incoming request fingerprint.
+     * @return void
+     * @throws \App\Exception\OrderValidationException
+     */
+    private function assertMatchingFingerprint(Order $order, string $requestFingerprint): void
+    {
+        if ($order->get('request_fingerprint') !== $requestFingerprint) {
+            throw new OrderValidationException([
+                'idempotency_key' => 'This idempotency key has already been used for a different order.',
+            ]);
+        }
     }
 }

@@ -85,6 +85,7 @@ class OrderProcessorTest extends TestCase
             'lines' => [[
                 'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                 'quantity' => 2,
+                'unit_price' => 1.5,
             ]],
         ];
     }

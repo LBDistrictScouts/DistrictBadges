@@ -102,6 +102,11 @@ class OrdersTable extends Table
             ->notEmptyString('idempotency_key');
 
         $validator
+            ->scalar('request_fingerprint')
+            ->lengthBetween('request_fingerprint', [64, 64])
+            ->allowEmptyString('request_fingerprint');
+
+        $validator
             ->uuid('account_id')
             ->notEmptyString('account_id');
 

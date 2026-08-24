@@ -72,7 +72,8 @@ class DistrictCoreDataService
         ): array {
             foreach ($groupData as $record) {
                 $id = (string)$record['id'];
-                $entity = $groups->find()->where(['group_name' => $record['group_name']])->first();
+                $entity = $groups->find()->where(['id' => $id])->first()
+                    ?? $groups->find()->where(['group_name' => $record['group_name']])->first();
 
                 if ($entity !== null && $entity->id !== $id) {
                     $groups->updateAll(['id' => $id], ['id' => $entity->id]);

@@ -272,7 +272,11 @@ function App() {
           email: checkoutDetails.email,
           group_id: checkoutDetails.groupId,
           section_id: checkoutDetails.sectionId,
-          lines: basket.map((item) => ({ badge_id: item.id, quantity: item.quantity })),
+          lines: basket.map((item) => ({
+            badge_id: item.id,
+            quantity: item.quantity,
+            unit_price: item.price,
+          })),
         }),
       })
 
