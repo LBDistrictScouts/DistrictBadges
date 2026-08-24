@@ -85,7 +85,7 @@ return [
         'enabled' => filter_var(env('ALGOLIA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
         'appId' => env('ALGOLIA_APP_ID', ''),
         'apiKey' => env('ALGOLIA_ADMIN_API_KEY', ''),
-        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
+        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES-DEV'),
     ],
 
     'DistrictCoreData' => [
@@ -280,13 +280,20 @@ return [
     'Email' => [
         'default' => [
             'transport' => 'default',
-            'from' => 'you@localhost',
+            'from' => [
+                env('EMAIL_FROM_ADDRESS', 'badge-shop@lbdscouts.org.uk') =>
+                    env('EMAIL_FROM_NAME', 'LBA Scouts District Badge Shop'),
+            ],
             /*
              * Will by default be set to config value of App.encoding, if that exists otherwise to UTF-8.
              */
             //'charset' => 'utf-8',
             //'headerCharset' => 'utf-8',
         ],
+    ],
+
+    'OrderNotifications' => [
+        'enabled' => filter_var(env('ORDER_NOTIFICATIONS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
     ],
 
     /*

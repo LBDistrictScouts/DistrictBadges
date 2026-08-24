@@ -198,7 +198,7 @@ The backend publishes stocked badge records to an Algolia index. Copy `.env.exam
 ```bash
 VITE_ALGOLIA_APP_ID=your_algolia_application_id
 VITE_ALGOLIA_SEARCH_API_KEY=your_search_only_api_key
-VITE_ALGOLIA_BADGES_INDEX=BADGES
+VITE_ALGOLIA_BADGES_INDEX=BADGES-DEV
 VITE_API_BASE_URL=http://localhost:8765
 
 CATALOGUE_API_URL=https://core-data.example.org/index.html

@@ -16,8 +16,10 @@ declare(strict_types=1);
  */
 namespace App;
 
+use App\Event\BackendOrderNotificationListener;
 use App\Event\LifecycleStatusListener;
 use App\Event\OrderLineFulfilmentListener;
+use App\Event\WebstoreOrderNotificationListener;
 use App\Middleware\ApiCorsMiddleware;
 use App\Middleware\HostHeaderMiddleware;
 use Cake\Core\Configure;
@@ -129,6 +131,8 @@ class Application extends BaseApplication
     {
         $eventManager->on(new LifecycleStatusListener());
         $eventManager->on(new OrderLineFulfilmentListener());
+        $eventManager->on(new WebstoreOrderNotificationListener());
+        $eventManager->on(new BackendOrderNotificationListener());
 
         return $eventManager;
     }

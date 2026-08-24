@@ -38,11 +38,16 @@ type CheckoutDetails = {
   sectionId: string
 }
 
+type ApiErrorResponse = {
+  message?: string
+  errors?: unknown
+}
+
 const BASKET_STORAGE_KEY = 'district-badges:basket'
 const CHECKOUT_DETAILS_STORAGE_KEY = 'district-badges:checkout-details'
 const appId = import.meta.env.VITE_ALGOLIA_APP_ID?.trim()
 const searchApiKey = import.meta.env.VITE_ALGOLIA_SEARCH_API_KEY?.trim()
-const indexName = import.meta.env.VITE_ALGOLIA_BADGES_INDEX?.trim() || 'BADGES'
+const indexName = import.meta.env.VITE_ALGOLIA_BADGES_INDEX?.trim() || 'BADGES-DEV'
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '')
 
 function readBasket(): BasketItem[] {
@@ -88,6 +93,13 @@ function readCheckoutDetails(): CheckoutDetails {
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(price)
+}
+
+function errorMessages(value: unknown): string[] {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(errorMessages)
+  if (value && typeof value === 'object') return Object.values(value).flatMap(errorMessages)
+  return []
 }
 
 function SearchIcon() {
@@ -281,8 +293,9 @@ function App() {
       })
 
       if (!response.ok) {
-        const result = await response.json().catch(() => null) as { message?: string } | null
-        throw new Error(result?.message || 'The order could not be accepted.')
+        const result = await response.json().catch(() => null) as ApiErrorResponse | null
+        const validationMessage = errorMessages(result?.errors).join(' ')
+        throw new Error(result?.message || validationMessage || 'The order could not be accepted.')
       }
 
       setBasket([])

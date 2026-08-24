@@ -27,6 +27,13 @@ The 1Password item should expose these keys:
 - `ALGOLIA_APP_ID`
 - `ALGOLIA_ADMIN_API_KEY`
 
+Use the matching `badges_queue_consumer_credentials` Terraform output from
+`DistrictInfrastructure` for each environment. Map
+`email_transport_default_url` to the secret
+`EMAIL_TRANSPORT_DEFAULT_URL`. The non-secret `ses_from_address` and
+`ses_from_name` values are configured as `EMAIL_FROM_ADDRESS` and
+`EMAIL_FROM_NAME` in the environment overlay ConfigMaps.
+
 The separate `ghcr-pull-secret` item is shared by every environment and points to `op://Infrastructure/ArgoCD - LBD Repo Creds/dockerconfig.json`. It is exposed as a `kubernetes.io/dockerconfigjson` Secret and attached to the runtime ServiceAccount.
 
 Create or update the matching 1Password items referenced by the manifests:
@@ -51,6 +58,15 @@ bash K8S/scripts/generate-1password-items.sh --env test --dry-run
 ```
 
 Non-secret environment variables live in `base/config/app-config-map.yaml` and are patched per environment.
+
+Order notification email is enabled with `ORDER_NOTIFICATIONS_ENABLED`. Set it
+to `"false"` in an overlay to suppress delivery without removing the SES
+credentials.
+
+The Algolia badge index is environment-specific: `BADGES` for production,
+`BADGES-TEST` for test, and `BADGES-DEV` for development. Keep the webstore's
+`VITE_ALGOLIA_BADGES_INDEX` value aligned with the backend's
+`ALGOLIA_INDEX_BADGES` value.
 
 `DATABASE_URL` should point at the environment-specific PostgreSQL service:
 

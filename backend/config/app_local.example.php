@@ -95,11 +95,15 @@ return [
         ],
     ],
 
+    'OrderNotifications' => [
+        'enabled' => filter_var(env('ORDER_NOTIFICATIONS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     'Algolia' => [
         'enabled' => filter_var(env('ALGOLIA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
         'appId' => env('ALGOLIA_APP_ID', ''),
         'apiKey' => env('ALGOLIA_ADMIN_API_KEY', ''),
-        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
+        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES-DEV'),
     ],
 
     'DistrictCoreData' => [

@@ -352,7 +352,10 @@ while IFS= read -r item_path; do
     error "Skipping unsupported itemPath format: $item_path"
     continue
   fi
-  if printf '%s\n' "${targets[@]}" | grep -Fx -- "$pair" >/dev/null 2>&1; then
+  # Bash 3.2 treats expansion of an empty array as an unbound variable when
+  # nounset is enabled, so only expand it after the first target is present.
+  if [ ${#targets[@]} -gt 0 ] && \
+      printf '%s\n' "${targets[@]}" | grep -Fx -- "$pair" >/dev/null 2>&1; then
     continue
   fi
   targets+=("$pair")

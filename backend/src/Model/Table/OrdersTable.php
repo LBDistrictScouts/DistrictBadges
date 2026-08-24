@@ -152,6 +152,9 @@ class OrdersTable extends Table
         ArrayObject $options,
     ): void {
         $options['dispatchOrderPlaced'] = $entity->isNew();
+        $options['orderNotificationSource'] = $entity->isNew()
+            ? ($options['orderNotificationSource'] ?? null)
+            : null;
         if ($entity->isNew() && !$entity->hasValue('status')) {
             $entity->set('status', OrderStatus::Draft);
         }
@@ -176,5 +179,14 @@ class OrdersTable extends Table
         }
 
         $this->dispatchEvent('Order.afterPlace', [], $entity);
+
+        $notificationEvent = match ($options['orderNotificationSource'] ?? null) {
+            'webstore' => 'Order.afterWebstorePlace',
+            'backend' => 'Order.afterBackendPlace',
+            default => null,
+        };
+        if ($notificationEvent !== null) {
+            $this->dispatchEvent($notificationEvent, [], $entity);
+        }
     }
 }

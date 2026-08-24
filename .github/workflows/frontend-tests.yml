@@ -100,6 +100,23 @@ jobs:
           CATALOGUE_BASIC_AUTH_PASSWORD: ${{ secrets.CATALOGUE_BASIC_AUTH_PASSWORD }}
         run: yarn build
 
+      - name: Install AWS CLI
+        working-directory: ${{ runner.temp }}
+        run: |
+          case "$(uname -m)" in
+            x86_64) aws_arch=x86_64 ;;
+            aarch64|arm64) aws_arch=aarch64 ;;
+            *) echo "Unsupported runner architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          curl --fail --silent --show-error --location \
+            "https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}.zip" \
+            --output awscliv2.zip
+          unzip -q awscliv2.zip
+          ./aws/install \
+            --install-dir "${RUNNER_TEMP}/aws-cli" \
+            --bin-dir "${RUNNER_TEMP}/bin"
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:

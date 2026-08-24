@@ -57,7 +57,10 @@ class OrderPlacementService
                 $order->set('idempotency_key', $data['idempotency_key']);
                 $order->set('request_fingerprint', $requestFingerprint);
                 $order->set('status', OrderStatus::Placed);
-                $orders->saveOrFail($order, ['associated' => ['OrderLines']]);
+                $orders->saveOrFail($order, [
+                    'associated' => ['OrderLines'],
+                    'orderNotificationSource' => 'webstore',
+                ]);
 
                 return $order;
             });
@@ -209,6 +212,14 @@ class OrderPlacementService
                 'can_login' => false,
             ]);
             $users->saveOrFail($user);
+        } else {
+            $user->patch([
+                'first_name' => trim((string)$data['first_name']),
+                'last_name' => trim((string)$data['last_name']),
+            ]);
+            if ($user->isDirty('first_name') || $user->isDirty('last_name')) {
+                $users->saveOrFail($user);
+            }
         }
 
         return [$account, $user];

@@ -117,6 +117,9 @@ class OrdersControllerTest extends TestCase
         $this->assertSame($beforeUsers, $users->find()->count());
         $this->assertSame($user->id, $order->user_id);
         $this->assertSame($accountId, $order->account_id);
+        $updatedUser = $users->get($user->id);
+        $this->assertSame('Changed', $updatedUser->first_name);
+        $this->assertSame('Name', $updatedUser->last_name);
     }
 
     public function testPlaceUsesSectionAccount(): void

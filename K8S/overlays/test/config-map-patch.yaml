@@ -7,4 +7,6 @@ data:
   APP_FULL_BASE_URL: https://badge-system-test.lbdscouts.org.uk
   WEBSTORE_ALLOWED_ORIGINS: https://badges-test.lbdscouts.org.uk
   DEBUG: "false"
-  ALGOLIA_INDEX_BADGES: BADGES_TEST
+  EMAIL_FROM_ADDRESS: orders@badges-test.lbdscouts.org.uk
+  EMAIL_FROM_NAME: LBA Scouts District Badge Shop (Test)
+  ALGOLIA_INDEX_BADGES: BADGES-TEST

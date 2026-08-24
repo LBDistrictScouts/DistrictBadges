@@ -126,7 +126,10 @@ class OrdersController extends AppController
             $this->StockTransactionLines->requireLines($order, $data, $config);
             if (
                 !$order->hasErrors()
-                && $this->Orders->save($order, ['associated' => ['OrderLines']])
+                && $this->Orders->save($order, [
+                    'associated' => ['OrderLines'],
+                    'orderNotificationSource' => 'backend',
+                ])
             ) {
                 $this->Flash->success(__('The order has been saved.'));
 
