@@ -72,6 +72,33 @@ class BadgeImportQueueServiceTest extends TestCase
         $this->assertSame('ReceiveMessage', $mock->getLastCommand()?->getName());
     }
 
+    public function testConsumeBatchContinuesAfterUnhandledProcessorError(): void
+    {
+        $mock = new MockHandler([
+            new Result([
+                'Messages' => [
+                    ['Body' => 'first', 'ReceiptHandle' => 'receipt-1'],
+                    ['Body' => 'second', 'ReceiptHandle' => 'receipt-2'],
+                ],
+            ]),
+            new Result(),
+        ]);
+        $client = $this->client($mock);
+        Configure::write('Sqs.badgeImportQueueUrl', 'https://example.com/badges');
+        $processor = $this->createMock(BadgeImportProcessor::class);
+        $processor->expects($this->exactly(2))
+            ->method('process')
+            ->willReturnCallback(static fn(string $body): string => $body === 'first'
+                ? throw new RuntimeException('processor failed')
+                : BadgeImportProcessor::ACK);
+
+        $count = (new BadgeImportQueueService($client))->consumeBatch($processor, 0);
+
+        $this->assertSame(2, $count);
+        $this->assertSame('DeleteMessage', $mock->getLastCommand()?->getName());
+        $this->assertSame('receipt-2', $mock->getLastCommand()?->get('ReceiptHandle'));
+    }
+
     public function testConstructorRequiresQueueUrl(): void
     {
         Configure::write('Sqs.badgeImportQueueUrl', '');

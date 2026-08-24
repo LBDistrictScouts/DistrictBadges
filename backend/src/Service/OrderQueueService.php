@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Queue\Processor\OrderProcessor;
 use Aws\Sqs\SqsClient;
 use Cake\Core\Configure;
 use RuntimeException;
@@ -51,6 +52,34 @@ class OrderQueueService
         ]);
 
         return (string)$result->get('MessageId');
+    }
+
+    /**
+     * Long poll and process one batch of orders.
+     */
+    public function consumeBatch(OrderProcessor $processor, int $waitTimeSeconds = 20): int
+    {
+        $result = $this->client->receiveMessage([
+            'QueueUrl' => $this->queueUrl,
+            'MaxNumberOfMessages' => 10,
+            'WaitTimeSeconds' => max(0, min(20, $waitTimeSeconds)),
+            'AttributeNames' => ['ApproximateReceiveCount'],
+        ]);
+        $messages = $result->get('Messages') ?? [];
+        foreach ($messages as $message) {
+            $outcome = $processor->process((string)($message['Body'] ?? ''));
+            if (
+                in_array($outcome, [OrderProcessor::ACK, OrderProcessor::REJECT], true)
+                && !empty($message['ReceiptHandle'])
+            ) {
+                $this->client->deleteMessage([
+                    'QueueUrl' => $this->queueUrl,
+                    'ReceiptHandle' => (string)$message['ReceiptHandle'],
+                ]);
+            }
+        }
+
+        return count($messages);
     }
 
     /**

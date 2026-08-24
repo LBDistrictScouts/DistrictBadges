@@ -27,3 +27,33 @@ spec:
                 name: district-badges-config
             - secretRef:
                 name: district-badges-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-worker
+  namespace: district-badges
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-worker
+  template:
+    metadata:
+      labels:
+        app: order-worker
+    spec:
+      serviceAccountName: district-badges-runtime
+      containers:
+        - name: worker
+          image: ghcr.io/lbdistrictscouts/districtbadges-backend:latest
+          imagePullPolicy: Always
+          command:
+            - php
+            - bin/cake.php
+            - orders:consume_queue
+          envFrom:
+            - configMapRef:
+                name: district-badges-config
+            - secretRef:
+                name: district-badges-secrets

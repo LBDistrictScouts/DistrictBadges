@@ -43,6 +43,9 @@ class GroupsTable extends Table
         $this->hasMany('Accounts', [
             'foreignKey' => 'group_id',
         ]);
+        $this->hasMany('Sections', [
+            'foreignKey' => 'group_id',
+        ]);
     }
 
     /**
@@ -61,8 +64,12 @@ class GroupsTable extends Table
 
         $validator
             ->integer('group_osm_id')
-            ->requirePresence('group_osm_id', 'create')
-            ->notEmptyString('group_osm_id');
+            ->allowEmptyString('group_osm_id');
+
+        $validator
+            ->integer('sort_order')
+            ->greaterThan('sort_order', 0)
+            ->allowEmptyString('sort_order');
 
         return $validator;
     }

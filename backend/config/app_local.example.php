@@ -95,11 +95,28 @@ return [
         ],
     ],
 
+    'OrderNotifications' => [
+        'enabled' => filter_var(env('ORDER_NOTIFICATIONS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     'Algolia' => [
         'enabled' => filter_var(env('ALGOLIA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
         'appId' => env('ALGOLIA_APP_ID', ''),
         'apiKey' => env('ALGOLIA_ADMIN_API_KEY', ''),
-        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
+        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES-DEV'),
+    ],
+
+    'DistrictCoreData' => [
+        'url' => env('DISTRICT_CORE_DATA_URL', ''),
+        'username' => env('DISTRICT_CORE_DATA_USERNAME', ''),
+        'password' => env('DISTRICT_CORE_DATA_PASSWORD', ''),
+    ],
+
+    'Webstore' => [
+        'allowedOrigins' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string)env('WEBSTORE_ALLOWED_ORIGINS', 'http://localhost:5173')),
+        ))),
     ],
 
     'Sqs' => [

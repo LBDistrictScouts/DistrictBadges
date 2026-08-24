@@ -18,6 +18,16 @@
                 ],
             ) ?>
             <?php endif; ?>
+            <?php if ($fulfilment->status === \App\Model\Enum\FulfilmentStatus::Dispatched) : ?>
+            <?= $this->Form->postLink(
+                __('Resend Dispatch Email'),
+                ['action' => 'resendNotification', $fulfilment->id],
+                [
+                    'confirm' => __('Resend the dispatch notification email?'),
+                    'class' => 'side-nav-item',
+                ],
+            ) ?>
+            <?php endif; ?>
             <?= $this->Html->link(
                 __('List Fulfilments'),
                 ['action' => 'index'],

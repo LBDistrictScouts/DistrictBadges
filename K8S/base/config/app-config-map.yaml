@@ -11,5 +11,8 @@ data:
   APP_FULL_BASE_URL: https://badges.example.com
   AWS_REGION: eu-west-1
   DEBUG: "false"
-  ALGOLIA_ENABLED: "false"
-  ALGOLIA_INDEX_BADGES: BADGES
+  EMAIL_FROM_ADDRESS: orders@badges-dev.lbdscouts.org.uk
+  EMAIL_FROM_NAME: LBA Scouts District Badge Shop (Development)
+  ORDER_NOTIFICATIONS_ENABLED: "true"
+  ALGOLIA_ENABLED: "true"
+  ALGOLIA_INDEX_BADGES: BADGES-DEV

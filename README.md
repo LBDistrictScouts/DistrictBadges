@@ -20,7 +20,7 @@ graph TD
     A["Scout Group Admin\n(Browser)"] -->|HTTPS| B[AWS CloudFront CDN]
     B --> C["S3 Bucket\n(Webstore – React 19 / TypeScript)"]
     C -->|REST API calls| D["CakePHP 5 Backend\n(EC2 / Container)"]
-    C -->|Place order| E["AWS SQS\n(Order Queue)"]
+    D -->|Queue accepted order| E["AWS SQS\n(Order Queue)"]
     E -->|Poll & process| D
     D --> F[(MySQL Database)]
     G["District Staff\n(Browser)"] -->|Web interface| D
@@ -29,7 +29,7 @@ graph TD
 ### How it hangs together
 
 1. **Webstore** – A React single-page application built with Vite and served as static files from an **AWS S3** bucket via **AWS CloudFront**. Scout group administrators use it to browse badges and place orders.
-2. **Order Queue** – When an order is submitted the webstore publishes a message to an **AWS SQS** queue. Using a queue decouples the storefront from the backend and makes order submission resilient to temporary backend unavailability.
+2. **Order Queue** – The webstore submits orders to the backend API, which validates them and publishes accepted orders to **AWS SQS** for asynchronous processing.
 3. **Backend** – A **CakePHP 5** application that provides:
    - A REST API consumed by the webstore.
    - A web interface for district staff to manage stock, process orders, raise invoices and record replenishments.

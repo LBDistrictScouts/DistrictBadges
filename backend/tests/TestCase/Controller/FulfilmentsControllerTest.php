@@ -63,6 +63,29 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseContains('Created To');
     }
 
+    public function testIndexDefaultsToFulfilmentNumberDescending(): void
+    {
+        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        $fulfilments->updateAll(
+            ['fulfilment_number' => 'FUL-0001'],
+            ['id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a'],
+        );
+        $newer = $fulfilments->newEmptyEntity();
+        $fulfilments->saveOrFail($newer);
+        $fulfilments->updateAll(['fulfilment_number' => 'FUL-9999'], ['id' => $newer->id]);
+
+        $this->get('/fulfilments');
+
+        $this->assertResponseOk();
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(strpos($body, 'FUL-0001'), strpos($body, 'FUL-9999'));
+
+        $this->get('/fulfilments?sort=fulfilment_number&direction=asc');
+
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(strpos($body, 'FUL-9999'), strpos($body, 'FUL-0001'));
+    }
+
     public function testIndexFilters(): void
     {
         $this->get('/fulfilments?number=Lorem&status=' . FulfilmentStatus::Dispatched->value);
@@ -256,6 +279,36 @@ class FulfilmentsControllerTest extends TestCase
         $updated = $fulfilments->get($id);
         $this->assertSame(FulfilmentStatus::Dispatched, $updated->status);
         $this->assertEquals($before->dispatched_date, $updated->dispatched_date);
+    }
+
+    public function testDispatchRedirectsBackToIndexReferrer(): void
+    {
+        $id = 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a';
+        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        $this->getTableLocator()->get('OrderLines')->updateAll([
+            'quantity' => 2,
+            'fulfilled_quantity' => 0,
+            'fulfilled' => false,
+        ], ['id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db']);
+        $this->getTableLocator()->get('Badges')->updateAll([
+            'on_hand_quantity' => 2,
+        ], ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d']);
+        $this->getTableLocator()->get('StockTransactions')->updateAll([
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+            'transaction_type' => 2,
+            'fulfilled_quantity_change' => 1,
+            'on_hand_quantity_change' => -1,
+        ], ['id' => 'bad57a31-305f-4398-87d6-8fcfe4600793']);
+        $fulfilments->updateAll([
+            'status' => FulfilmentStatus::Draft->value,
+            'dispatched_date' => null,
+        ], ['id' => $id]);
+
+        $this->configRequest(['headers' => ['Referer' => 'http://localhost/fulfilments']]);
+        $this->enableCsrfToken();
+        $this->post("/fulfilments/dispatch/{$id}");
+
+        $this->assertRedirect('/fulfilments');
     }
 
     public function testAddRequiresAtLeastOneLine(): void

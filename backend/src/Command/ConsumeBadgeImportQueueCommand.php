@@ -9,6 +9,8 @@ use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
+use Cake\Log\Log;
+use Throwable;
 
 class ConsumeBadgeImportQueueCommand extends Command
 {
@@ -58,7 +60,20 @@ class ConsumeBadgeImportQueueCommand extends Command
         $waitTime = (int)$args->getOption('wait-time');
 
         do {
-            $count = $service->consumeBatch($processor, $waitTime);
+            try {
+                $count = $service->consumeBatch($processor, $waitTime);
+            } catch (Throwable $exception) {
+                Log::error('Badge import queue polling failed: {message}', [
+                    'message' => $exception->getMessage(),
+                    'scope' => ['badge_import'],
+                ]);
+                if ($args->getOption('once')) {
+                    return self::CODE_ERROR;
+                }
+
+                sleep(5);
+                continue;
+            }
             if ($count > 0) {
                 $io->verbose(sprintf('Processed %d badge import message(s).', $count));
             }

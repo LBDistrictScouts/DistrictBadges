@@ -39,7 +39,7 @@ class BadgeImportProcessor
         try {
             $payload = json_decode($body, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            $this->log('Badge import queue message is not valid JSON.', LOG_WARNING);
+            $this->logImport('Badge import queue message is not valid JSON.', LOG_WARNING);
 
             return self::REJECT;
         }
@@ -100,7 +100,7 @@ class BadgeImportProcessor
 
             $badge = $badges->patchEntity($badge, $data);
             if ($badge->hasErrors()) {
-                $this->log('Badge import message produced invalid badge data.', LOG_WARNING, [
+                $this->logImport('Badge import message produced invalid badge data.', LOG_WARNING, [
                     'errors' => $badge->getErrors(),
                     'nationalProductCode' => $productId,
                 ]);
@@ -117,7 +117,7 @@ class BadgeImportProcessor
 
             return self::ACK;
         } catch (Throwable $exception) {
-            $this->log(
+            $this->logImport(
                 sprintf('Failed to persist imported badge %d: %s', $productId, $exception->getMessage()),
                 LOG_ERR,
             );
@@ -142,7 +142,7 @@ class BadgeImportProcessor
                 flags: JSON_THROW_ON_ERROR,
             );
         } catch (JsonException) {
-            $this->log('Badge import JSON schema is invalid.', LOG_ERR);
+            $this->logImport('Badge import JSON schema is invalid.', LOG_ERR);
 
             return false;
         }
@@ -153,10 +153,23 @@ class BadgeImportProcessor
             return true;
         }
 
-        $this->log('Badge import queue message failed schema validation.', LOG_WARNING, [
+        $this->logImport('Badge import queue message failed schema validation.', LOG_WARNING, [
             'errors' => $validator->getErrors(),
         ]);
 
         return false;
+    }
+
+    /**
+     * Write only to the dedicated badge import log.
+     *
+     * @param string $message Log message.
+     * @param string|int $level Log level.
+     * @param array<string, mixed> $context Structured context.
+     * @return void
+     */
+    private function logImport(string $message, int|string $level, array $context = []): void
+    {
+        $this->log($message, $level, $context + ['scope' => ['badge_import']]);
     }
 }

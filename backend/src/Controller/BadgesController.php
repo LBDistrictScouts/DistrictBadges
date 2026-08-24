@@ -24,6 +24,7 @@ class BadgesController extends AppController
         $filters = [
             'name' => trim((string)$this->request->getQuery('name')),
             'status' => (string)$this->request->getQuery('status'),
+            'stocked' => (string)$this->request->getQuery('stocked', '1'),
             'section_tag' => (string)$this->request->getQuery('section_tag'),
             'type_tag' => (string)$this->request->getQuery('type_tag'),
         ];
@@ -33,8 +34,20 @@ class BadgesController extends AppController
         }
 
         $status = filter_var($filters['status'], FILTER_VALIDATE_INT);
-        if ($status !== false && BadgeStatus::tryFrom($status) !== null) {
+        $availabilityStatuses = [
+            BadgeStatus::Unavailable,
+            BadgeStatus::OnBackOrder,
+            BadgeStatus::Available,
+        ];
+        if (
+            $status !== false
+            && in_array(BadgeStatus::tryFrom($status), $availabilityStatuses, true)
+        ) {
             $query->where(['status' => $status]);
+        }
+
+        if (in_array($filters['stocked'], ['0', '1'], true)) {
+            $query->where(['stocked' => $filters['stocked'] === '1']);
         }
 
         if ($filters['section_tag'] !== '') {
@@ -54,9 +67,13 @@ class BadgesController extends AppController
         $query->distinct(['Badges.id']);
         $badges = $this->paginate($query);
         $statusOptions = [];
-        foreach (BadgeStatus::cases() as $case) {
+        foreach ($availabilityStatuses as $case) {
             $statusOptions[$case->value] = $case->label();
         }
+        $stockedOptions = [
+            '1' => __('Stocked'),
+            '0' => __('Unstocked'),
+        ];
         $sectionTagOptions = $this->Badges->BadgeSections->find('list')
             ->orderByAsc('tag_order')
             ->orderByAsc('tag_name')
@@ -71,6 +88,7 @@ class BadgesController extends AppController
             'filters',
             'sectionTagOptions',
             'statusOptions',
+            'stockedOptions',
             'typeTagOptions',
         ));
     }

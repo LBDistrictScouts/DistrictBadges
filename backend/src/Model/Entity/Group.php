@@ -11,8 +11,10 @@ use Cake\ORM\Entity;
  * @property string $id
  * @property string $group_name
  * @property int $group_osm_id
+ * @property int|null $sort_order
  *
  * @property \App\Model\Entity\Account[] $accounts
+ * @property \App\Model\Entity\Section[] $sections
  */
 class Group extends Entity
 {
@@ -28,6 +30,8 @@ class Group extends Entity
     protected array $_accessible = [
         'group_name' => true,
         'group_osm_id' => true,
+        'sort_order' => true,
         'accounts' => true,
+        'sections' => true,
     ];
 }

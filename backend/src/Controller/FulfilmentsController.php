@@ -6,8 +6,10 @@ namespace App\Controller;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\TransactionType;
+use App\Service\FulfilmentNotificationService;
 use Cake\Datasource\EntityInterface;
 use Cake\Utility\Text;
+use Throwable;
 
 /**
  * Fulfilments Controller
@@ -51,7 +53,9 @@ class FulfilmentsController extends AppController
             $query->where(['fulfilment_date <' => date('Y-m-d', strtotime($createdTo . ' +1 day'))]);
         }
 
-        $fulfilments = $this->paginate($query);
+        $fulfilments = $this->paginate($query, [
+            'order' => ['Fulfilments.fulfilment_date' => 'DESC'],
+        ]);
         $statusOptions = [];
         foreach (FulfilmentStatus::cases() as $case) {
             $statusOptions[$case->value] = $case->label();
@@ -71,6 +75,37 @@ class FulfilmentsController extends AppController
     {
         $fulfilment = $this->Fulfilments->get($id, contain: ['FulfilmentLines.Badges']);
         $this->set(compact('fulfilment'));
+    }
+
+    /**
+     * Retry the customer notification for a dispatched fulfilment.
+     *
+     * @return \Cake\Http\Response
+     */
+    public function resendNotification(?string $id = null)
+    {
+        $this->request->allowMethod(['post']);
+        $fulfilment = $this->Fulfilments->get($id);
+        if ($fulfilment->status !== FulfilmentStatus::Dispatched) {
+            $this->Flash->error(__('Only dispatched fulfilments can be notified.'));
+
+            return $this->redirect(['action' => 'view', $fulfilment->id]);
+        }
+
+        $service = new FulfilmentNotificationService();
+        $service->setTableLocator($this->getTableLocator());
+        try {
+            if ($service->sendDispatched($fulfilment)) {
+                $this->Flash->success(__('The fulfilment notification email has been resent.'));
+            } else {
+                $this->Flash->error(__('Order notification emails are disabled.'));
+            }
+        } catch (Throwable $exception) {
+            $this->log('Could not resend fulfilment notification: ' . $exception->getMessage(), LOG_ERR);
+            $this->Flash->error(__('The fulfilment notification email could not be sent.'));
+        }
+
+        return $this->redirect(['action' => 'view', $fulfilment->id]);
     }
 
     /**
@@ -273,24 +308,25 @@ class FulfilmentsController extends AppController
             'FulfilmentLines.Badges',
             'FulfilmentLines.OrderLines',
         ]);
+        $redirect = $this->referer(['action' => 'view', $fulfilment->id], true);
 
         if ($fulfilment->status !== FulfilmentStatus::Draft) {
             $this->Flash->error(__('Only draft fulfilments can be dispatched.'));
 
-            return $this->redirect(['action' => 'view', $fulfilment->id]);
+            return $this->redirect($redirect);
         }
         if (!$this->fulfilmentCanDispatch($fulfilment->fulfilment_lines ?? [])) {
             $this->Flash->error(__(
                 'This fulfilment can no longer be dispatched because stock or order quantities changed.',
             ));
 
-            return $this->redirect(['action' => 'view', $fulfilment->id]);
+            return $this->redirect($redirect);
         }
 
         $this->Fulfilments->dispatchEvent('Fulfilment.afterDispatch', [], $fulfilment);
         $this->Flash->success(__('The fulfilment has been dispatched.'));
 
-        return $this->redirect(['action' => 'view', $fulfilment->id]);
+        return $this->redirect($redirect);
     }
 
     /**

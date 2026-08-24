@@ -6,6 +6,7 @@ use App\Model\Enum\BadgeStatus;
  * @var iterable<\App\Model\Entity\Badge> $badges
  * @var array<string, string> $filters
  * @var array<int, string> $statusOptions
+ * @var array<string, string> $stockedOptions
  * @var \Cake\Collection\CollectionInterface|array<string, string> $sectionTagOptions
  * @var \Cake\Collection\CollectionInterface|array<string, string> $typeTagOptions
  */
@@ -20,10 +21,16 @@ use App\Model\Enum\BadgeStatus;
             'value' => $filters['name'],
         ]) ?>
         <?= $this->Form->control('status', [
-            'label' => __('Status'),
+            'label' => __('Availability Status'),
             'options' => $statusOptions,
-            'empty' => __('All statuses'),
+            'empty' => __('All availability statuses'),
             'value' => $filters['status'],
+        ]) ?>
+        <?= $this->Form->control('stocked', [
+            'label' => __('Stocking'),
+            'options' => $stockedOptions,
+            'empty' => __('All badges'),
+            'value' => $filters['stocked'],
         ]) ?>
     </div>
     <div class="index-filters__row">

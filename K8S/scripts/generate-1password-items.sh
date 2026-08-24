@@ -22,6 +22,9 @@ REQUIRED_KEYS=(
   "SQS_BADGE_IMPORT_QUEUE_URL"
   "ALGOLIA_APP_ID"
   "ALGOLIA_ADMIN_API_KEY"
+  "DISTRICT_CORE_DATA_URL"
+  "DISTRICT_CORE_DATA_USERNAME"
+  "DISTRICT_CORE_DATA_PASSWORD"
 )
 
 usage() {
@@ -187,6 +190,7 @@ upsert_item() {
 
   local db_name db_user db_pass security_salt smtp_url
   local aws_key aws_secret sqs_order sqs_badge algolia_app algolia_key
+  local core_data_url core_data_username core_data_password
   local db_host db_url
   local exists=false
 
@@ -207,6 +211,9 @@ upsert_item() {
     sqs_badge="$(existing_field "$vault" "$item" SQS_BADGE_IMPORT_QUEUE_URL)"
     algolia_app="$(existing_field "$vault" "$item" ALGOLIA_APP_ID)"
     algolia_key="$(existing_field "$vault" "$item" ALGOLIA_ADMIN_API_KEY)"
+    core_data_url="$(existing_field "$vault" "$item" DISTRICT_CORE_DATA_URL)"
+    core_data_username="$(existing_field "$vault" "$item" DISTRICT_CORE_DATA_USERNAME)"
+    core_data_password="$(existing_field "$vault" "$item" DISTRICT_CORE_DATA_PASSWORD)"
   else
     db_name="district_badges"
     db_user="district_badges"
@@ -221,6 +228,9 @@ upsert_item() {
     sqs_badge=""
     algolia_app=""
     algolia_key=""
+    core_data_url=""
+    core_data_username=""
+    core_data_password=""
   fi
 
   db_name="$(prompt_with_default "POSTGRES_DB" "$db_name")"
@@ -236,6 +246,9 @@ upsert_item() {
   sqs_badge="$(prompt_with_default "SQS_BADGE_IMPORT_QUEUE_URL" "$sqs_badge")"
   algolia_app="$(prompt_with_default "ALGOLIA_APP_ID" "$algolia_app")"
   algolia_key="$(prompt_secret_with_default "ALGOLIA_ADMIN_API_KEY" "$algolia_key" "$([ "$exists" = true ] && printf 'keep existing' || printf 'empty')")"
+  core_data_url="$(prompt_with_default "DISTRICT_CORE_DATA_URL" "$core_data_url")"
+  core_data_username="$(prompt_with_default "DISTRICT_CORE_DATA_USERNAME" "$core_data_username")"
+  core_data_password="$(prompt_secret_with_default "DISTRICT_CORE_DATA_PASSWORD" "$core_data_password" "$([ "$exists" = true ] && printf 'keep existing' || printf 'empty')")"
 
   local op_fields=(
     "SECURITY_SALT[text]=${security_salt}"
@@ -250,6 +263,9 @@ upsert_item() {
     "SQS_BADGE_IMPORT_QUEUE_URL[text]=${sqs_badge}"
     "ALGOLIA_APP_ID[text]=${algolia_app}"
     "ALGOLIA_ADMIN_API_KEY[password]=${algolia_key}"
+    "DISTRICT_CORE_DATA_URL[text]=${core_data_url}"
+    "DISTRICT_CORE_DATA_USERNAME[text]=${core_data_username}"
+    "DISTRICT_CORE_DATA_PASSWORD[password]=${core_data_password}"
   )
 
   log ""
@@ -336,7 +352,10 @@ while IFS= read -r item_path; do
     error "Skipping unsupported itemPath format: $item_path"
     continue
   fi
-  if printf '%s\n' "${targets[@]}" | grep -Fx -- "$pair" >/dev/null 2>&1; then
+  # Bash 3.2 treats expansion of an empty array as an unbound variable when
+  # nounset is enabled, so only expand it after the first target is present.
+  if [ ${#targets[@]} -gt 0 ] && \
+      printf '%s\n' "${targets[@]}" | grep -Fx -- "$pair" >/dev/null 2>&1; then
     continue
   fi
   targets+=("$pair")

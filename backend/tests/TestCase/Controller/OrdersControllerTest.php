@@ -56,6 +56,30 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseNotContains('>Edit<');
     }
 
+    public function testIndexDefaultsToOrderNumberDescending(): void
+    {
+        $orders = $this->getTableLocator()->get('Orders');
+        $existing = $orders->get('dd7b14cc-abe6-4e58-b63d-070678d78644');
+        $orders->updateAll(['order_number' => 'ORD-0001'], ['id' => $existing->id]);
+        $newer = $orders->newEntity([
+            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+        ]);
+        $orders->saveOrFail($newer);
+        $orders->updateAll(['order_number' => 'ORD-9999'], ['id' => $newer->id]);
+
+        $this->get('/orders');
+
+        $this->assertResponseOk();
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(strpos($body, 'ORD-0001'), strpos($body, 'ORD-9999'));
+
+        $this->get('/orders?sort=order_number&direction=asc');
+
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(strpos($body, 'ORD-9999'), strpos($body, 'ORD-0001'));
+    }
+
     public function testIndexFilters(): void
     {
         $orderUrl = '/orders/view/dd7b14cc-abe6-4e58-b63d-070678d78644';
@@ -107,6 +131,17 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains('Unit Price');
         $this->assertResponseContains('Line Amount');
         $this->assertResponseContains('Edit Order');
+        $this->assertResponseContains('Resend Order Email');
+    }
+
+    public function testResendNotificationReportsDisabledDelivery(): void
+    {
+        $id = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $this->enableCsrfToken();
+        $this->post("/orders/resend-notification/{$id}");
+
+        $this->assertRedirect(['controller' => 'Orders', 'action' => 'view', $id]);
+        $this->assertFlashMessage('Order notification emails are disabled.');
     }
 
     public function testAddDisplaysUserFullNames(): void

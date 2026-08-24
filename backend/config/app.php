@@ -85,7 +85,20 @@ return [
         'enabled' => filter_var(env('ALGOLIA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
         'appId' => env('ALGOLIA_APP_ID', ''),
         'apiKey' => env('ALGOLIA_ADMIN_API_KEY', ''),
-        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES'),
+        'indexName' => env('ALGOLIA_INDEX_BADGES', 'BADGES-DEV'),
+    ],
+
+    'DistrictCoreData' => [
+        'url' => env('DISTRICT_CORE_DATA_URL', ''),
+        'username' => env('DISTRICT_CORE_DATA_USERNAME', ''),
+        'password' => env('DISTRICT_CORE_DATA_PASSWORD', ''),
+    ],
+
+    'Webstore' => [
+        'allowedOrigins' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string)env('WEBSTORE_ALLOWED_ORIGINS', 'http://localhost:5173')),
+        ))),
     ],
 
     'Sqs' => [
@@ -267,13 +280,20 @@ return [
     'Email' => [
         'default' => [
             'transport' => 'default',
-            'from' => 'you@localhost',
+            'from' => [
+                env('EMAIL_FROM_ADDRESS', 'orders@badges-dev.lbdscouts.org.uk') =>
+                    env('EMAIL_FROM_NAME', 'LBA Scouts District Badge Shop (Development)'),
+            ],
             /*
              * Will by default be set to config value of App.encoding, if that exists otherwise to UTF-8.
              */
             //'charset' => 'utf-8',
             //'headerCharset' => 'utf-8',
         ],
+    ],
+
+    'OrderNotifications' => [
+        'enabled' => filter_var(env('ORDER_NOTIFICATIONS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
     ],
 
     /*
@@ -378,6 +398,14 @@ return [
             'url' => env('LOG_ERROR_URL', null),
             'scopes' => null,
             'levels' => ['warning', 'error', 'critical', 'alert', 'emergency'],
+        ],
+        'badge_import' => [
+            'className' => FileLog::class,
+            'path' => LOGS,
+            'file' => 'badge-import',
+            'url' => env('LOG_BADGE_IMPORT_URL', null),
+            'scopes' => ['badge_import'],
+            'levels' => ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'],
         ],
         // To enable this dedicated query log, you need to set your datasource's log flag to true
         'queries' => [
