@@ -15,6 +15,13 @@ use Cake\ORM\Entity;
  * @property \App\Model\Enum\FulfilmentStatus $status
  * @property string $total_amount
  * @property int $total_quantity
+ * @property \App\Model\Enum\DispatchType $dispatch_type
+ * @property string $postage_charge
+ * @property string|null $dispatch_address_line_1
+ * @property string|null $dispatch_address_line_2
+ * @property string|null $dispatch_town
+ * @property string|null $dispatch_county
+ * @property string|null $dispatch_postcode
  * @property \Cake\I18n\DateTime|null $last_notification_sent_at
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
@@ -34,6 +41,13 @@ class Fulfilment extends Entity
     protected array $_accessible = [
         'total_amount' => true,
         'total_quantity' => true,
+        'dispatch_type' => true,
+        'postage_charge' => true,
+        'dispatch_address_line_1' => true,
+        'dispatch_address_line_2' => true,
+        'dispatch_town' => true,
+        'dispatch_county' => true,
+        'dispatch_postcode' => true,
         'stock_transactions' => true,
         'fulfilment_lines' => true,
     ];

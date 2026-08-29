@@ -120,6 +120,32 @@ class OrdersTable extends Table
             ->allowEmptyString('contact_email');
 
         $validator
+            ->boolean('postage')
+            ->allowEmptyString('postage');
+        foreach (
+            [
+                'dispatch_address_line_1',
+                'dispatch_address_line_2',
+                'dispatch_town',
+                'dispatch_county',
+            ] as $field
+        ) {
+            $validator
+                ->scalar($field)
+                ->maxLength($field, 255)
+                ->allowEmptyString($field);
+        }
+        $validator
+            ->scalar('dispatch_postcode')
+            ->maxLength('dispatch_postcode', 10)
+            ->regex(
+                'dispatch_postcode',
+                '/^(GIR ?0AA|[A-Z]{1,2}[0-9][0-9A-Z]? ?[0-9][A-Z]{2})$/i',
+                'Postcode must be a valid UK postcode.',
+            )
+            ->allowEmptyString('dispatch_postcode');
+
+        $validator
             ->uuid('account_id')
             ->notEmptyString('account_id');
 

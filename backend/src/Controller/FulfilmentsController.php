@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\TransactionType;
 use App\Service\FulfilmentNotificationService;
+use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
 use Cake\Utility\Text;
 use Throwable;
@@ -128,12 +130,13 @@ class FulfilmentsController extends AppController
                 $fulfilment,
                 $data,
                 [
-                    'fields' => ['fulfilment_lines'],
+                    'fields' => ['dispatch_type', 'fulfilment_lines'],
                     'associated' => ['FulfilmentLines'],
                 ],
             );
             $this->StockTransactionLines->requireLines($fulfilment, $data, $config);
             $this->requireCompatibleOrderLines($fulfilment, $data);
+            $this->applyDispatchDetails($fulfilment, $data);
             if (
                 !$fulfilment->hasErrors()
                 && $this->Fulfilments->save($fulfilment, ['associated' => ['FulfilmentLines']])
@@ -208,7 +211,18 @@ class FulfilmentsController extends AppController
 
         $order = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
             ->find()
-            ->select(['id', 'order_number', 'user_id', 'status'])
+            ->select([
+                'id',
+                'order_number',
+                'user_id',
+                'status',
+                'postage',
+                'dispatch_address_line_1',
+                'dispatch_address_line_2',
+                'dispatch_town',
+                'dispatch_county',
+                'dispatch_postcode',
+            ])
             ->where([
                 'id' => $orderId,
                 'status NOT IN' => [
@@ -223,11 +237,21 @@ class FulfilmentsController extends AppController
         if (!$this->orderLinesMatchUser($existingOrderLineIds, (string)$order->user_id)) {
             return $this->jsonError(__('All orders in a fulfilment must belong to the same user.'));
         }
+        $user = $this->Fulfilments->FulfilmentLines->OrderLines->Orders->Users->get($order->user_id);
+        $dispatchAddress = array_values(array_filter([
+            $order->postage === true ? $order->dispatch_address_line_1 : $user->address_line_1,
+            $order->postage === true ? $order->dispatch_address_line_2 : $user->address_line_2,
+            $order->postage === true ? $order->dispatch_town : $user->town,
+            $order->postage === true ? $order->dispatch_county : $user->county,
+            $order->postage === true ? $order->dispatch_postcode : $user->postcode,
+        ], static fn($line): bool => trim((string)$line) !== ''));
 
         $config = $this->fulfilmentLineConfig($this->orderLineOptions());
         $view = $this->createView();
         $html = '';
-        $omitted = 0;
+        $fulfilledOmitted = 0;
+        $noStockOmitted = 0;
+        $lowStockReduced = 0;
         $orderLinesQuery = $this->Fulfilments->FulfilmentLines->OrderLines
             ->find()
             ->contain(['Badges'])
@@ -240,17 +264,22 @@ class FulfilmentsController extends AppController
 
         foreach ($orderLines as $orderLine) {
             $badgeId = (string)$orderLine->badge_id;
+            $remaining = (int)$orderLine->remaining_quantity;
+            if ($remaining < 1) {
+                $fulfilledOmitted++;
+                continue;
+            }
             $available = max(
                 0,
                 (int)$orderLine->badge->on_hand_quantity - ($allocatedByBadge[$badgeId] ?? 0),
             );
-            $quantity = min(
-                (int)$orderLine->remaining_quantity,
-                $available,
-            );
-            if ($quantity < 1) {
-                $omitted++;
+            if ($available < 1) {
+                $noStockOmitted++;
                 continue;
+            }
+            $quantity = min($remaining, $available);
+            if ($quantity < $remaining) {
+                $lowStockReduced++;
             }
 
             $unitPrice = number_format((float)$orderLine->badge->price, 2, '.', '');
@@ -280,17 +309,50 @@ class FulfilmentsController extends AppController
             $index++;
         }
 
-        $message = $omitted > 0
-            ? __('{0} order line(s) were omitted because no stock is available.', $omitted)
-            : null;
+        $alerts = [];
+        if ($fulfilledOmitted > 0) {
+            $alerts[] = [
+                'level' => 'info',
+                'title' => __('Already fulfilled'),
+                'message' => __(
+                    '{0} order line(s) were not added because their full quantities have already been fulfilled.',
+                    $fulfilledOmitted,
+                ),
+            ];
+        }
+        if ($noStockOmitted > 0) {
+            $alerts[] = [
+                'level' => 'warning',
+                'title' => __('No stock available'),
+                'message' => __(
+                    '{0} order line(s) were not added because none of the required badge stock is available.',
+                    $noStockOmitted,
+                ),
+            ];
+        }
+        if ($lowStockReduced > 0) {
+            $alerts[] = [
+                'level' => 'warning',
+                'title' => __('Quantity reduced'),
+                'message' => __(
+                    '{0} order line(s) were added with a lower quantity because there is not enough stock '
+                    . 'to fulfil them in full.',
+                    $lowStockReduced,
+                ),
+            ];
+        }
 
         return $this->getResponse()
             ->withType('application/json')
             ->withStringBody((string)json_encode([
                 'html' => $html,
                 'next_index' => $index,
-                'message' => $message,
+                'alerts' => $alerts,
                 'user_id' => (string)$order->user_id,
+                'dispatch_type' => ($order->postage === true
+                    ? DispatchType::PostalDispatch
+                    : DispatchType::ShopCollection)->value,
+                'dispatch_address' => $dispatchAddress,
             ]));
     }
 
@@ -340,6 +402,11 @@ class FulfilmentsController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $fulfilment = $this->Fulfilments->get($id);
+        if ($fulfilment->status === FulfilmentStatus::Dispatched) {
+            $this->Flash->error(__('Dispatched fulfilments cannot be deleted.'));
+
+            return $this->redirect(['action' => 'index']);
+        }
         if ($this->Fulfilments->delete($fulfilment)) {
             $this->Flash->success(__('The fulfilment has been deleted.'));
         } else {
@@ -532,6 +599,105 @@ class FulfilmentsController extends AppController
                     'Fulfilment lines must be unique, belong to orders for the same user, '
                     . 'belong to fulfilable orders, and not exceed available stock.',
                 ),
+            );
+        }
+    }
+
+    /**
+     * Copy the common delivery details from the source orders onto the fulfilment.
+     *
+     * @param \Cake\Datasource\EntityInterface $fulfilment Fulfilment entity.
+     * @param array<string, mixed> $data Normalised request data.
+     * @return void
+     */
+    private function applyDispatchDetails(EntityInterface $fulfilment, array $data): void
+    {
+        $orderLineIds = array_values(array_filter(array_map(
+            static fn(array $line): string => (string)($line['order_line_id'] ?? ''),
+            $data['fulfilment_lines'] ?? [],
+        )));
+        if ($orderLineIds === []) {
+            return;
+        }
+
+        $orders = $this->Fulfilments->FulfilmentLines->OrderLines
+            ->find()
+            ->select(['OrderLines.id', 'OrderLines.order_id'])
+            ->contain(['Orders' => ['fields' => [
+                'id',
+                'user_id',
+                'postage',
+                'dispatch_address_line_1',
+                'dispatch_address_line_2',
+                'dispatch_town',
+                'dispatch_county',
+                'dispatch_postcode',
+            ]]])
+            ->where(['OrderLines.id IN' => $orderLineIds])
+            ->all()
+            ->extract('order')
+            ->indexBy('id')
+            ->toList();
+        if ($orders === []) {
+            return;
+        }
+
+        $fields = [
+            'dispatch_address_line_1',
+            'dispatch_address_line_2',
+            'dispatch_town',
+            'dispatch_county',
+            'dispatch_postcode',
+        ];
+        $first = $orders[0];
+        $postage = $first->postage === true;
+        $user = $this->Fulfilments->FulfilmentLines->OrderLines->Orders->Users->get($first->user_id);
+        $details = ['postage' => $postage];
+        foreach ($fields as $field) {
+            $userField = str_replace('dispatch_', '', $field);
+            $details[$field] = $postage ? $first->get($field) : $user->get($userField);
+        }
+
+        foreach ($orders as $order) {
+            $candidate = ['postage' => $order->postage === true];
+            foreach ($fields as $field) {
+                $userField = str_replace('dispatch_', '', $field);
+                $candidate[$field] = $candidate['postage'] ? $order->get($field) : $user->get($userField);
+            }
+            if ($candidate !== $details) {
+                $fulfilment->setError(
+                    'fulfilment_lines',
+                    __('Orders combined in one fulfilment must have the same delivery method and dispatch address.'),
+                );
+
+                return;
+            }
+        }
+
+        $dispatchType = DispatchType::tryFrom((int)($data['dispatch_type'] ?? 0))
+            ?? ($postage ? DispatchType::PostalDispatch : DispatchType::ShopCollection);
+        if (
+            $dispatchType !== DispatchType::ShopCollection
+            && array_filter(
+                ['dispatch_address_line_1', 'dispatch_town', 'dispatch_postcode'],
+                static fn(string $field): bool => trim((string)($details[$field] ?? '')) === '',
+            ) !== []
+        ) {
+            $fulfilment->setError(
+                'dispatch_type',
+                __('A complete dispatch address is required for postal dispatch or local drop-off.'),
+            );
+
+            return;
+        }
+        $fulfilment->set('postage_charge', $dispatchType === DispatchType::PostalDispatch
+            ? number_format((float)Configure::read('Postage.price', 0), 2, '.', '')
+            : '0.00');
+        $fulfilment->set('dispatch_type', $dispatchType);
+        foreach ($fields as $field) {
+            $fulfilment->set(
+                $field,
+                $dispatchType === DispatchType::ShopCollection ? null : $details[$field],
             );
         }
     }

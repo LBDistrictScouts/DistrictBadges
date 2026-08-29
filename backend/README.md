@@ -246,7 +246,9 @@ erDiagram
 
 The API Gateway/SQS route accepts the identical JSON payload. The `orders:consume_queue` worker passes each SQS message body through the same `OrderPlacementService` used by the synchronous controller, so validation, party resolution, pricing, and persistence remain consistent across both entry points.
 
-[`config/schema/scout-shop-order-v1.json`](config/schema/scout-shop-order-v1.json) is the canonical, versioned transport contract for both the `POST /api/orders.json` request body and the unchanged SQS message body. Edge services must reject payloads that fail this schema before enqueueing them. Database-backed checks, including group/section relationships and badge existence, are performed when the backend processes the valid payload.
+[`config/schema/scout-shop-order-v2.json`](config/schema/scout-shop-order-v2.json) is the latest canonical, versioned transport contract for both the `POST /api/orders.json` request body and the unchanged SQS message body. Version 2 adds optional `postage` and `dispatch_address` properties. Version 1 remains available for existing clients. Edge services must reject payloads that fail their selected schema version before enqueueing them. Database-backed checks, including group/section relationships and badge existence, are performed when the backend processes the valid payload.
+
+The per-dispatch postage charge is configured with the backend `POSTAGE_PRICE` environment variable and is available as `Postage.price`. Keep it aligned with the webstore deployment's separate `VITE_POSTAGE_PRICE` value.
 
 Run `bin/cake district_core_data:sync` whenever the canonical group or section data changes. Deploy and sync DistrictCoreData changes before deploying a webstore build that contains the new UUIDs.
 

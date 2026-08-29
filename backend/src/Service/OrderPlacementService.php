@@ -59,6 +59,15 @@ class OrderPlacementService
                 $requestFingerprint,
             ): Order {
                 [$account, $user] = $this->resolveParties($data);
+                $dispatchAddress = $data['dispatch_address'] ?? [];
+                if (($data['postage'] ?? false) === true) {
+                    $user->set('address_line_1', $this->addressValue($dispatchAddress, 'address_line_1'));
+                    $user->set('address_line_2', $this->addressValue($dispatchAddress, 'address_line_2'));
+                    $user->set('town', $this->addressValue($dispatchAddress, 'town'));
+                    $user->set('county', $this->addressValue($dispatchAddress, 'county'));
+                    $user->set('postcode', $this->addressValue($dispatchAddress, 'postcode'));
+                    $orders->Users->saveOrFail($user);
+                }
                 $order = $orders->newEntity([
                     'account_id' => $account->id,
                     'user_id' => $user->id,
@@ -70,6 +79,12 @@ class OrderPlacementService
                 $order->set('contact_first_name', trim((string)$data['first_name']));
                 $order->set('contact_last_name', trim((string)$data['last_name']));
                 $order->set('contact_email', mb_strtolower(trim((string)$data['email'])));
+                $order->set('postage', $data['postage'] ?? null);
+                $order->set('dispatch_address_line_1', $this->addressValue($dispatchAddress, 'address_line_1'));
+                $order->set('dispatch_address_line_2', $this->addressValue($dispatchAddress, 'address_line_2'));
+                $order->set('dispatch_town', $this->addressValue($dispatchAddress, 'town'));
+                $order->set('dispatch_county', $this->addressValue($dispatchAddress, 'county'));
+                $order->set('dispatch_postcode', $this->addressValue($dispatchAddress, 'postcode'));
                 $order->set('status', OrderStatus::Placed);
                 $orders->saveOrFail($order, [
                     'associated' => ['OrderLines'],
@@ -122,6 +137,47 @@ class OrderPlacementService
 
         if (!isset($data['email']) || !is_string($data['email']) || !Validation::email($data['email'])) {
             $errors['email'] = 'A valid email address is required.';
+        }
+
+        if (array_key_exists('postage', $data) && !is_bool($data['postage'])) {
+            $errors['postage'] = 'Postage must be a boolean.';
+        }
+        if (($data['postage'] ?? false) === true && !array_key_exists('dispatch_address', $data)) {
+            $errors['dispatch_address'] = 'Dispatch address is required when postage is selected.';
+        }
+        if (array_key_exists('dispatch_address', $data)) {
+            if (!is_array($data['dispatch_address'])) {
+                $errors['dispatch_address'] = 'Dispatch address must be an object.';
+            } else {
+                foreach (
+                    [
+                        'address_line_1' => 'Address line 1',
+                        'town' => 'Town',
+                    ] as $field => $label
+                ) {
+                    $this->validateAddressField($data['dispatch_address'], $field, $label, $errors, true);
+                }
+                $this->validateAddressField(
+                    $data['dispatch_address'],
+                    'postcode',
+                    'Postcode',
+                    $errors,
+                    true,
+                    10,
+                );
+                if (
+                    !isset($errors['dispatch_address']['postcode'])
+                    && preg_match(
+                        '/^(GIR ?0AA|[A-Z]{1,2}[0-9][0-9A-Z]? ?[0-9][A-Z]{2})$/i',
+                        $data['dispatch_address']['postcode'],
+                    ) !== 1
+                ) {
+                    $errors['dispatch_address']['postcode'] = 'Postcode must be a valid UK postcode.';
+                }
+                foreach (['address_line_2' => 'Address line 2', 'county' => 'County'] as $field => $label) {
+                    $this->validateAddressField($data['dispatch_address'], $field, $label, $errors);
+                }
+            }
         }
 
         $validGroupId = isset($data['group_id']) && is_string($data['group_id'])
@@ -295,14 +351,70 @@ class OrderPlacementService
         ], $data['lines']);
         usort($lines, static fn(array $left, array $right): int => $left['badge_id'] <=> $right['badge_id']);
 
-        return hash('sha256', json_encode([
+        $fingerprintData = [
             'first_name' => trim((string)$data['first_name']),
             'last_name' => trim((string)$data['last_name']),
             'email' => mb_strtolower(trim((string)$data['email'])),
             'group_id' => (string)$data['group_id'],
             'section_id' => (string)$data['section_id'],
             'lines' => $lines,
-        ], JSON_THROW_ON_ERROR));
+        ];
+        if (array_key_exists('postage', $data)) {
+            $fingerprintData['postage'] = $data['postage'];
+        }
+        if (isset($data['dispatch_address']) && is_array($data['dispatch_address'])) {
+            $fingerprintData['dispatch_address'] = array_filter([
+                'address_line_1' => $this->addressValue($data['dispatch_address'], 'address_line_1'),
+                'address_line_2' => $this->addressValue($data['dispatch_address'], 'address_line_2'),
+                'town' => $this->addressValue($data['dispatch_address'], 'town'),
+                'county' => $this->addressValue($data['dispatch_address'], 'county'),
+                'postcode' => $this->addressValue($data['dispatch_address'], 'postcode'),
+            ], static fn(?string $value): bool => $value !== null);
+        }
+
+        return hash('sha256', json_encode($fingerprintData, JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @param array<string, mixed> $address Dispatch address.
+     * @param array<string, mixed> $errors Validation errors.
+     */
+    private function validateAddressField(
+        array $address,
+        string $field,
+        string $label,
+        array &$errors,
+        bool $required = false,
+        int $maxLength = 255,
+    ): void {
+        if (!array_key_exists($field, $address)) {
+            if ($required) {
+                $errors['dispatch_address'][$field] = sprintf('%s is required.', $label);
+            }
+
+            return;
+        }
+        if (!is_string($address[$field]) || trim($address[$field]) === '') {
+            $errors['dispatch_address'][$field] = sprintf('%s must be a non-empty string.', $label);
+        } elseif (mb_strlen($address[$field]) > $maxLength) {
+            $errors['dispatch_address'][$field] = sprintf(
+                '%s must be no more than %d characters.',
+                $label,
+                $maxLength,
+            );
+        }
+    }
+
+    /**
+     * @param mixed $address Dispatch address.
+     */
+    private function addressValue(mixed $address, string $field): ?string
+    {
+        if (!is_array($address) || !isset($address[$field])) {
+            return null;
+        }
+
+        return trim((string)$address[$field]);
     }
 
     /**

@@ -20,6 +20,7 @@ use Cake\ORM\Entity;
  * @property string $total_received_amount
  * @property int $total_received_quantity
  * @property string $wholesale_order_number
+ * @property string|null $wholesaler_order_number
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
  * @property \App\Model\Entity\ReplenishmentOrderLine[] $replenishment_order_lines
@@ -46,6 +47,7 @@ class Replenishment extends Entity
         'total_ordered_quantity' => true,
         'total_received_amount' => true,
         'total_received_quantity' => true,
+        'wholesaler_order_number' => true,
         'stock_transactions' => true,
         'replenishment_order_lines' => true,
         'replenishment_receipt_lines' => true,

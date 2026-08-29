@@ -109,7 +109,8 @@ class OrdersController extends AppController
     public function view(?string $id = null)
     {
         $order = $this->Orders->get($id, contain: [
-            'Accounts',
+            'Accounts.Groups',
+            'Sections',
             'Users',
             'OrderLines.Badges',
         ]);

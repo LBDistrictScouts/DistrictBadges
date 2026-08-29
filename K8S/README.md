@@ -63,6 +63,10 @@ Order notification email is enabled with `ORDER_NOTIFICATIONS_ENABLED`. Set it
 to `"false"` in an overlay to suppress delivery without removing the SES
 credentials.
 
+The per-dispatch postage charge is configured with `POSTAGE_PRICE`. Keep it
+aligned with the matching webstore environment's separately deployed
+`VITE_POSTAGE_PRICE` value.
+
 The Algolia badge index is environment-specific: `BADGES` for production,
 `BADGES-TEST` for test, and `BADGES-DEV` for development. Keep the webstore's
 `VITE_ALGOLIA_BADGES_INDEX` value aligned with the backend's

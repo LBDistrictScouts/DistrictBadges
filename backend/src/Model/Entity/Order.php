@@ -25,6 +25,12 @@ use Cake\ORM\Entity;
  * @property string|null $contact_first_name
  * @property string|null $contact_last_name
  * @property string|null $contact_email
+ * @property bool|null $postage
+ * @property string|null $dispatch_address_line_1
+ * @property string|null $dispatch_address_line_2
+ * @property string|null $dispatch_town
+ * @property string|null $dispatch_county
+ * @property string|null $dispatch_postcode
  * @property \Cake\I18n\DateTime|null $last_notification_sent_at
  *
  * @property \App\Model\Entity\Account $account
@@ -53,6 +59,12 @@ class Order extends Entity
         'contact_first_name' => true,
         'contact_last_name' => true,
         'contact_email' => true,
+        'postage' => true,
+        'dispatch_address_line_1' => true,
+        'dispatch_address_line_2' => true,
+        'dispatch_town' => true,
+        'dispatch_county' => true,
+        'dispatch_postcode' => true,
         'account' => true,
         'user' => true,
         'section' => true,

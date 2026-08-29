@@ -30,7 +30,9 @@ class BadgesController extends AppController
         ];
 
         if ($filters['name'] !== '') {
-            $query->where(['badge_name LIKE' => '%' . $filters['name'] . '%']);
+            $query->where([
+                'LOWER(Badges.badge_name) LIKE' => '%' . mb_strtolower($filters['name']) . '%',
+            ]);
         }
 
         $status = filter_var($filters['status'], FILTER_VALIDATE_INT);

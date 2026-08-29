@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
+use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
+use Cake\Core\Configure;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -61,6 +63,7 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseContains('All statuses');
         $this->assertResponseContains('Created From');
         $this->assertResponseContains('Created To');
+        $this->assertResponseNotContains('>Delete<');
     }
 
     public function testIndexDefaultsToFulfilmentNumberDescending(): void
@@ -105,6 +108,23 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
     }
 
+    public function testIndexPaginationPreservesFalseyStatusFilter(): void
+    {
+        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        for ($index = 0; $index < 10; $index++) {
+            $fulfilments->saveOrFail($fulfilments->newEmptyEntity());
+        }
+        $fulfilments->updateAll(['status' => FulfilmentStatus::Draft->value], []);
+
+        $this->get('/fulfilments?status=0&limit=10');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Page 1 of 2');
+        $this->assertResponseRegExp(
+            '/href="(?=[^"]*page=2)(?=[^"]*status=0)[^"]+"[^>]*>2<\/a>/',
+        );
+    }
+
     /**
      * Test view method
      *
@@ -113,11 +133,20 @@ class FulfilmentsControllerTest extends TestCase
      */
     public function testView(): void
     {
+        $this->getTableLocator()->get('Fulfilments')->updateAll([
+            'postage_charge' => '4.50',
+            'dispatch_address_line_1' => '1 Scout Way',
+            'dispatch_town' => 'Chingford',
+            'dispatch_postcode' => 'E4 7QW',
+        ], ['id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a']);
         $this->get('/fulfilments/view/be5a0a9f-9d87-4191-b819-b7e1c1c50a3a');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Fulfilment Lines');
         $this->assertResponseContains('Processed');
+        $this->assertResponseContains('Postage Charge');
+        $this->assertResponseContains('Postal Dispatch');
+        $this->assertResponseContains('1 Scout Way');
         $this->assertResponseNotContains('Transaction Type');
     }
 
@@ -140,6 +169,14 @@ class FulfilmentsControllerTest extends TestCase
             ['on_hand_quantity' => 2],
             ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d'],
         );
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'postage' => true,
+            'dispatch_address_line_1' => '1 Scout Way',
+            'dispatch_address_line_2' => 'Gilwell Park',
+            'dispatch_town' => 'Chingford',
+            'dispatch_county' => 'London',
+            'dispatch_postcode' => 'E4 7QW',
+        ], ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644']);
         $before = $fulfilments->find()->count();
 
         $this->enableCsrfToken();
@@ -170,6 +207,10 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertNull($saved->dispatched_date);
         $this->assertNotNull($saved->fulfilment_date);
         $this->assertNotSame('2025-04-01 08:00:00', $saved->fulfilment_date->format('Y-m-d H:i:s'));
+        $this->assertSame((float)Configure::read('Postage.price'), (float)$saved->postage_charge);
+        $this->assertSame(DispatchType::PostalDispatch, $saved->dispatch_type);
+        $this->assertSame('1 Scout Way', $saved->dispatch_address_line_1);
+        $this->assertSame('E4 7QW', $saved->dispatch_postcode);
 
         $line = $fulfilments->FulfilmentLines->find()
             ->where(['fulfilment_id' => $saved->id])
@@ -322,6 +363,77 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseContains('Add at least one fulfilment line.');
     }
 
+    public function testAddAllowsDispatchTypeOverride(): void
+    {
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'postage' => false,
+        ], ['id' => $orderId]);
+        $this->getTableLocator()->get('Users')->updateAll([
+            'address_line_1' => '1 Scout Way',
+            'town' => 'Chingford',
+            'postcode' => 'E4 7QW',
+        ], ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1']);
+        $this->getTableLocator()->get('Badges')->updateAll(
+            ['on_hand_quantity' => 1],
+            ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d'],
+        );
+
+        $this->enableCsrfToken();
+        $this->post('/fulfilments/add', [
+            'dispatch_type' => DispatchType::LocalDropOff->value,
+            'fulfilment_lines' => [[
+                'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+                'quantity' => 1,
+                'unit_price' => '1.50',
+                'monetary_amount' => '1.50',
+            ]],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Fulfilments', 'action' => 'index']);
+        $saved = $this->getTableLocator()->get('Fulfilments')->find()
+            ->orderByDesc('fulfilment_date')
+            ->firstOrFail();
+        $this->assertSame(DispatchType::LocalDropOff, $saved->dispatch_type);
+        $this->assertSame(0.0, (float)$saved->postage_charge);
+        $this->assertSame('1 Scout Way', $saved->dispatch_address_line_1);
+    }
+
+    public function testAddRejectsDeliveryOverrideWithoutAddress(): void
+    {
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'postage' => false,
+        ], ['id' => $orderId]);
+        $this->getTableLocator()->get('Users')->updateAll([
+            'address_line_1' => null,
+            'town' => null,
+            'postcode' => null,
+        ], ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1']);
+        $this->getTableLocator()->get('Badges')->updateAll(
+            ['on_hand_quantity' => 1],
+            ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d'],
+        );
+
+        $before = $this->getTableLocator()->get('Fulfilments')->find()->count();
+        $this->enableCsrfToken();
+        $this->post('/fulfilments/add', [
+            'dispatch_type' => DispatchType::LocalDropOff->value,
+            'fulfilment_lines' => [[
+                'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+                'quantity' => 1,
+                'unit_price' => '1.50',
+                'monetary_amount' => '1.50',
+            ]],
+        ]);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('A complete dispatch address is required');
+        $this->assertSame($before, $this->getTableLocator()->get('Fulfilments')->find()->count());
+    }
+
     public function testAddFormLoadsLinesByOrder(): void
     {
         $orders = $this->getTableLocator()->get('Orders');
@@ -351,6 +463,11 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseContains('Select an order');
         $this->assertResponseContains('data-stock-line-bulk-source');
+        $this->assertResponseContains('data-dispatch-type');
+        $this->assertResponseContains('Local Drop Off');
+        $this->assertResponseRegExp(
+            '/<option value="" selected="selected">Add an order to set the dispatch type<\/option>/',
+        );
         $this->assertResponseContains('\/fulfilments\/order-lines');
         $this->assertResponseContains('<optgroup label="' . h($order->user->full_name) . '">');
         $this->assertResponseContains(sprintf(
@@ -379,6 +496,11 @@ class FulfilmentsControllerTest extends TestCase
             ['on_hand_quantity' => 2],
             ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d'],
         );
+        $this->getTableLocator()->get('Users')->updateAll([
+            'address_line_1' => '1 Scout Way',
+            'town' => 'Chingford',
+            'postcode' => 'E4 7QW',
+        ], ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1']);
 
         $this->get(
             '/fulfilments/order-lines'
@@ -395,7 +517,10 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertStringContainsString('value="2"', $payload['html']);
         $this->assertStringContainsString('£3.00', $payload['html']);
         $this->assertSame(4, $payload['next_index']);
-        $this->assertNull($payload['message']);
+        $this->assertSame('Quantity reduced', $payload['alerts'][0]['title']);
+        $this->assertStringContainsString('not enough stock', $payload['alerts'][0]['message']);
+        $this->assertSame(DispatchType::ShopCollection->value, $payload['dispatch_type']);
+        $this->assertSame(['1 Scout Way', 'Chingford', 'E4 7QW'], $payload['dispatch_address']);
     }
 
     public function testOrderLinesUsesRemainingQuantityAfterPartialFulfilment(): void
@@ -567,10 +692,28 @@ class FulfilmentsControllerTest extends TestCase
         $payload = json_decode((string)$this->_response->getBody(), true, flags: JSON_THROW_ON_ERROR);
         $this->assertSame('', $payload['html']);
         $this->assertSame(0, $payload['next_index']);
-        $this->assertSame(
-            '1 order line(s) were omitted because no stock is available.',
-            $payload['message'],
+        $this->assertSame('No stock available', $payload['alerts'][0]['title']);
+        $this->assertStringContainsString('none of the required badge stock', $payload['alerts'][0]['message']);
+    }
+
+    public function testOrderLinesExplainsAlreadyFulfilledLines(): void
+    {
+        $this->getTableLocator()->get('OrderLines')->updateAll([
+            'quantity' => 2,
+            'fulfilled_quantity' => 2,
+            'fulfilled' => true,
+        ], ['id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db']);
+
+        $this->get(
+            '/fulfilments/order-lines'
+            . '?order_id=dd7b14cc-abe6-4e58-b63d-070678d78644&index=0',
         );
+
+        $this->assertResponseOk();
+        $payload = json_decode((string)$this->_response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertSame('', $payload['html']);
+        $this->assertSame('Already fulfilled', $payload['alerts'][0]['title']);
+        $this->assertStringContainsString('already been fulfilled', $payload['alerts'][0]['message']);
     }
 
     public function testLineRowReturnsGridRow(): void
@@ -739,6 +882,18 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertFlashMessage('The fulfilment has been deleted.');
         $this->assertSame($before - 1, $fulfilments->find()->count());
         $this->assertFalse($fulfilments->exists(['id' => $id]));
+    }
+
+    public function testDeleteRejectsDispatchedFulfilment(): void
+    {
+        $id = 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a';
+
+        $this->enableCsrfToken();
+        $this->post("/fulfilments/delete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Fulfilments', 'action' => 'index']);
+        $this->assertFlashMessage('Dispatched fulfilments cannot be deleted.');
+        $this->assertTrue($this->getTableLocator()->get('Fulfilments')->exists(['id' => $id]));
     }
 
     /**

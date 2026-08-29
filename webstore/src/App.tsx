@@ -36,6 +36,12 @@ type CheckoutDetails = {
   email: string
   groupId: string
   sectionId: string
+  postage: boolean
+  addressLine1: string
+  addressLine2: string
+  town: string
+  county: string
+  postcode: string
 }
 
 type ApiErrorResponse = {
@@ -50,6 +56,11 @@ const appId = import.meta.env.VITE_ALGOLIA_APP_ID?.trim()
 const searchApiKey = import.meta.env.VITE_ALGOLIA_SEARCH_API_KEY?.trim()
 const indexName = import.meta.env.VITE_ALGOLIA_BADGES_INDEX?.trim() || 'BADGES-DEV'
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '')
+const postagePriceValue = import.meta.env.VITE_POSTAGE_PRICE?.trim()
+const configuredPostagePrice = postagePriceValue ? Number(postagePriceValue) : Number.NaN
+const postagePrice = Number.isFinite(configuredPostagePrice) && configuredPostagePrice >= 0
+  ? configuredPostagePrice
+  : 1.55
 
 function readBasket(): BasketItem[] {
   try {
@@ -68,6 +79,12 @@ function readCheckoutDetails(): CheckoutDetails {
     email: '',
     groupId: '',
     sectionId: '',
+    postage: false,
+    addressLine1: '',
+    addressLine2: '',
+    town: '',
+    county: 'Hertfordshire',
+    postcode: '',
   }
 
   try {
@@ -86,6 +103,12 @@ function readCheckoutDetails(): CheckoutDetails {
       email: typeof parsed.email === 'string' ? parsed.email : '',
       groupId,
       sectionId,
+      postage: typeof parsed.postage === 'boolean' ? parsed.postage : false,
+      addressLine1: typeof parsed.addressLine1 === 'string' ? parsed.addressLine1 : '',
+      addressLine2: typeof parsed.addressLine2 === 'string' ? parsed.addressLine2 : '',
+      town: typeof parsed.town === 'string' ? parsed.town : '',
+      county: typeof parsed.county === 'string' ? parsed.county : 'Hertfordshire',
+      postcode: typeof parsed.postcode === 'string' ? parsed.postcode : '',
     }
   } catch {
     return emptyDetails
@@ -126,6 +149,7 @@ function BasketIcon() {
 function App() {
   const [query, setQuery] = useState('')
   const [section, setSection] = useState('All sections')
+  const [badgeType, setBadgeType] = useState('All types')
   const [products, setProducts] = useState<Product[]>([])
   const [heroBadgeImages, setHeroBadgeImages] = useState<string[]>([])
   const [totalHits, setTotalHits] = useState(0)
@@ -229,12 +253,19 @@ function App() {
     return ['All sections', ...Array.from(names).sort()]
   }, [products])
 
-  const visibleProducts = useMemo(() => section === 'All sections'
-    ? products
-    : products.filter((product) => product.section_tags?.includes(section)), [products, section])
+  const badgeTypes = useMemo(() => {
+    const names = new Set(products.flatMap((product) => product.type_tags ?? []))
+    return ['All types', ...Array.from(names).sort()]
+  }, [products])
+
+  const visibleProducts = useMemo(() => products.filter((product) => (
+    (section === 'All sections' || product.section_tags?.includes(section))
+    && (badgeType === 'All types' || product.type_tags?.includes(badgeType))
+  )), [badgeType, products, section])
 
   const itemCount = basket.reduce((count, item) => count + item.quantity, 0)
   const basketTotal = basket.reduce((total, item) => total + item.price * item.quantity, 0)
+  const checkoutTotal = basketTotal + (checkoutDetails.postage ? postagePrice : 0)
   const checkoutSections = coreData.sections.filter((item) => item.group_id === checkoutDetails.groupId)
 
   function openQuantityPicker(product: Product) {
@@ -285,6 +316,10 @@ function App() {
     }))
   }
 
+  function updatePostage(postage: boolean) {
+    setCheckoutDetails((current) => ({ ...current, postage }))
+  }
+
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!apiBaseUrl) {
@@ -305,6 +340,16 @@ function App() {
           email: checkoutDetails.email,
           group_id: checkoutDetails.groupId,
           section_id: checkoutDetails.sectionId,
+          postage: checkoutDetails.postage,
+          ...(checkoutDetails.postage ? {
+            dispatch_address: {
+              address_line_1: checkoutDetails.addressLine1,
+              ...(checkoutDetails.addressLine2.trim() ? { address_line_2: checkoutDetails.addressLine2 } : {}),
+              town: checkoutDetails.town,
+              ...(checkoutDetails.county.trim() ? { county: checkoutDetails.county } : {}),
+              postcode: checkoutDetails.postcode,
+            },
+          } : {}),
           lines: basket.map((item) => ({
             badge_id: item.id,
             quantity: item.quantity,
@@ -344,7 +389,6 @@ function App() {
           <nav className="desktop-nav" aria-label="Main navigation">
             <a className="active" href="#shop">Shop badges</a>
             <a href="#how-it-works">How it works</a>
-            <a href="#support">Help</a>
           </nav>
           <Button className="basket-button" variant="primary" onClick={() => setBasketOpen(true)}>
             <BasketIcon /><span>Basket</span><Badge bg="light" text="dark" pill>{itemCount}</Badge>
@@ -363,7 +407,7 @@ function App() {
             <p>Order official Scout badges from your district shop. Search the range, build your basket and collect from the district team.</p>
             <div className="hero-search" role="search">
               <SearchIcon />
-              <Form.Control type="search" value={query} onChange={(event) => { setQuery(event.target.value); setSection('All sections') }} placeholder="Search by badge name…" aria-label="Search badges" />
+              <Form.Control type="search" value={query} onChange={(event) => { setQuery(event.target.value); setSection('All sections'); setBadgeType('All types') }} placeholder="Search by badge name…" aria-label="Search badges" />
               {query && <Button variant="link" onClick={() => setQuery('')}>Clear</Button>}
             </div>
             <div className="hero-promises" aria-label="Shop benefits">
@@ -380,12 +424,20 @@ function App() {
                 <h2>{query ? `Results for “${query}”` : 'Find the badges you need'}</h2>
                 <p>{loading ? 'Searching the district catalogue…' : `${visibleProducts.length} of ${totalHits} badges shown`}</p>
               </div>
-              <Form.Group className="section-filter" controlId="section-filter">
-                <Form.Label>Filter by section</Form.Label>
-                <Form.Select value={section} onChange={(event) => setSection(event.target.value)}>
-                  {sections.map((name) => <option key={name}>{name}</option>)}
-                </Form.Select>
-              </Form.Group>
+              <div className="catalogue-filters">
+                <Form.Group className="catalogue-filter" controlId="section-filter">
+                  <Form.Label>Filter by section</Form.Label>
+                  <Form.Select value={section} onChange={(event) => setSection(event.target.value)}>
+                    {sections.map((name) => <option key={name}>{name}</option>)}
+                  </Form.Select>
+                </Form.Group>
+                <Form.Group className="catalogue-filter" controlId="type-filter">
+                  <Form.Label>Filter by badge type</Form.Label>
+                  <Form.Select value={badgeType} onChange={(event) => setBadgeType(event.target.value)}>
+                    {badgeTypes.map((name) => <option key={name}>{name}</option>)}
+                  </Form.Select>
+                </Form.Group>
+              </div>
             </div>
 
             {error && <Alert variant="warning" className="catalogue-alert">{error}</Alert>}
@@ -412,7 +464,7 @@ function App() {
                 ))}
               </div>
             ) : !error && (
-              <div className="catalogue-state"><span className="empty-icon" aria-hidden="true">⌕</span><h3>No matching badges</h3><p>Try another badge name or section.</p><Button variant="outline-primary" onClick={() => { setQuery(''); setSection('All sections') }}>Clear filters</Button></div>
+              <div className="catalogue-state"><span className="empty-icon" aria-hidden="true">⌕</span><h3>No matching badges</h3><p>Try another badge name, section or type.</p><Button variant="outline-primary" onClick={() => { setQuery(''); setSection('All sections'); setBadgeType('All types') }}>Clear filters</Button></div>
             )}
           </Container>
         </section>
@@ -512,8 +564,8 @@ function App() {
           <Modal.Body className="checkout-success">
             <span aria-hidden="true">✓</span>
             <h2>Thank you, {checkoutDetails.firstName}.</h2>
-            <p>Your order has been received by the district badge shop. We’ll contact you at <strong>{checkoutDetails.email}</strong> when badges are ready to collect.</p>
-            <p>Your Group Treasurer will be invoiced monthly for the badges that are fulfilled and collected.</p>
+            <p>Your order has been received by the district badge shop. We’ll contact you at <strong>{checkoutDetails.email}</strong> when badges are ready {checkoutDetails.postage ? 'to be posted' : 'to collect'}.</p>
+            <p>Your Group Treasurer will be invoiced monthly for the badges that are fulfilled.</p>
             <Button onClick={() => setCheckoutOpen(false)}>Continue shopping</Button>
           </Modal.Body>
         ) : (
@@ -521,7 +573,7 @@ function App() {
             <Modal.Body>
               <div className="checkout-grid">
                 <div className="checkout-form-fields">
-                  <div><span className="checkout-step">Your details</span><h2>Who is placing this order?</h2><p>We’ll use these details to arrange collection.</p></div>
+                  <div><span className="checkout-step">Your details</span><h2>Who is placing this order?</h2><p>We’ll use these details to arrange fulfilment.</p></div>
                   {checkoutError && <Alert variant="danger">{checkoutError}</Alert>}
                   <div className="checkout-name-row">
                     <Form.Group controlId="checkout-first-name"><Form.Label>First name</Form.Label><Form.Control required autoComplete="given-name" value={checkoutDetails.firstName} onChange={(event) => updateCheckoutField('firstName', event.target.value)} /></Form.Group>
@@ -530,15 +582,36 @@ function App() {
                   <Form.Group controlId="checkout-email"><Form.Label>Email address</Form.Label><Form.Control required type="email" autoComplete="email" value={checkoutDetails.email} onChange={(event) => updateCheckoutField('email', event.target.value)} /></Form.Group>
                   <Form.Group controlId="checkout-group"><Form.Label>Scout Group</Form.Label><Form.Select required value={checkoutDetails.groupId} onChange={(event) => updateCheckoutField('groupId', event.target.value)}><option value="">Choose your Group…</option>{coreData.groups.map((group) => <option key={group.id} value={group.id}>{group.group_name}</option>)}</Form.Select></Form.Group>
                   <Form.Group controlId="checkout-section"><Form.Label>Section</Form.Label><Form.Select required disabled={!checkoutDetails.groupId} value={checkoutDetails.sectionId} onChange={(event) => updateCheckoutField('sectionId', event.target.value)}><option value="">{checkoutDetails.groupId ? 'Choose your Section…' : 'Choose a Group first'}</option>{checkoutSections.map((item) => <option key={item.id} value={item.id}>{item.section_name}</option>)}</Form.Select></Form.Group>
+                  <fieldset className="checkout-delivery-options">
+                    <legend>Delivery</legend>
+                    <Form.Check type="radio" id="checkout-collection" name="checkout-delivery" label="Collect from the district badge shop" checked={!checkoutDetails.postage} onChange={() => updatePostage(false)} />
+                    <Form.Check type="radio" id="checkout-postage" name="checkout-delivery" label={`Post this order to me (${formatPrice(postagePrice)} per dispatch)`} checked={checkoutDetails.postage} onChange={() => updatePostage(true)} />
+                  </fieldset>
+                  {checkoutDetails.postage && (
+                    <>
+                      <Alert variant="info" className="postage-charge-notice">Postage is charged for each dispatch. Back-ordered badges may require more than one dispatch and postage charge. If you place multiple orders, we may group them into one dispatch and charge postage once.</Alert>
+                      <fieldset className="checkout-address-fields">
+                        <legend>Postage address</legend>
+                        <Form.Group controlId="checkout-address-line-1"><Form.Label>Address line 1</Form.Label><Form.Control required autoComplete="address-line1" value={checkoutDetails.addressLine1} onChange={(event) => updateCheckoutField('addressLine1', event.target.value)} /></Form.Group>
+                        <Form.Group controlId="checkout-address-line-2"><Form.Label>Address line 2 <span>(optional)</span></Form.Label><Form.Control autoComplete="address-line2" value={checkoutDetails.addressLine2} onChange={(event) => updateCheckoutField('addressLine2', event.target.value)} /></Form.Group>
+                        <div className="checkout-name-row">
+                          <Form.Group controlId="checkout-town"><Form.Label>Town or city</Form.Label><Form.Control required autoComplete="address-level2" value={checkoutDetails.town} onChange={(event) => updateCheckoutField('town', event.target.value)} /></Form.Group>
+                          <Form.Group controlId="checkout-county"><Form.Label>County <span>(optional)</span></Form.Label><Form.Control autoComplete="address-level1" value={checkoutDetails.county} onChange={(event) => updateCheckoutField('county', event.target.value)} /></Form.Group>
+                        </div>
+                        <Form.Group controlId="checkout-postcode"><Form.Label>Postcode</Form.Label><Form.Control required autoComplete="postal-code" maxLength={10} value={checkoutDetails.postcode} onChange={(event) => updateCheckoutField('postcode', event.target.value)} /></Form.Group>
+                      </fieldset>
+                    </>
+                  )}
                 </div>
                 <aside className="checkout-summary">
                   <span className="checkout-step">Order summary</span>
                   <h2>{itemCount} {itemCount === 1 ? 'badge' : 'badges'}</h2>
                   <div className="checkout-summary-items">
                     {basket.map((item) => <div key={item.id}><span><b>{item.quantity}×</b> {item.name}</span><strong>{formatPrice(item.price * item.quantity)}</strong></div>)}
+                    {checkoutDetails.postage && <div><span>Postage <small>(one dispatch)</small></span><strong>{formatPrice(postagePrice)}</strong></div>}
                   </div>
-                  <div className="checkout-summary-total"><span>Total</span><strong>{formatPrice(basketTotal)}</strong></div>
-                  <p>You’ll only be invoiced for badges that are fulfilled and collected.</p>
+                  <div className="checkout-summary-total"><span>{checkoutDetails.postage ? 'Estimated total' : 'Total'}</span><strong>{formatPrice(checkoutTotal)}</strong></div>
+                  <p>{checkoutDetails.postage ? 'The estimate includes one postage charge. Your invoice will reflect the number of dispatches actually made.' : 'You’ll only be invoiced for badges that are fulfilled and collected.'}</p>
                 </aside>
               </div>
             </Modal.Body>

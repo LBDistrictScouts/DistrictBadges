@@ -113,6 +113,7 @@ use App\Model\Enum\BadgeStatus;
         </table>
     </div>
     <div class="paginator">
+        <?= $this->element('pagination_limit') ?>
         <ul class="pagination">
             <?= $this->Paginator->first('<< ' . __('first')) ?>
             <?= $this->Paginator->prev('< ' . __('previous')) ?>

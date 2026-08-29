@@ -88,6 +88,11 @@ class ReplenishmentsTable extends Table
             ->allowEmptyString('wholesale_order_number');
 
         $validator
+            ->scalar('wholesaler_order_number')
+            ->maxLength('wholesaler_order_number', 255)
+            ->allowEmptyString('wholesaler_order_number');
+
+        $validator
             ->integer('status')
             ->inList('status', array_column(ReplenishmentStatus::cases(), 'value'))
             ->allowEmptyString('status');

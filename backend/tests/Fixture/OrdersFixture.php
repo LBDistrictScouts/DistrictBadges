@@ -36,6 +36,12 @@ class OrdersFixture extends TestFixture
                 'contact_first_name' => null,
                 'contact_last_name' => null,
                 'contact_email' => null,
+                'postage' => null,
+                'dispatch_address_line_1' => null,
+                'dispatch_address_line_2' => null,
+                'dispatch_town' => null,
+                'dispatch_county' => null,
+                'dispatch_postcode' => null,
                 'last_notification_sent_at' => null,
             ],
         ];

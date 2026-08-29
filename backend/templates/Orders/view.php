@@ -1,8 +1,20 @@
 <?php
+use Cake\Core\Configure;
+
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Order $order
  */
+$dispatchAddress = array_filter([
+    $order->dispatch_address_line_1,
+    $order->dispatch_address_line_2,
+    $order->dispatch_town,
+    $order->dispatch_county,
+    $order->dispatch_postcode,
+]);
+$postagePrice = $this->Number->currency((float)Configure::read('Postage.price', 0));
+$multipleOrdersMessage = 'If the customer places multiple orders, they may be grouped into one dispatch '
+    . 'and charged postage once.';
 ?>
 <div class="row">
     <aside class="column">
@@ -34,14 +46,25 @@
                     <td><?= h($order->status->label()) ?></td>
                 </tr>
                 <tr>
-                    <th><?= __('Account') ?></th>
+                    <th><?= __('Order for') ?></th>
                     <td>
+                        <?php if ($order->account?->hasValue('group')) : ?>
+                            <?= $this->Html->link(
+                                $order->account->group->group_name,
+                                ['controller' => 'Groups', 'action' => 'view', $order->account->group->id],
+                            ) ?>
+                            <span aria-hidden="true">›</span>
+                        <?php endif; ?>
                         <?= $order->hasValue('account')
                             ? $this->Html->link(
                                 $order->account->account_name,
                                 ['controller' => 'Accounts', 'action' => 'view', $order->account->id],
                             )
                             : __('No account') ?>
+                        <?php if ($order->hasValue('section')) : ?>
+                            <span aria-hidden="true">›</span>
+                            <?= h($order->section->section_name) ?>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <tr>
@@ -101,6 +124,51 @@
             </table>
 
             <div class="related">
+                <h4><?= __('Delivery') ?></h4>
+                <?php if ($order->postage === true) : ?>
+                    <p style="margin-bottom:0.5rem;">
+                        <strong>
+                            <?= __('Postage selected ({0} per dispatch)', $postagePrice) ?>
+                        </strong>
+                        <button
+                            type="button"
+                            class="button button-clear"
+                            id="postage-info-open"
+                            aria-haspopup="dialog"
+                            aria-controls="postage-info-dialog"
+                        ><?= __('Postage information') ?></button>
+                    </p>
+                    <address style="margin-bottom:0;">
+                        <?php foreach ($dispatchAddress as $addressLine) : ?>
+                            <?= h($addressLine) ?><br>
+                        <?php endforeach; ?>
+                    </address>
+                    <dialog id="postage-info-dialog" class="audit-count-dialog">
+                        <div class="audit-count-dialog__heading">
+                            <h4><?= __('Postage charges') ?></h4>
+                            <button
+                                type="button"
+                                class="button button-clear audit-dialog-close"
+                                aria-label="<?= __('Close') ?>"
+                                id="postage-info-close"
+                            >×</button>
+                        </div>
+                        <p>
+                            <?= __('Postage is charged at {0} for each dispatch.', $postagePrice) ?>
+                            <?= __('Back-ordered badges may require more than one dispatch and postage charge.') ?>
+                            <?= __($multipleOrdersMessage) ?>
+                            <?= __('The invoice will reflect the number of dispatches actually made.') ?>
+                        </p>
+                    </dialog>
+                <?php else : ?>
+                    <p>
+                        <strong><?= __('Collection selected') ?></strong><br>
+                        <?= __('This order will be prepared for collection from the district badge shop.') ?>
+                    </p>
+                <?php endif; ?>
+            </div>
+
+            <div class="related">
                 <h4><?= __('Order Lines') ?></h4>
                 <?php if (!empty($order->order_lines)) : ?>
                 <div class="table-responsive">
@@ -149,3 +217,21 @@
         </div>
     </div>
 </div>
+<?php if ($order->postage === true) : ?>
+<script>
+    (function () {
+        var dialog = document.getElementById('postage-info-dialog');
+        document.getElementById('postage-info-open').addEventListener('click', function () {
+            dialog.showModal();
+        });
+        document.getElementById('postage-info-close').addEventListener('click', function () {
+            dialog.close();
+        });
+        dialog.addEventListener('click', function (event) {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+    }());
+</script>
+<?php endif; ?>

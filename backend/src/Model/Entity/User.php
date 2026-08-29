@@ -16,6 +16,11 @@ use Cake\ORM\Entity;
  * @property string|null $login
  * @property int $admin_role
  * @property bool $can_login
+ * @property string|null $address_line_1
+ * @property string|null $address_line_2
+ * @property string|null $town
+ * @property string|null $county
+ * @property string|null $postcode
  * @property string $full_name
  *
  * @property \App\Model\Entity\Account $account
@@ -47,6 +52,11 @@ class User extends Entity
         'login' => true,
         'admin_role' => true,
         'can_login' => true,
+        'address_line_1' => true,
+        'address_line_2' => true,
+        'town' => true,
+        'county' => true,
+        'postcode' => true,
         'account' => true,
         'orders' => true,
     ];

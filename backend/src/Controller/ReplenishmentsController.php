@@ -79,6 +79,39 @@ class ReplenishmentsController extends AppController
     }
 
     /**
+     * Edit the wholesaler's order reference on an unreceived replenishment.
+     *
+     * @param string|null $id Replenishment id.
+     * @return \Cake\Http\Response|null|void Redirects on success, renders otherwise.
+     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
+     */
+    public function edit(?string $id = null)
+    {
+        $replenishment = $this->Replenishments->get($id);
+        if ($replenishment->received) {
+            $this->Flash->error(__('Received replenishments cannot be edited.'));
+
+            return $this->redirect(['action' => 'view', $replenishment->id]);
+        }
+
+        if ($this->request->is(['patch', 'post', 'put'])) {
+            $replenishment = $this->Replenishments->patchEntity(
+                $replenishment,
+                $this->request->getData(),
+                ['fields' => ['wholesaler_order_number']],
+            );
+            if ($this->Replenishments->save($replenishment)) {
+                $this->Flash->success(__('The wholesaler order number has been saved.'));
+
+                return $this->redirect(['action' => 'view', $replenishment->id]);
+            }
+            $this->Flash->error(__('The wholesaler order number could not be saved. Please, try again.'));
+        }
+
+        $this->set(compact('replenishment'));
+    }
+
+    /**
      * Add method
      *
      * @return \Cake\Http\Response|null|void Redirects on successful add, renders view otherwise.
@@ -98,7 +131,7 @@ class ReplenishmentsController extends AppController
                 $replenishment,
                 $data,
                 [
-                    'fields' => ['replenishment_order_lines'],
+                    'fields' => ['wholesaler_order_number', 'replenishment_order_lines'],
                     'associated' => ['ReplenishmentOrderLines'],
                 ],
             );
@@ -256,6 +289,11 @@ class ReplenishmentsController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $replenishment = $this->Replenishments->get($id);
+        if ($replenishment->received) {
+            $this->Flash->error(__('Received replenishments cannot be deleted.'));
+
+            return $this->redirect(['action' => 'index']);
+        }
         if ($this->Replenishments->delete($replenishment)) {
             $this->Flash->success(__('The replenishment has been deleted.'));
         } else {

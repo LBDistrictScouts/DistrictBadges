@@ -26,6 +26,13 @@ class FulfilmentsFixture extends TestFixture
                 'status' => 10,
                 'total_amount' => 0,
                 'total_quantity' => 0,
+                'dispatch_type' => 10,
+                'postage_charge' => '4.50',
+                'dispatch_address_line_1' => '1 Scout Way',
+                'dispatch_address_line_2' => 'Gilwell Park',
+                'dispatch_town' => 'Chingford',
+                'dispatch_county' => 'London',
+                'dispatch_postcode' => 'E4 7QW',
                 'last_notification_sent_at' => null,
             ],
         ];

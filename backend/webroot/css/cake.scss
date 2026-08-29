@@ -264,7 +264,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .district-brand { display: inline-flex; align-items: center; gap: 1.2rem; color: var(--district-ink) !important; text-decoration: none; }
-.district-brand__mark { display: grid; width: 5rem; height: 5rem; place-items: center; border-radius: 1.6rem .5rem 1.6rem .5rem; background: var(--district-purple); box-shadow: 0 .8rem 2.2rem rgba(116, 19, 220, .22); color: #fff; font-size: 1.2rem; font-weight: 900; transform: rotate(-3deg); }
+.top-nav-title .district-brand__mark { display: grid; width: 5rem; height: 5rem; margin-left: 0; place-items: center; border-radius: 1.6rem .5rem 1.6rem .5rem; background: var(--district-purple); box-shadow: 0 .8rem 2.2rem rgba(116, 19, 220, .22); color: #fff; font-size: 1.2rem; font-weight: 900; transform: rotate(-3deg); }
 .district-brand__copy { display: grid; line-height: 1.05; }
 .district-brand__copy strong { font-size: 1.75rem; font-weight: 900; }
 .district-brand__copy small { margin-top: .5rem; color: var(--district-muted); font-size: 1rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -367,52 +367,116 @@ input[type='color'] {
 
 /* Paginator */
 .paginator {
+    align-items: center;
+    background: #f7f8fa;
+    border: 1px solid #e1e5e9;
+    border-radius: .6rem;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    margin-top: 2rem;
+    overflow-x: auto;
+    padding: 1.2rem 1.5rem;
     text-align: right;
+    white-space: nowrap;
 }
+
+.pagination-limit,
+.pagination-limit .input {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: .75rem;
+    margin: 0;
+}
+
+.pagination-limit label {
+    color: #606c76;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.pagination-limit select {
+    background-color: #fff;
+    border-color: #d1d1d1;
+    border-radius: .4rem;
+    font-size: 1.4rem;
+    height: 3.2rem;
+    line-height: 1.5;
+    margin: 0;
+    padding: .25rem 2.5rem .25rem .75rem;
+    width: auto;
+}
+
 .paginator p {
+    color: #606c76;
+    flex: 0 0 auto;
+    font-size: 1.3rem;
     margin-bottom: 0;
 }
+
 .pagination {
     display: flex;
+    flex: 0 0 auto;
     justify-content: center;
     list-style: none;
-    margin: 0 0 1rem 0;
+    margin: 0;
     padding: 0;
 }
+
 .pagination li {
-    display: inline-block;
-    margin: 0.25em;
+    display: block;
+    margin: 0 0 0 -1px;
     text-align: center;
 }
+
+.pagination li:first-child {
+    margin-left: 0;
+}
+
 .pagination a {
+    background-color: #fff;
+    border: 1px solid #d1d1d1;
     color: var(--color-cakephp-blue);
-    display: inline-block;
-    font-size: 1.25rem;
-    line-height: 3rem;
-    min-width: 3rem;
-    padding: 0;
+    display: block;
+    font-size: 1.4rem;
+    line-height: 3.2rem;
+    min-width: 3.6rem;
+    padding: 0 .75rem;
     position: relative;
     text-decoration: none;
-    transition: background .3s,color .3s;
+    transition: background .15s, color .15s;
 }
+
+.pagination li:first-child a {
+    border-radius: .4rem 0 0 .4rem;
+}
+
+.pagination li:last-child a {
+    border-radius: 0 .4rem .4rem 0;
+}
+
 .pagination li.active a,
 .pagination a:hover {
-    text-decoration: underline;
+    background-color: var(--color-cakephp-blue);
+    border-color: var(--color-cakephp-blue);
+    color: #fff;
+    text-decoration: none;
+    z-index: 1;
 }
+
 .pagination .disabled a {
+    background-color: #fff;
+    border-color: #d1d1d1;
     cursor: not-allowed;
     color: var(--color-lightgray);
     text-decoration: none;
 }
-.first a,
-.prev a,
-.next a,
-.last a {
-    padding: 0 .75rem;
-}
+
 .disabled a:hover {
-    background: initial;
-    color: initial;
+    background: #fff;
+    color: var(--color-lightgray);
 }
 .asc:after {
     content: " \2193";
@@ -507,6 +571,15 @@ input[type='color'] {
 .stock-line-bulk-action {
     display: flex;
     align-items: flex-end;
+}
+
+.stock-line-alerts {
+    margin: 0 0 1.5rem;
+}
+
+.stock-line-alerts .message {
+    cursor: default;
+    padding: 1rem 1.25rem;
 }
 
 @media (min-width: 40rem) {

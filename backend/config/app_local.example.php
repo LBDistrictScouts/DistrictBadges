@@ -99,6 +99,10 @@ return [
         'enabled' => filter_var(env('ORDER_NOTIFICATIONS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
     ],
 
+    'Postage' => [
+        'price' => max(0.0, (float)env('POSTAGE_PRICE', '1.55')),
+    ],
+
     'Algolia' => [
         'enabled' => filter_var(env('ALGOLIA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
         'appId' => env('ALGOLIA_APP_ID', ''),

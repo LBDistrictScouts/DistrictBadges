@@ -63,13 +63,17 @@ class DistrictCoreDataService
         $groups = $this->getTableLocator()->get('Groups');
         /** @var \App\Model\Table\SectionsTable $sections */
         $sections = $this->getTableLocator()->get('Sections');
+        /** @var \App\Model\Table\AccountsTable $accounts */
+        $accounts = $this->getTableLocator()->get('Accounts');
 
         return $groups->getConnection()->transactional(function () use (
             $groups,
             $sections,
+            $accounts,
             $groupData,
             $sectionData,
         ): array {
+            $accountIds = [];
             foreach ($groupData as $record) {
                 $id = (string)$record['id'];
                 $entity = $groups->find()->where(['id' => $id])->first()
@@ -90,6 +94,19 @@ class DistrictCoreDataService
                     'sort_order' => $record['sort_order'],
                 ]);
                 $groups->saveOrFail($entity);
+
+                $account = $accounts->find()
+                    ->where(['Accounts.group_id' => $id])
+                    ->orderByAsc('Accounts.account_name')
+                    ->first();
+                if ($account === null) {
+                    $account = $accounts->newEntity([
+                        'account_name' => $record['group_name'],
+                        'group_id' => $id,
+                    ]);
+                    $accounts->saveOrFail($account);
+                }
+                $accountIds[$id] = $account->id;
             }
 
             foreach ($sectionData as $record) {
@@ -107,7 +124,7 @@ class DistrictCoreDataService
                     $entity->set('id', $id);
                 }
 
-                $sections->patchEntity($entity, [
+                $sectionFields = [
                     'group_id' => $record['group_id'],
                     'section_osm_id' => $record['section_id'],
                     'section_name' => $record['section_name'],
@@ -115,7 +132,15 @@ class DistrictCoreDataService
                     'meeting_start_time' => $record['meeting_start_time'] ?? null,
                     'meeting_end_time' => $record['meeting_end_time'] ?? null,
                     'meeting_day' => $record['meeting_day'] ?? null,
+                ];
+                $hasValidAccount = $entity->account_id !== null && $accounts->exists([
+                    'id' => $entity->account_id,
+                    'group_id' => $record['group_id'],
                 ]);
+                if (!$hasValidAccount) {
+                    $sectionFields['account_id'] = $accountIds[$record['group_id']];
+                }
+                $sections->patchEntity($entity, $sectionFields);
                 $sections->saveOrFail($entity);
             }
 

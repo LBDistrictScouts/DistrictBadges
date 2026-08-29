@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\Entity\Fulfilment;
+use App\Model\Enum\DispatchType;
 use Cake\Core\Configure;
 use Cake\I18n\DateTime;
 use Cake\Mailer\Mailer;
@@ -59,9 +60,14 @@ class FulfilmentNotificationService
         }
 
         $mailer = $this->createMailer();
+        $subject = match ($fulfilment->dispatch_type) {
+            DispatchType::PostalDispatch => 'Badges dispatched: ',
+            DispatchType::LocalDropOff => 'Badges ready for local drop-off: ',
+            DispatchType::ShopCollection => 'Badges ready to collect: ',
+        };
         $mailer
             ->setTo($contactEmail, $contactName)
-            ->setSubject('Badges ready to collect: ' . $fulfilment->fulfilment_number)
+            ->setSubject($subject . $fulfilment->fulfilment_number)
             ->setEmailFormat('both')
             ->setViewVars(compact('fulfilment', 'user', 'contactName'));
         $mailer->viewBuilder()
