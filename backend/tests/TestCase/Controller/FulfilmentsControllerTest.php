@@ -400,6 +400,40 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertSame('1 Scout Way', $saved->dispatch_address_line_1);
     }
 
+    public function testAddRejectsDeliveryOverrideWithoutAddress(): void
+    {
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'postage' => false,
+        ], ['id' => $orderId]);
+        $this->getTableLocator()->get('Users')->updateAll([
+            'address_line_1' => null,
+            'town' => null,
+            'postcode' => null,
+        ], ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1']);
+        $this->getTableLocator()->get('Badges')->updateAll(
+            ['on_hand_quantity' => 1],
+            ['id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d'],
+        );
+
+        $before = $this->getTableLocator()->get('Fulfilments')->find()->count();
+        $this->enableCsrfToken();
+        $this->post('/fulfilments/add', [
+            'dispatch_type' => DispatchType::LocalDropOff->value,
+            'fulfilment_lines' => [[
+                'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+                'quantity' => 1,
+                'unit_price' => '1.50',
+                'monetary_amount' => '1.50',
+            ]],
+        ]);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('A complete dispatch address is required');
+        $this->assertSame($before, $this->getTableLocator()->get('Fulfilments')->find()->count());
+    }
+
     public function testAddFormLoadsLinesByOrder(): void
     {
         $orders = $this->getTableLocator()->get('Orders');

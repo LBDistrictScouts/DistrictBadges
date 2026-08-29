@@ -29,6 +29,14 @@ class ScoutShopOrderV2SchemaTest extends TestCase
         $this->assertSame([], $this->validate($payload));
     }
 
+    public function testRejectsPostageWithoutDispatchAddress(): void
+    {
+        $errors = $this->validate($this->validPayload() + ['postage' => true]);
+
+        $this->assertNotEmpty($errors);
+        $this->assertSame('postage', $errors[0]['property']);
+    }
+
     public function testRejectsDispatchAddressMissingMandatoryField(): void
     {
         $payload = $this->validPayload() + [

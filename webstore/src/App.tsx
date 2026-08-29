@@ -56,10 +56,11 @@ const appId = import.meta.env.VITE_ALGOLIA_APP_ID?.trim()
 const searchApiKey = import.meta.env.VITE_ALGOLIA_SEARCH_API_KEY?.trim()
 const indexName = import.meta.env.VITE_ALGOLIA_BADGES_INDEX?.trim() || 'BADGES-DEV'
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '')
-const configuredPostagePrice = Number(import.meta.env.VITE_POSTAGE_PRICE)
+const postagePriceValue = import.meta.env.VITE_POSTAGE_PRICE?.trim()
+const configuredPostagePrice = postagePriceValue ? Number(postagePriceValue) : Number.NaN
 const postagePrice = Number.isFinite(configuredPostagePrice) && configuredPostagePrice >= 0
   ? configuredPostagePrice
-  : 0
+  : 1.55
 
 function readBasket(): BasketItem[] {
   try {

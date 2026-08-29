@@ -142,6 +142,9 @@ class OrderPlacementService
         if (array_key_exists('postage', $data) && !is_bool($data['postage'])) {
             $errors['postage'] = 'Postage must be a boolean.';
         }
+        if (($data['postage'] ?? false) === true && !array_key_exists('dispatch_address', $data)) {
+            $errors['dispatch_address'] = 'Dispatch address is required when postage is selected.';
+        }
         if (array_key_exists('dispatch_address', $data)) {
             if (!is_array($data['dispatch_address'])) {
                 $errors['dispatch_address'] = 'Dispatch address must be an object.';

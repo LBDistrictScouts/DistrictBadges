@@ -676,6 +676,20 @@ class FulfilmentsController extends AppController
 
         $dispatchType = DispatchType::tryFrom((int)($data['dispatch_type'] ?? 0))
             ?? ($postage ? DispatchType::PostalDispatch : DispatchType::ShopCollection);
+        if (
+            $dispatchType !== DispatchType::ShopCollection
+            && array_filter(
+                ['dispatch_address_line_1', 'dispatch_town', 'dispatch_postcode'],
+                static fn(string $field): bool => trim((string)($details[$field] ?? '')) === '',
+            ) !== []
+        ) {
+            $fulfilment->setError(
+                'dispatch_type',
+                __('A complete dispatch address is required for postal dispatch or local drop-off.'),
+            );
+
+            return;
+        }
         $fulfilment->set('postage_charge', $dispatchType === DispatchType::PostalDispatch
             ? number_format((float)Configure::read('Postage.price', 0), 2, '.', '')
             : '0.00');

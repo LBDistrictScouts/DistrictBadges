@@ -141,6 +141,23 @@ class OrdersControllerTest extends TestCase
         $this->assertArrayHasKey('postcode', $payload['errors']['dispatch_address']);
     }
 
+    public function testPlaceRejectsPostageWithoutDispatchAddress(): void
+    {
+        $this->enableCsrfToken();
+        $payload = $this->validOrderPayload([
+            'postage' => true,
+        ]);
+        $this->configRequest(['headers' => ['Content-Type' => 'application/json']]);
+        $this->post('/api/orders.json', json_encode($payload, JSON_THROW_ON_ERROR));
+
+        $this->assertResponseCode(422);
+        $payload = json_decode((string)$this->_response->getBody(), true);
+        $this->assertSame(
+            'Dispatch address is required when postage is selected.',
+            $payload['errors']['dispatch_address'],
+        );
+    }
+
     public function testPlaceRejectsInvalidUkPostcode(): void
     {
         $this->enableCsrfToken();

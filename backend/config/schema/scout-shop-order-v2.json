@@ -53,6 +53,22 @@
             }
         }
     },
+    "anyOf": [
+        {
+            "properties": {
+                "postage": {
+                    "enum": [
+                        false
+                    ]
+                }
+            }
+        },
+        {
+            "required": [
+                "dispatch_address"
+            ]
+        }
+    ],
     "definitions": {
         "uuid": {
             "type": "string",
