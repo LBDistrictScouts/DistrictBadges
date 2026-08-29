@@ -38,6 +38,7 @@ class AppView extends View
      */
     public function initialize(): void
     {
+        $this->addHelper('Paginator', ['className' => 'AppPaginator']);
         $this->addHelper('StockTransactionLines');
     }
 }

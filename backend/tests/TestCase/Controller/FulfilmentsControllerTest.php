@@ -105,6 +105,23 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
     }
 
+    public function testIndexPaginationPreservesFalseyStatusFilter(): void
+    {
+        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        for ($index = 0; $index < 10; $index++) {
+            $fulfilments->saveOrFail($fulfilments->newEmptyEntity());
+        }
+        $fulfilments->updateAll(['status' => FulfilmentStatus::Draft->value], []);
+
+        $this->get('/fulfilments?status=0&limit=10');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Page 1 of 2');
+        $this->assertResponseRegExp(
+            '/href="(?=[^"]*page=2)(?=[^"]*status=0)[^"]+"[^>]*>2<\/a>/',
+        );
+    }
+
     /**
      * Test view method
      *

@@ -82,6 +82,23 @@ class ReplenishmentsControllerTest extends TestCase
         $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
     }
 
+    public function testIndexPaginationPreservesFalseyStatusFilter(): void
+    {
+        $replenishments = $this->getTableLocator()->get('Replenishments');
+        for ($index = 0; $index < 10; $index++) {
+            $replenishments->saveOrFail($replenishments->newEmptyEntity());
+        }
+        $replenishments->updateAll(['status' => ReplenishmentStatus::Draft->value], []);
+
+        $this->get('/replenishments?status=0&limit=10');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Page 1 of 2');
+        $this->assertResponseRegExp(
+            '/href="(?=[^"]*page=2)(?=[^"]*status=0)[^"]+"[^>]*>2<\/a>/',
+        );
+    }
+
     /**
      * Test view method
      *

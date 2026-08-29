@@ -74,6 +74,64 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseContains('Second badge');
     }
 
+    public function testIndexPaginationPreservesFilters(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $badges->updateAll(['stocked' => false], []);
+        for ($index = 0; $index < 9; $index++) {
+            $badges->saveOrFail($badges->newEntity([
+                'badge_name' => "Pagination badge {$index}",
+                'national_data' => '{}',
+                'stocked' => false,
+                'status' => BadgeStatus::Unavailable->value,
+            ]), ['skipAlgolia' => true]);
+        }
+
+        $this->get('/badges?stocked=0&limit=10');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Page 1 of 2');
+        $this->assertResponseRegExp(
+            '/href="(?=[^"]*page=2)(?=[^"]*stocked=0)[^"]+"[^>]*>2<\/a>/',
+        );
+    }
+
+    public function testIndexPaginationPreservesEmptyAllFilter(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        for ($index = 0; $index < 9; $index++) {
+            $badges->saveOrFail($badges->newEntity([
+                'badge_name' => "Pagination badge {$index}",
+                'national_data' => '{}',
+                'stocked' => true,
+                'status' => BadgeStatus::Available->value,
+            ]), ['skipAlgolia' => true]);
+        }
+
+        $this->get('/badges?stocked=&limit=10');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Page 1 of 2');
+        $this->assertResponseRegExp(
+            '/href="(?=[^"]*page=2)(?=[^"]*stocked=)[^"]+"[^>]*>2<\/a>/',
+        );
+    }
+
+    public function testIndexPaginationLimitIsCachedInSession(): void
+    {
+        $this->get('/badges?limit=75');
+
+        $this->assertResponseOk();
+        $this->assertSession(75, 'Pagination.limit');
+        $this->assertResponseRegExp('/<option value="75"[^>]*selected[^>]*>75<\/option>/');
+
+        $this->session(['Pagination' => ['limit' => 75]]);
+        $this->get('/badges');
+
+        $this->assertResponseOk();
+        $this->assertResponseRegExp('/<option value="75"[^>]*selected[^>]*>75<\/option>/');
+    }
+
     public function testIndexFiltersStockedSeparatelyFromAvailability(): void
     {
         $badges = $this->getTableLocator()->get('Badges');

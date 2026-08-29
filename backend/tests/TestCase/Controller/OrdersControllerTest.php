@@ -116,6 +116,26 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseNotContains($orderUrl);
     }
 
+    public function testIndexPaginationPreservesFalseyStatusFilter(): void
+    {
+        $orders = $this->getTableLocator()->get('Orders');
+        for ($index = 0; $index < 10; $index++) {
+            $orders->saveOrFail($orders->newEntity([
+                'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+                'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            ]));
+        }
+        $orders->updateAll(['status' => OrderStatus::Draft->value], []);
+
+        $this->get('/orders?status=0&limit=10');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Page 1 of 2');
+        $this->assertResponseRegExp(
+            '/href="(?=[^"]*page=2)(?=[^"]*status=0)[^"]+"[^>]*>2<\/a>/',
+        );
+    }
+
     /**
      * Test view method
      *
