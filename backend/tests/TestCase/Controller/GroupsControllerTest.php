@@ -23,6 +23,7 @@ class GroupsControllerTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
+        'app.Sections',
     ];
 
     /**
@@ -49,6 +50,10 @@ class GroupsControllerTest extends TestCase
         $this->get('/groups/view/4d5149f3-6214-4457-a04d-e428dc1200d7');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Sections');
+        $this->assertResponseContains('Example Beavers');
+        $this->assertResponseContains('Beavers');
+        $this->assertResponseContains('/sections/view/d9534dcb-a846-5a22-a2fe-b67580555563');
     }
 
     /**

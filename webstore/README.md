@@ -200,6 +200,7 @@ VITE_ALGOLIA_APP_ID=your_algolia_application_id
 VITE_ALGOLIA_SEARCH_API_KEY=your_search_only_api_key
 VITE_ALGOLIA_BADGES_INDEX=BADGES-DEV
 VITE_API_BASE_URL=http://localhost:8765
+VITE_POSTAGE_PRICE=2.50
 
 CATALOGUE_API_URL=https://core-data.example.org/index.html
 CATALOGUE_BASIC_AUTH_USERNAME=your_username
@@ -208,19 +209,21 @@ CATALOGUE_BASIC_AUTH_PASSWORD=your_password
 
 Use a restricted, search-only Algolia API key. Never expose the admin API key configured by the backend: every variable prefixed with `VITE_` is included in client-side code.
 
+`VITE_POSTAGE_PRICE` is a non-negative decimal amount in pounds charged per dispatch. Set it as a GitHub environment variable for each deployed environment. The checkout initially estimates one postage charge; split back orders can incur additional charges, while multiple orders may be combined into a single dispatch.
+
 The catalogue searches the badge payload produced by `backend/src/Model/Entity/Badge.php`, including product names, prices, images, and section/type tags. Stock availability is deliberately not presented because the shop accepts back-orders.
 
 Before `yarn dev` or `yarn build` starts Vite, `scripts/fetch-core-data.mjs` downloads `groups.json` and `sections.json` from the Basic Auth-protected DistrictCoreData endpoint. The generated data is compiled into the static application; the credentials are build-only and must never use the `VITE_` prefix. For local CoreData development, set `DISTRICT_CORE_DATA_LOCAL_PATH` to its `data/` directory.
 
 DistrictCoreData is the canonical source of the stable group and section UUIDs. Deploy its data changes before building the webstore. The backend must sync the same version before accepting orders, otherwise a newly introduced UUID will fail checkout validation.
 
-Checkout sends `first_name`, `last_name`, `email`, `group_id`, `section_id`, and badge UUID/quantity lines to `POST /api/orders.json`. The backend validates the group/section relationship, calculates current prices itself and queues the order. No payment details are collected.
+Checkout sends `first_name`, `last_name`, `email`, `group_id`, `section_id`, `postage`, and badge UUID/quantity lines to `POST /api/orders.json`. When postage is selected it also sends the v2 `dispatch_address` object. The backend validates the group/section relationship, calculates current prices itself and queues the order. No payment details are collected.
 
-The canonical contract for both the HTTP request body and the unchanged SQS message body is [`backend/config/schema/scout-shop-order-v1.json`](../backend/config/schema/scout-shop-order-v1.json). Infrastructure order-ingress services must validate against that versioned schema before enqueueing a payload. Database-backed checks such as group/section relationships and badge existence remain the backend consumer's responsibility.
+The latest canonical contract for both the HTTP request body and the unchanged SQS message body is [`backend/config/schema/scout-shop-order-v2.json`](../backend/config/schema/scout-shop-order-v2.json). Version 2 adds optional `postage` and `dispatch_address` properties; version 1 remains available for existing clients. Infrastructure order-ingress services must validate against the selected versioned schema before enqueueing a payload. Database-backed checks such as group/section relationships and badge existence remain the backend consumer's responsibility.
 
 ## Basket Persistence
 
-The basket is stored in the browser's local storage under `district-badges:basket`. It persists across page reloads on the same browser and device, does not require an account, and is cleared only after checkout has been accepted by the backend.
+The basket is stored in the browser's local storage under `district-badges:basket`. Checkout contact, delivery and address details are stored under `district-badges:checkout-details`. They persist across page reloads on the same browser and device and do not require an account. The basket is cleared only after checkout has been accepted by the backend.
 
 ## Available Scripts
 

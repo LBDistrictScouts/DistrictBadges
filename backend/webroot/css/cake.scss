@@ -573,6 +573,15 @@ input[type='color'] {
     align-items: flex-end;
 }
 
+.stock-line-alerts {
+    margin: 0 0 1.5rem;
+}
+
+.stock-line-alerts .message {
+    cursor: default;
+    padding: 1rem 1.25rem;
+}
+
 @media (min-width: 40rem) {
     .stock-line-builder > .stock-line-badge-column {
         flex: 2 1 0;

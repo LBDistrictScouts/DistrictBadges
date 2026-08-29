@@ -5,6 +5,7 @@ namespace App\Test\TestCase\Controller;
 
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
+use Cake\Core\Configure;
 use Cake\I18n\FrozenTime;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
@@ -25,6 +26,7 @@ class OrdersControllerTest extends TestCase
      */
     protected array $fixtures = [
         'app.Groups',
+        'app.Sections',
         'app.Accounts',
         'app.Users',
         'app.Orders',
@@ -144,6 +146,10 @@ class OrdersControllerTest extends TestCase
      */
     public function testView(): void
     {
+        $this->getTableLocator()->get('Orders')->updateAll(
+            ['section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563'],
+            ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644'],
+        );
         $this->get('/orders/view/dd7b14cc-abe6-4e58-b63d-070678d78644');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
@@ -152,6 +158,41 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains('Line Amount');
         $this->assertResponseContains('Edit Order');
         $this->assertResponseContains('Resend Order Email');
+        $this->assertResponseContains('Order for');
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Example Beavers');
+        $this->assertResponseRegExp('/Lorem ipsum dolor sit amet.*›.*Lorem ipsum dolor sit amet.*›.*Example Beavers/s');
+        $this->assertResponseContains('Collection selected');
+        $this->assertResponseContains('prepared for collection from the district badge shop');
+    }
+
+    public function testViewDisplaysPostageAddressAndTerms(): void
+    {
+        $id = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'postage' => true,
+            'dispatch_address_line_1' => '1 Scout Way',
+            'dispatch_address_line_2' => 'Gilwell Park',
+            'dispatch_town' => 'Chingford',
+            'dispatch_county' => 'London',
+            'dispatch_postcode' => 'E4 7QW',
+        ], ['id' => $id]);
+
+        $this->get("/orders/view/{$id}");
+
+        $postagePrice = '£' . number_format((float)Configure::read('Postage.price'), 2);
+        $this->assertResponseOk();
+        $this->assertResponseContains('Postage selected');
+        $this->assertResponseContains($postagePrice . ' per dispatch');
+        $this->assertResponseContains('Postage information');
+        $this->assertResponseContains('id="postage-info-dialog"');
+        $this->assertResponseContains('1 Scout Way');
+        $this->assertResponseContains('Gilwell Park');
+        $this->assertResponseContains('Chingford');
+        $this->assertResponseContains('London');
+        $this->assertResponseContains('E4 7QW');
+        $this->assertResponseContains('Postage is charged at ' . $postagePrice . ' for each dispatch');
+        $this->assertResponseContains('may be grouped into one dispatch');
     }
 
     public function testResendNotificationReportsDisabledDelivery(): void

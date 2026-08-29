@@ -31,6 +31,7 @@ class ReplenishmentsFixture extends TestFixture
                 'total_received_amount' => 0,
                 'total_received_quantity' => 0,
                 'wholesale_order_number' => 'Lorem ipsum dolor sit amet',
+                'wholesaler_order_number' => 'SUP-12345',
             ],
         ];
         parent::init();

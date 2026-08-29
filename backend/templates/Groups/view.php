@@ -28,6 +28,47 @@
                 </tr>
             </table>
             <div class="related">
+                <h4><?= __('Sections') ?></h4>
+                <?php if (!empty($group->sections)) : ?>
+                <div class="table-responsive">
+                    <table>
+                        <tr>
+                            <th><?= __('Section Name') ?></th>
+                            <th><?= __('Type') ?></th>
+                            <th><?= __('Account') ?></th>
+                            <th class="actions"><?= __('Actions') ?></th>
+                        </tr>
+                        <?php foreach ($group->sections as $section) : ?>
+                        <tr>
+                            <td><?= h($section->section_name) ?></td>
+                            <td><?= h(ucfirst($section->section_type)) ?></td>
+                            <td>
+                                <?= $section->hasValue('account')
+                                    ? $this->Html->link(
+                                        $section->account->account_name,
+                                        ['controller' => 'Accounts', 'action' => 'view', $section->account->id],
+                                    )
+                                    : __('No account') ?>
+                            </td>
+                            <td class="actions">
+                                <?= $this->Html->link(
+                                    __('View'),
+                                    ['controller' => 'Sections', 'action' => 'view', $section->id],
+                                ) ?>
+                                <?= $this->Html->link(
+                                    __('Edit'),
+                                    ['controller' => 'Sections', 'action' => 'edit', $section->id],
+                                ) ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </table>
+                </div>
+                <?php else : ?>
+                    <p><?= __('No sections are associated with this group.') ?></p>
+                <?php endif; ?>
+            </div>
+            <div class="related">
                 <h4><?= __('Related Accounts') ?></h4>
                 <?php if (!empty($group->accounts)) : ?>
                 <div class="table-responsive">
@@ -48,7 +89,7 @@
                                     [
                                         'method' => 'delete',
                                         'confirm' => __('Are you sure you want to delete this account?'),
-                                    ]
+                                    ],
                                 ) ?>
                             </td>
                         </tr>

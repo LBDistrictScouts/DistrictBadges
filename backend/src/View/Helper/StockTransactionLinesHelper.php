@@ -156,6 +156,7 @@ class StockTransactionLinesHelper extends Helper
             . '</div>' . $selectorControls . $fieldControls . '</div>'
             . '<button type="button" class="button button-outline" data-stock-line-add>'
             . h($config['addLabel'] ?? __('Add Line')) . '</button>' : '')
+            . '<div class="stock-line-alerts" data-stock-line-alerts hidden></div>'
             . '<p class="error-message" data-stock-line-error hidden></p>'
             . '<div class="table-responsive"><table class="stock-transaction-grid">'
             . '<thead><tr><th>' . __('Badge') . '</th>'
@@ -418,9 +419,24 @@ class StockTransactionLinesHelper extends Helper
         });
     };
     var nextIndex = grid.querySelectorAll('[data-stock-transaction-line]').length;
+    var alerts = container.querySelector('[data-stock-line-alerts]');
     var showError = function (message) {
         error.textContent = message;
         error.hidden = !message;
+    };
+    var showAlerts = function (items) {
+        alerts.replaceChildren();
+        (Array.isArray(items) ? items : []).forEach(function (item) {
+            var alert = document.createElement('div');
+            alert.className = 'message ' + (item.level === 'warning' ? 'warning' : 'info');
+            var title = document.createElement('strong');
+            title.textContent = item.title;
+            alert.appendChild(title);
+            alert.appendChild(document.createElement('br'));
+            alert.appendChild(document.createTextNode(item.message));
+            alerts.appendChild(alert);
+        });
+        alerts.hidden = alerts.childElementCount === 0;
     };
     var resetFields = function () {
         if (badgeInput) {
@@ -536,6 +552,7 @@ class StockTransactionLinesHelper extends Helper
     });
     if (bulkAddButton) bulkAddButton.addEventListener('click', async function () {
         showError('');
+        showAlerts([]);
         if (!bulkSource.value) return;
         var existingOrderLineIds = Array.from(
             grid.querySelectorAll('input[name$="[order_line_id]"]')
@@ -573,7 +590,8 @@ class StockTransactionLinesHelper extends Helper
                 calculate(row, 'data-stock-row-field');
             });
             nextIndex = payload.next_index;
-            if (payload.message) showError(payload.message);
+            showAlerts(payload.alerts);
+            container.dispatchEvent(new CustomEvent('stock-lines:bulk-loaded', {detail: payload}));
             bulkSource.value = '';
         } catch (exception) {
             showError(exception.message);

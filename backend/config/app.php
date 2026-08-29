@@ -101,6 +101,10 @@ return [
         ))),
     ],
 
+    'Postage' => [
+        'price' => max(0.0, (float)env('POSTAGE_PRICE', '2.4')),
+    ],
+
     'Sqs' => [
         'region' => env('AWS_REGION', 'eu-west-1'),
         'profile' => env('AWS_PROFILE', null),

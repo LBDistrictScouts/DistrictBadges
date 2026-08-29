@@ -93,6 +93,15 @@ class UsersTable extends Table
             ->boolean('can_login')
             ->notEmptyString('can_login');
 
+        foreach (
+            ['address_line_1', 'address_line_2', 'town', 'county', 'postcode'] as $field
+        ) {
+            $validator
+                ->scalar($field)
+                ->maxLength($field, $field === 'postcode' ? 10 : 255)
+                ->allowEmptyString($field);
+        }
+
         return $validator;
     }
 

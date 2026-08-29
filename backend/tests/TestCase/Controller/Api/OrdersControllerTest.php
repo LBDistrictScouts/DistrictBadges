@@ -68,7 +68,7 @@ class OrdersControllerTest extends TestCase
             ],
         ]);
 
-        $this->assertResponseCode(201);
+        $this->assertSame(201, $this->_response->getStatusCode(), (string)$this->_response->getBody());
 
         $payload = json_decode((string)$this->_response->getBody(), true);
         $this->assertSame('created', $payload['status']);
@@ -89,6 +89,76 @@ class OrdersControllerTest extends TestCase
         $this->assertSame('Alex', $createdUser->first_name);
         $this->assertSame('Leader', $createdUser->last_name);
         $this->assertSame($order->account_id, $createdUser->account_id);
+    }
+
+    public function testPlaceRecordsPostageAndDispatchAddress(): void
+    {
+        $this->enableCsrfToken();
+        $payload = $this->validOrderPayload([
+            'idempotency_key' => '55e501e5-fcac-4b21-9ae8-1ab426a0f625',
+            'postage' => true,
+            'dispatch_address' => [
+                'address_line_1' => ' 1 Scout Way ',
+                'address_line_2' => 'Gilwell Park',
+                'town' => 'Chingford',
+                'county' => 'London',
+                'postcode' => 'E4 7QW',
+            ],
+        ]);
+        $this->configRequest(['headers' => ['Content-Type' => 'application/json']]);
+        $this->post('/api/orders.json', json_encode($payload, JSON_THROW_ON_ERROR));
+
+        $this->assertSame(201, $this->_response->getStatusCode(), (string)$this->_response->getBody());
+        $payload = json_decode((string)$this->_response->getBody(), true);
+        $order = $this->getTableLocator()->get('Orders')->get($payload['order_id']);
+        $this->assertTrue($order->postage);
+        $this->assertSame('1 Scout Way', $order->dispatch_address_line_1);
+        $this->assertSame('Gilwell Park', $order->dispatch_address_line_2);
+        $this->assertSame('Chingford', $order->dispatch_town);
+        $this->assertSame('London', $order->dispatch_county);
+        $this->assertSame('E4 7QW', $order->dispatch_postcode);
+        $user = $this->getTableLocator()->get('Users')->get($order->user_id);
+        $this->assertSame('1 Scout Way', $user->address_line_1);
+        $this->assertSame('Gilwell Park', $user->address_line_2);
+        $this->assertSame('Chingford', $user->town);
+        $this->assertSame('London', $user->county);
+        $this->assertSame('E4 7QW', $user->postcode);
+    }
+
+    public function testPlaceRejectsIncompleteDispatchAddress(): void
+    {
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $this->validOrderPayload([
+            'postage' => true,
+            'dispatch_address' => [
+                'address_line_1' => '1 Scout Way',
+                'town' => 'Chingford',
+            ],
+        ]));
+
+        $this->assertResponseCode(422);
+        $payload = json_decode((string)$this->_response->getBody(), true);
+        $this->assertArrayHasKey('postcode', $payload['errors']['dispatch_address']);
+    }
+
+    public function testPlaceRejectsInvalidUkPostcode(): void
+    {
+        $this->enableCsrfToken();
+        $this->post('/api/orders.json', $this->validOrderPayload([
+            'postage' => true,
+            'dispatch_address' => [
+                'address_line_1' => '1 Scout Way',
+                'town' => 'Chingford',
+                'postcode' => 'ABC 12DE',
+            ],
+        ]));
+
+        $this->assertResponseCode(422);
+        $payload = json_decode((string)$this->_response->getBody(), true);
+        $this->assertSame(
+            'Postcode must be a valid UK postcode.',
+            $payload['errors']['dispatch_address']['postcode'],
+        );
     }
 
     public function testPlaceReusesExistingUserByEmail(): void

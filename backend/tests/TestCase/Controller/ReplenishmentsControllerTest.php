@@ -45,6 +45,7 @@ class ReplenishmentsControllerTest extends TestCase
     {
         $this->get('/replenishments');
         $this->assertResponseOk();
+        $this->assertResponseNotContains('>Delete<');
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Ord. Qty');
         $this->assertResponseContains('Ord. Value');
@@ -138,6 +139,7 @@ class ReplenishmentsControllerTest extends TestCase
             'total_received_amount' => 10.5,
             'total_received_quantity' => 4,
             'wholesale_order_number' => 'WO-NEW',
+            'wholesaler_order_number' => 'SUP-67890',
             'replenishment_order_lines' => [
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
@@ -163,6 +165,7 @@ class ReplenishmentsControllerTest extends TestCase
         $this->assertFalse($saved->received);
         $this->assertSame(12.5, (float)$saved->total_ordered_amount);
         $this->assertSame(5, $saved->total_ordered_quantity);
+        $this->assertSame('SUP-67890', $saved->wholesaler_order_number);
 
         $line = $replenishments->ReplenishmentOrderLines->find()
             ->where(['replenishment_id' => $saved->id])
@@ -171,6 +174,48 @@ class ReplenishmentsControllerTest extends TestCase
         $this->assertSame(5, $line->pending_quantity_change);
         $this->assertSame(12.5, (float)$line->monetary_amount);
         $this->assertSame(2.5, (float)$line->unit_price);
+    }
+
+    public function testEditOnlyChangesWholesalerOrderNumberWhenUnreceived(): void
+    {
+        $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+        $replenishments = $this->getTableLocator()->get('Replenishments');
+        $replenishments->updateAll([
+            'received' => false,
+            'received_date' => null,
+            'status' => ReplenishmentStatus::Submitted->value,
+        ], ['id' => $id]);
+        $before = $replenishments->get($id);
+
+        $this->get("/replenishments/edit/{$id}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Edit Wholesaler Order Number');
+        $this->assertResponseContains('name="wholesaler_order_number"');
+        $this->assertResponseNotContains('name="total_ordered_amount"');
+
+        $this->enableCsrfToken();
+        $this->post("/replenishments/edit/{$id}", [
+            'wholesaler_order_number' => 'SUP-UPDATED',
+            'total_ordered_amount' => '999.99',
+            'status' => ReplenishmentStatus::Cancelled->value,
+        ]);
+
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
+        $this->assertFlashMessage('The wholesaler order number has been saved.');
+        $updated = $replenishments->get($id);
+        $this->assertSame('SUP-UPDATED', $updated->wholesaler_order_number);
+        $this->assertSame((float)$before->total_ordered_amount, (float)$updated->total_ordered_amount);
+        $this->assertSame(ReplenishmentStatus::Submitted, $updated->status);
+    }
+
+    public function testEditRejectsReceivedReplenishment(): void
+    {
+        $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+
+        $this->get("/replenishments/edit/{$id}");
+
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
+        $this->assertFlashMessage('Received replenishments cannot be edited.');
     }
 
     public function testAddPrepopulatesRequiredReplenishmentLines(): void
@@ -527,6 +572,26 @@ class ReplenishmentsControllerTest extends TestCase
         $this->assertFlashMessage('The replenishment has been deleted.');
         $this->assertSame($before - 1, $replenishments->find()->count());
         $this->assertFalse($replenishments->exists(['id' => $id]));
+    }
+
+    public function testDeleteRejectsReceivedReplenishment(): void
+    {
+        $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+
+        $this->get("/replenishments/view/{$id}");
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('Delete Replenishment');
+
+        $this->get('/replenishments');
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('>Delete<');
+
+        $this->enableCsrfToken();
+        $this->post("/replenishments/delete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'index']);
+        $this->assertFlashMessage('Received replenishments cannot be deleted.');
+        $this->assertTrue($this->getTableLocator()->get('Replenishments')->exists(['id' => $id]));
     }
 
     private function makeReplenishmentReceivable(string $id): void

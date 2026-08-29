@@ -1,0 +1,119 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://districtbadges.lbdscouts.org.uk/schema/scout-shop-order-v2.json",
+    "title": "District Badges shop order",
+    "description": "Canonical request and SQS message contract for a District Badges webstore order.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "idempotency_key",
+        "first_name",
+        "last_name",
+        "email",
+        "group_id",
+        "section_id",
+        "lines"
+    ],
+    "properties": {
+        "idempotency_key": {
+            "$ref": "#/definitions/uuid"
+        },
+        "first_name": {
+            "type": "string",
+            "pattern": "\\S",
+            "maxLength": 255
+        },
+        "last_name": {
+            "type": "string",
+            "pattern": "\\S",
+            "maxLength": 255
+        },
+        "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255
+        },
+        "group_id": {
+            "$ref": "#/definitions/uuid"
+        },
+        "section_id": {
+            "$ref": "#/definitions/uuid"
+        },
+        "postage": {
+            "type": "boolean"
+        },
+        "dispatch_address": {
+            "$ref": "#/definitions/dispatchAddress"
+        },
+        "lines": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/definitions/orderLine"
+            }
+        }
+    },
+    "definitions": {
+        "uuid": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "dispatchAddress": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "address_line_1",
+                "town",
+                "postcode"
+            ],
+            "properties": {
+                "address_line_1": {
+                    "$ref": "#/definitions/nonEmptyAddressField"
+                },
+                "address_line_2": {
+                    "$ref": "#/definitions/nonEmptyAddressField"
+                },
+                "town": {
+                    "$ref": "#/definitions/nonEmptyAddressField"
+                },
+                "county": {
+                    "$ref": "#/definitions/nonEmptyAddressField"
+                },
+                "postcode": {
+                    "type": "string",
+                    "pattern": "^(GIR ?0AA|[A-Za-z]{1,2}[0-9][0-9A-Za-z]? ?[0-9][A-Za-z]{2})$",
+                    "maxLength": 10
+                }
+            }
+        },
+        "nonEmptyAddressField": {
+            "type": "string",
+            "pattern": "\\S",
+            "maxLength": 255
+        },
+        "orderLine": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "badge_id",
+                "quantity",
+                "unit_price"
+            ],
+            "properties": {
+                "badge_id": {
+                    "$ref": "#/definitions/uuid"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                },
+                "unit_price": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 99999999.99
+                }
+            }
+        }
+    }
+}

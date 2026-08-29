@@ -14,5 +14,6 @@ data:
   EMAIL_FROM_ADDRESS: orders@badges-dev.lbdscouts.org.uk
   EMAIL_FROM_NAME: LBA Scouts District Badge Shop (Development)
   ORDER_NOTIFICATIONS_ENABLED: "true"
+  POSTAGE_PRICE: "1.55"
   ALGOLIA_ENABLED: "true"
   ALGOLIA_INDEX_BADGES: BADGES-DEV

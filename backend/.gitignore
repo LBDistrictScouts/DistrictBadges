@@ -1,6 +1,7 @@
 # CakePHP specific files #
 ##########################
 /config/app_local.php
+/config/.env
 /.env
 /logs/*
 /tmp/*
@@ -55,4 +56,4 @@ yarn-debug.log
 yarn-error.log
 # npm
 /package-lock.json
-.env
+config/.env

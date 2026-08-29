@@ -27,6 +27,11 @@ class UsersFixture extends TestFixture
                 'login' => 'Lorem ipsum dolor sit amet',
                 'admin_role' => 1,
                 'can_login' => 1,
+                'address_line_1' => null,
+                'address_line_2' => null,
+                'town' => null,
+                'county' => null,
+                'postcode' => null,
             ],
         ];
         parent::init();

@@ -3,6 +3,13 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Fulfilment $fulfilment
  */
+$dispatchAddress = array_filter([
+    $fulfilment->dispatch_address_line_1,
+    $fulfilment->dispatch_address_line_2,
+    $fulfilment->dispatch_town,
+    $fulfilment->dispatch_county,
+    $fulfilment->dispatch_postcode,
+], static fn($line): bool => trim((string)$line) !== '');
 ?>
 <div class="row">
     <aside class="column">
@@ -75,6 +82,22 @@
                 <tr>
                     <th><?= __('Total Amount') ?></th>
                     <td><?= $this->Number->currency($fulfilment->total_amount) ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('Dispatch Type') ?></th>
+                    <td><?= h($fulfilment->dispatch_type->label()) ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('Postage Charge') ?></th>
+                    <td><?= $this->Number->currency($fulfilment->postage_charge) ?></td>
+                </tr>
+                <tr>
+                    <th><?= __('Dispatch Address') ?></th>
+                    <td>
+                        <?= $dispatchAddress === []
+                            ? __('Collection')
+                            : implode('<br>', array_map('h', $dispatchAddress)) ?>
+                    </td>
                 </tr>
             </table>
 

@@ -44,6 +44,7 @@
             <thead>
                 <tr>
                     <th><?= $this->Paginator->sort('wholesale_order_number', __('Replenishment')) ?></th>
+                    <th><?= $this->Paginator->sort('wholesaler_order_number', __('Wholesaler Order')) ?></th>
                     <th><?= $this->Paginator->sort('created_date', __('Created')) ?></th>
                     <th><?= $this->Paginator->sort('status') ?></th>
                     <th><?= $this->Paginator->sort('total_ordered_quantity', __('Ord. Qty')) ?></th>
@@ -62,6 +63,7 @@
                             ['action' => 'view', $replenishment->id],
                         ) ?>
                     </td>
+                    <td><?= h($replenishment->wholesaler_order_number) ?></td>
                     <td><?= h($replenishment->created_date?->i18nFormat('dd MMM yyyy')) ?></td>
                     <td><?= h($replenishment->status->label()) ?></td>
                     <td><?= $this->Number->format($replenishment->total_ordered_quantity) ?></td>
@@ -70,6 +72,9 @@
                     <td><?= $this->Number->currency($replenishment->total_received_amount) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $replenishment->id]) ?>
+                        <?php if (!$replenishment->received) : ?>
+                        <?= $this->Html->link(__('Edit'), ['action' => 'edit', $replenishment->id]) ?>
+                        <?php endif; ?>
                         <?php if (!in_array(
                             $replenishment->status,
                             [
@@ -83,14 +88,6 @@
                             ['action' => 'receive', $replenishment->id],
                         ) ?>
                         <?php endif; ?>
-                        <?= $this->Form->postLink(
-                            __('Delete'),
-                            ['action' => 'delete', $replenishment->id],
-                            [
-                                'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete this replenishment?'),
-                            ],
-                        ) ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

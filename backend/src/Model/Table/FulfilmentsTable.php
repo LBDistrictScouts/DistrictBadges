@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use ArrayObject;
 use Cake\Database\Type\EnumType;
@@ -49,6 +50,10 @@ class FulfilmentsTable extends Table
             'status',
             EnumType::from(FulfilmentStatus::class),
         );
+        $this->getSchema()->setColumnType(
+            'dispatch_type',
+            EnumType::from(DispatchType::class),
+        );
 
         $this->addBehavior('Timestamp', [
             'events' => [
@@ -87,6 +92,31 @@ class FulfilmentsTable extends Table
             ->integer('status')
             ->inList('status', array_column(FulfilmentStatus::cases(), 'value'))
             ->allowEmptyString('status');
+
+        $validator
+            ->decimal('postage_charge')
+            ->greaterThanOrEqual('postage_charge', 0)
+            ->notEmptyString('postage_charge');
+
+        $validator
+            ->integer('dispatch_type')
+            ->inList('dispatch_type', array_column(DispatchType::cases(), 'value'))
+            ->notEmptyString('dispatch_type');
+
+        foreach (
+            [
+                'dispatch_address_line_1',
+                'dispatch_address_line_2',
+                'dispatch_town',
+                'dispatch_county',
+                'dispatch_postcode',
+            ] as $field
+        ) {
+            $validator
+                ->scalar($field)
+                ->maxLength($field, $field === 'dispatch_postcode' ? 10 : 255)
+                ->allowEmptyString($field);
+        }
 
         return $validator;
     }

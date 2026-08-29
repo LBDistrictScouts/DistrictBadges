@@ -8,6 +8,13 @@
     <aside class="column">
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
+            <?php if (!$replenishment->received) : ?>
+            <?= $this->Html->link(
+                __('Edit Wholesaler Order Number'),
+                ['action' => 'edit', $replenishment->id],
+                ['class' => 'side-nav-item'],
+            ) ?>
+            <?php endif; ?>
             <?php if (!in_array(
                 $replenishment->status,
                 [
@@ -22,14 +29,16 @@
                 ['class' => 'side-nav-item'],
             ) ?>
             <?php endif; ?>
-            <?= $this->Form->postLink(
-                __('Delete Replenishment'),
-                ['action' => 'delete', $replenishment->id],
-                [
-                    'confirm' => __('Are you sure you want to delete this replenishment?'),
-                    'class' => 'side-nav-item',
-                ],
-            ) ?>
+            <?php if (!$replenishment->received) : ?>
+                <?= $this->Form->postLink(
+                    __('Delete Replenishment'),
+                    ['action' => 'delete', $replenishment->id],
+                    [
+                        'confirm' => __('Are you sure you want to delete this replenishment?'),
+                        'class' => 'side-nav-item',
+                    ],
+                ) ?>
+            <?php endif; ?>
             <?= $this->Html->link(
                 __('List Replenishments'),
                 ['action' => 'index'],
@@ -46,6 +55,10 @@
         <div class="replenishments view content">
             <h3><?= h($replenishment->wholesale_order_number) ?></h3>
             <table>
+                <tr>
+                    <th><?= __('Wholesaler Order Number') ?></th>
+                    <td><?= h($replenishment->wholesaler_order_number) ?></td>
+                </tr>
                 <tr>
                     <th><?= __('Status') ?></th>
                     <td><?= h($replenishment->status->label()) ?></td>

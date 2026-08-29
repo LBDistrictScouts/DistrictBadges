@@ -5,6 +5,8 @@
  * @var array<string, string> $filters
  * @var array<int, string> $statusOptions
  */
+use App\Model\Enum\FulfilmentStatus;
+
 ?>
 <div class="fulfilments index content">
     <?= $this->Html->link(__('New Fulfilment'), ['action' => 'add'], ['class' => 'button float-right']) ?>
@@ -49,6 +51,7 @@
                     <th><?= $this->Paginator->sort('status') ?></th>
                     <th><?= $this->Paginator->sort('total_quantity', __('Total Quantity')) ?></th>
                     <th><?= $this->Paginator->sort('total_amount', __('Total Amount')) ?></th>
+                    <th><?= $this->Paginator->sort('dispatch_type', __('Dispatch Type')) ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
@@ -70,25 +73,28 @@
                     <td><?= h($fulfilment->status->label()) ?></td>
                     <td><?= $this->Number->format($fulfilment->total_quantity) ?></td>
                     <td><?= $this->Number->currency($fulfilment->total_amount) ?></td>
+                    <td><?= h($fulfilment->dispatch_type->label()) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $fulfilment->id]) ?>
-                        <?php if ($fulfilment->status === \App\Model\Enum\FulfilmentStatus::Draft) : ?>
-                        <?= $this->Form->postLink(
-                            __('Dispatch'),
-                            ['action' => 'dispatch', $fulfilment->id],
-                            [
-                                'confirm' => __('Are you sure you want to dispatch this fulfilment?'),
-                            ],
-                        ) ?>
+                        <?php if ($fulfilment->status === FulfilmentStatus::Draft) : ?>
+                            <?= $this->Form->postLink(
+                                __('Dispatch'),
+                                ['action' => 'dispatch', $fulfilment->id],
+                                [
+                                    'confirm' => __('Are you sure you want to dispatch this fulfilment?'),
+                                ],
+                            ) ?>
                         <?php endif; ?>
-                        <?= $this->Form->postLink(
-                            __('Delete'),
-                            ['action' => 'delete', $fulfilment->id],
-                            [
-                                'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete this fulfilment?'),
-                            ],
-                        ) ?>
+                        <?php if ($fulfilment->status !== FulfilmentStatus::Dispatched) : ?>
+                            <?= $this->Form->postLink(
+                                __('Delete'),
+                                ['action' => 'delete', $fulfilment->id],
+                                [
+                                    'method' => 'delete',
+                                    'confirm' => __('Are you sure you want to delete this fulfilment?'),
+                                ],
+                            ) ?>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
