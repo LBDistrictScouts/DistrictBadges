@@ -33,7 +33,7 @@ class AccountsController extends AppController
      */
     public function view(?string $id = null)
     {
-        $account = $this->Accounts->get($id, contain: ['Groups', 'Invoices', 'Orders']);
+        $account = $this->Accounts->get($id, contain: ['Groups', 'Sections', 'Invoices', 'Orders']);
         $this->set(compact('account'));
     }
 

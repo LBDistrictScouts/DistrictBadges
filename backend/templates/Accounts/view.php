@@ -28,6 +28,36 @@
                 </tr>
             </table>
             <div class="related">
+                <h4><?= __('Sections') ?></h4>
+                <?php if (!empty($account->sections)) : ?>
+                <div class="table-responsive">
+                    <table>
+                        <tr>
+                            <th><?= __('Section Name') ?></th>
+                            <th><?= __('Type') ?></th>
+                            <th><?= __('Meeting Day') ?></th>
+                            <th><?= __('Meeting Time') ?></th>
+                        </tr>
+                        <?php foreach ($account->sections as $section) : ?>
+                        <tr>
+                            <td><?= h($section->section_name) ?></td>
+                            <td><?= h(ucfirst($section->section_type)) ?></td>
+                            <td><?= h($section->meeting_day ?? '') ?></td>
+                            <td>
+                                <?= h(implode('–', array_filter([
+                                    $section->meeting_start_time,
+                                    $section->meeting_end_time,
+                                ]))) ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </table>
+                </div>
+                <?php else : ?>
+                    <p><?= __('No sections are assigned to this account.') ?></p>
+                <?php endif; ?>
+            </div>
+            <div class="related">
                 <h4><?= __('Related Invoices') ?></h4>
                 <?php if (!empty($account->invoices)) : ?>
                 <div class="table-responsive">

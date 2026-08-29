@@ -47,9 +47,19 @@ class AccountsControllerTest extends TestCase
      */
     public function testView(): void
     {
-        $this->get('/accounts/view/ae471706-04cc-4c9c-8916-e4be1f913edf');
+        $accountId = 'ae471706-04cc-4c9c-8916-e4be1f913edf';
+        $this->getTableLocator()->get('Sections')->updateAll(
+            ['account_id' => $accountId],
+            ['id' => 'd9534dcb-a846-5a22-a2fe-b67580555563'],
+        );
+
+        $this->get("/accounts/view/{$accountId}");
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('<h4>Sections</h4>');
+        $this->assertResponseContains('Example Beavers');
+        $this->assertResponseContains('Thursday');
+        $this->assertResponseContains('17:30–18:30');
     }
 
     /**
