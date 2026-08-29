@@ -68,10 +68,7 @@ class OrderQueueService
         $messages = $result->get('Messages') ?? [];
         foreach ($messages as $message) {
             $outcome = $processor->process((string)($message['Body'] ?? ''));
-            if (
-                in_array($outcome, [OrderProcessor::ACK, OrderProcessor::REJECT], true)
-                && !empty($message['ReceiptHandle'])
-            ) {
+            if ($outcome === OrderProcessor::ACK && !empty($message['ReceiptHandle'])) {
                 $this->client->deleteMessage([
                     'QueueUrl' => $this->queueUrl,
                     'ReceiptHandle' => (string)$message['ReceiptHandle'],
