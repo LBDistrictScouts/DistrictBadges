@@ -38,8 +38,10 @@ class BadgeImportProcessor
     {
         try {
             $payload = json_decode($body, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            $this->logImport('Badge import queue message is not valid JSON.', LOG_WARNING);
+        } catch (JsonException $exception) {
+            $this->logFailure('Badge import queue message is not valid JSON.', [
+                'reason' => $exception->getMessage(),
+            ]);
 
             return self::REJECT;
         }
@@ -56,7 +58,16 @@ class BadgeImportProcessor
          */
         $product = (array)$payload;
         $productId = (int)$product['NationalBadgeID'];
+        $logContext = [
+            'nationalProductCode' => $productId,
+            'badgeName' => (string)$product['BadgeName'],
+        ];
         if (str_ends_with((string)$product['BadgeName'], ' -')) {
+            $this->logImport('Badge import skipped.', LOG_NOTICE, [
+                'status' => 'skipped',
+                'reason' => 'Badge name ends with " -".',
+            ] + $logContext);
+
             return self::ACK;
         }
 
@@ -73,6 +84,10 @@ class BadgeImportProcessor
 
             if (!$isNew && hash_equals((string)$badge->national_product_hash, $hash)) {
                 $badges->associateTagsFromBadgeName($badge);
+                $this->logSuccess('Badge import succeeded: badge data is unchanged.', $logContext + [
+                    'outcome' => 'unchanged',
+                    'badgeId' => $badge->id,
+                ]);
 
                 return self::ACK;
             }
@@ -100,10 +115,9 @@ class BadgeImportProcessor
 
             $badge = $badges->patchEntity($badge, $data);
             if ($badge->hasErrors()) {
-                $this->logImport('Badge import message produced invalid badge data.', LOG_WARNING, [
+                $this->logFailure('Badge import failed: badge data is invalid.', [
                     'errors' => $badge->getErrors(),
-                    'nationalProductCode' => $productId,
-                ]);
+                ] + $logContext);
 
                 return self::REJECT;
             }
@@ -114,13 +128,21 @@ class BadgeImportProcessor
             ]);
             $badges->associateTagsFromBadgeName($badge, false);
             $badges->syncBadgeToAlgolia($badge);
+            $this->logSuccess(
+                sprintf('Badge import succeeded: badge was %s.', $isNew ? 'created' : 'updated'),
+                $logContext + [
+                    'outcome' => $isNew ? 'created' : 'updated',
+                    'badgeId' => $badge->id,
+                ],
+            );
 
             return self::ACK;
         } catch (Throwable $exception) {
-            $this->logImport(
-                sprintf('Failed to persist imported badge %d: %s', $productId, $exception->getMessage()),
-                LOG_ERR,
-            );
+            $this->logFailure('Badge import failed while persisting the badge.', $logContext + [
+                'reason' => $exception->getMessage(),
+                'exception' => $exception::class,
+                'code' => $exception->getCode(),
+            ], LOG_ERR);
 
             return self::REQUEUE;
         }
@@ -133,6 +155,10 @@ class BadgeImportProcessor
     private function isValid(mixed $payload): bool
     {
         if (!is_object($payload)) {
+            $this->logFailure('Badge import queue message must decode to a JSON object.', [
+                'decodedType' => get_debug_type($payload),
+            ]);
+
             return false;
         }
 
@@ -141,8 +167,12 @@ class BadgeImportProcessor
                 (string)file_get_contents($this->schemaPath),
                 flags: JSON_THROW_ON_ERROR,
             );
-        } catch (JsonException) {
-            $this->logImport('Badge import JSON schema is invalid.', LOG_ERR);
+        } catch (Throwable $exception) {
+            $this->logFailure('Badge import failed because its JSON schema could not be loaded.', [
+                'schemaPath' => $this->schemaPath,
+                'reason' => $exception->getMessage(),
+                'exception' => $exception::class,
+            ], LOG_ERR);
 
             return false;
         }
@@ -153,7 +183,7 @@ class BadgeImportProcessor
             return true;
         }
 
-        $this->logImport('Badge import queue message failed schema validation.', LOG_WARNING, [
+        $this->logFailure('Badge import queue message failed schema validation.', [
             'errors' => $validator->getErrors(),
         ]);
 
@@ -170,6 +200,32 @@ class BadgeImportProcessor
      */
     private function logImport(string $message, int|string $level, array $context = []): void
     {
-        $this->log($message, $level, $context + ['scope' => ['badge_import']]);
+        $details = json_encode($context, JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
+        if ($details !== false && $details !== '[]') {
+            $message .= ' ' . $details;
+        }
+
+        $this->log($message, $level, ['scope' => ['badge_import']]);
+    }
+
+    /**
+     * @param string $message Log message.
+     * @param array<string, mixed> $context Structured context.
+     * @return void
+     */
+    private function logSuccess(string $message, array $context): void
+    {
+        $this->logImport($message, LOG_DEBUG, ['status' => 'success'] + $context);
+    }
+
+    /**
+     * @param string $message Log message.
+     * @param array<string, mixed> $context Structured context.
+     * @param string|int $level Log level.
+     * @return void
+     */
+    private function logFailure(string $message, array $context = [], int|string $level = LOG_WARNING): void
+    {
+        $this->logImport($message, $level, ['status' => 'failure'] + $context);
     }
 }

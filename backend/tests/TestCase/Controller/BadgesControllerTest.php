@@ -59,7 +59,7 @@ class BadgesControllerTest extends TestCase
 
     public function testIndexFilters(): void
     {
-        $this->get('/badges?name=Lorem&status=' . BadgeStatus::Available->value);
+        $this->get('/badges?name=lOrEm&status=' . BadgeStatus::Available->value);
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseNotContains('Second badge');

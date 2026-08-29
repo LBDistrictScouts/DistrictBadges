@@ -5,6 +5,8 @@ namespace App\Test\TestCase\Queue\Processor;
 
 use App\Queue\Processor\BadgeImportProcessor;
 use Cake\Core\Configure;
+use Cake\Log\Engine\ArrayLog;
+use Cake\Log\Log;
 use Cake\TestSuite\TestCase;
 
 class BadgeImportProcessorTest extends TestCase
@@ -19,6 +21,17 @@ class BadgeImportProcessorTest extends TestCase
     {
         parent::setUp();
         Configure::write('Algolia.enabled', false);
+        Log::setConfig('badge_import_test', [
+            'className' => ArrayLog::class,
+            'levels' => ['debug', 'notice', 'warning', 'error'],
+            'scopes' => ['badge_import'],
+        ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Log::drop('badge_import_test');
+        parent::tearDown();
     }
 
     public function testProcessCreatesBadgeFromObservedQueuePayload(): void
@@ -48,6 +61,12 @@ class BadgeImportProcessorTest extends TestCase
         );
         $this->assertSame(['Beavers'], array_column($badge->badge_sections, 'tag_name'));
         $this->assertSame([], $badge->badge_types);
+
+        $messages = $this->badgeImportLogMessages();
+        $this->assertCount(1, $messages);
+        $this->assertStringContainsString('debug: Badge import succeeded: badge was created.', $messages[0]);
+        $this->assertStringContainsString('"status":"success"', $messages[0]);
+        $this->assertStringContainsString('"outcome":"created"', $messages[0]);
     }
 
     public function testProcessUpdatesExistingBadgeWithoutChangingStockControls(): void
@@ -88,6 +107,11 @@ class BadgeImportProcessorTest extends TestCase
         $this->assertSame(BadgeImportProcessor::ACK, $result);
         $this->assertSame($before, $badges->find()->count());
         $this->assertFalse($badges->exists(['national_product_code' => 2477]));
+        $messages = $this->badgeImportLogMessages();
+        $this->assertCount(1, $messages);
+        $this->assertStringContainsString('Badge import skipped.', $messages[0]);
+        $this->assertStringContainsString('"status":"skipped"', $messages[0]);
+        $this->assertStringContainsString('Badge name ends with \\" -\\".', $messages[0]);
     }
 
     public function testProcessDoesNotIgnoreHyphenWithinBadgeName(): void
@@ -120,6 +144,22 @@ class BadgeImportProcessorTest extends TestCase
         $result = $processor->process(json_encode($payload, JSON_THROW_ON_ERROR));
 
         $this->assertSame(BadgeImportProcessor::REJECT, $result);
+        $messages = $this->badgeImportLogMessages();
+        $this->assertCount(1, $messages);
+        $this->assertStringContainsString('failed schema validation', $messages[0]);
+        $this->assertStringContainsString('"status":"failure"', $messages[0]);
+        $this->assertStringContainsString('NationalBadgeID', $messages[0]);
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function badgeImportLogMessages(): array
+    {
+        $logger = Log::engine('badge_import_test');
+        $this->assertInstanceOf(ArrayLog::class, $logger);
+
+        return $logger->read();
     }
 
     /**
