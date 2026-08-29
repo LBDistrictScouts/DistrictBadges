@@ -23,6 +23,7 @@ class AccountsControllerTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
+        'app.Sections',
     ];
 
     /**
@@ -100,6 +101,54 @@ class AccountsControllerTest extends TestCase
 
         $updated = $accounts->get($id);
         $this->assertSame('Updated Account', $updated->account_name);
+    }
+
+    public function testEditAssignsSelectedSections(): void
+    {
+        $id = 'ae471706-04cc-4c9c-8916-e4be1f913edf';
+        $sectionId = 'd9534dcb-a846-5a22-a2fe-b67580555563';
+
+        $this->enableCsrfToken();
+        $this->put("/accounts/edit/{$id}", [
+            'account_name' => 'Updated Account',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_ids' => [$sectionId],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Accounts', 'action' => 'index']);
+        $section = $this->getTableLocator()->get('Sections')->get($sectionId);
+        $this->assertSame($id, $section->account_id);
+    }
+
+    public function testEditRejectsSectionFromAnotherGroup(): void
+    {
+        $groups = $this->getTableLocator()->get('Groups');
+        $otherGroup = $groups->newEntity([
+            'group_name' => 'Other Group',
+            'group_osm_id' => 999,
+            'sort_order' => 2,
+        ]);
+        $groups->saveOrFail($otherGroup);
+        $sections = $this->getTableLocator()->get('Sections');
+        $otherSection = $sections->newEntity([
+            'group_id' => $otherGroup->id,
+            'section_osm_id' => 999,
+            'section_name' => 'Other Cubs',
+            'section_type' => 'cubs',
+        ]);
+        $sections->saveOrFail($otherSection);
+        $id = 'ae471706-04cc-4c9c-8916-e4be1f913edf';
+
+        $this->enableCsrfToken();
+        $this->put("/accounts/edit/{$id}", [
+            'account_name' => 'Updated Account',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_ids' => [$otherSection->id],
+        ]);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Select only sections belonging to the selected group.');
+        $this->assertNull($sections->get($otherSection->id)->account_id);
     }
 
     /**
