@@ -161,6 +161,7 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains('Order for');
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Example Beavers');
+        $this->assertResponseNotContains('/sections/view/d9534dcb-a846-5a22-a2fe-b67580555563');
         $this->assertResponseRegExp('/Lorem ipsum dolor sit amet.*›.*Lorem ipsum dolor sit amet.*›.*Example Beavers/s');
         $this->assertResponseContains('Collection selected');
         $this->assertResponseContains('prepared for collection from the district badge shop');

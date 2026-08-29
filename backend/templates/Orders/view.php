@@ -63,10 +63,7 @@ $multipleOrdersMessage = 'If the customer places multiple orders, they may be gr
                             : __('No account') ?>
                         <?php if ($order->hasValue('section')) : ?>
                             <span aria-hidden="true">›</span>
-                            <?= $this->Html->link(
-                                $order->section->section_name,
-                                ['controller' => 'Sections', 'action' => 'view', $order->section->id],
-                            ) ?>
+                            <?= h($order->section->section_name) ?>
                         <?php endif; ?>
                     </td>
                 </tr>
