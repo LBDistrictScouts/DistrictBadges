@@ -159,4 +159,40 @@ class DistrictCoreDataServiceTest extends TestCase
         $this->assertSame('New Scout Group', $account->account_name);
         $this->assertSame($account->id, $section->account_id);
     }
+
+    public function testSyncPreservesExistingSectionAccountAssignment(): void
+    {
+        $groupId = '4d5149f3-6214-4457-a04d-e428dc1200d7';
+        $sectionId = 'd9534dcb-a846-5a22-a2fe-b67580555563';
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $assignedAccount = $accounts->newEntity([
+            'account_name' => 'Section Account',
+            'group_id' => $groupId,
+        ]);
+        $accounts->saveOrFail($assignedAccount);
+        $this->getTableLocator()->get('Sections')->updateAll(
+            ['account_id' => $assignedAccount->id],
+            ['id' => $sectionId],
+        );
+        $service = new DistrictCoreDataService([
+            'url' => 'https://example.org/index.html',
+            'username' => 'test',
+            'password' => 'test',
+        ]);
+
+        $service->sync([[
+            'id' => $groupId,
+            'group_name' => 'Lorem ipsum dolor sit amet',
+            'sort_order' => 1,
+        ]], [[
+            'id' => $sectionId,
+            'group_id' => $groupId,
+            'section_id' => 14450,
+            'section_name' => 'Example Beavers',
+            'section_type' => 'beavers',
+        ]]);
+
+        $section = $this->getTableLocator()->get('Sections')->get($sectionId);
+        $this->assertSame($assignedAccount->id, $section->account_id);
+    }
 }

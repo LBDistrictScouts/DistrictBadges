@@ -36,7 +36,6 @@
                             <th><?= __('Section Name') ?></th>
                             <th><?= __('Type') ?></th>
                             <th><?= __('Account') ?></th>
-                            <th class="actions"><?= __('Actions') ?></th>
                         </tr>
                         <?php foreach ($group->sections as $section) : ?>
                         <tr>
@@ -49,16 +48,6 @@
                                         ['controller' => 'Accounts', 'action' => 'view', $section->account->id],
                                     )
                                     : __('No account') ?>
-                            </td>
-                            <td class="actions">
-                                <?= $this->Html->link(
-                                    __('View'),
-                                    ['controller' => 'Sections', 'action' => 'view', $section->id],
-                                ) ?>
-                                <?= $this->Html->link(
-                                    __('Edit'),
-                                    ['controller' => 'Sections', 'action' => 'edit', $section->id],
-                                ) ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>

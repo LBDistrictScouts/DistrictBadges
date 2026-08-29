@@ -53,7 +53,8 @@ class GroupsControllerTest extends TestCase
         $this->assertResponseContains('Sections');
         $this->assertResponseContains('Example Beavers');
         $this->assertResponseContains('Beavers');
-        $this->assertResponseContains('/sections/view/d9534dcb-a846-5a22-a2fe-b67580555563');
+        $this->assertResponseNotContains('/sections/view/d9534dcb-a846-5a22-a2fe-b67580555563');
+        $this->assertResponseNotContains('/sections/edit/d9534dcb-a846-5a22-a2fe-b67580555563');
     }
 
     /**

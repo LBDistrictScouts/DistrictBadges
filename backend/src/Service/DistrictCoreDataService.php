@@ -124,16 +124,23 @@ class DistrictCoreDataService
                     $entity->set('id', $id);
                 }
 
-                $sections->patchEntity($entity, [
+                $sectionFields = [
                     'group_id' => $record['group_id'],
-                    'account_id' => $accountIds[$record['group_id']],
                     'section_osm_id' => $record['section_id'],
                     'section_name' => $record['section_name'],
                     'section_type' => $record['section_type'],
                     'meeting_start_time' => $record['meeting_start_time'] ?? null,
                     'meeting_end_time' => $record['meeting_end_time'] ?? null,
                     'meeting_day' => $record['meeting_day'] ?? null,
+                ];
+                $hasValidAccount = $entity->account_id !== null && $accounts->exists([
+                    'id' => $entity->account_id,
+                    'group_id' => $record['group_id'],
                 ]);
+                if (!$hasValidAccount) {
+                    $sectionFields['account_id'] = $accountIds[$record['group_id']];
+                }
+                $sections->patchEntity($entity, $sectionFields);
                 $sections->saveOrFail($entity);
             }
 
