@@ -162,21 +162,17 @@ class InvoicesTable extends Table
             if ($postage > 0) {
                 $description .= sprintf(' + £%.2f postage', $postage);
             }
-            if ($summary->order !== null) {
-                $description .= sprintf(
-                    '. Ordered by: %s. Section: %s.',
-                    $summary->order->user->full_name,
-                    $summary->order->section?->section_name ?? 'Not specified',
-                );
-            }
+            $description .= sprintf(
+                '. Ordered by: %s. Section: %s.',
+                $summary->order->user->full_name,
+                $summary->order->section?->section_name ?? 'Not specified',
+            );
             $items[] = [
-                'name' => $summary->order === null || $summary->fulfilment === null
-                    ? 'Legacy invoice items'
-                    : sprintf(
-                        'Order %s / Fulfilment %s',
-                        $summary->order->order_number,
-                        $summary->fulfilment->fulfilment_number,
-                    ),
+                'name' => sprintf(
+                    'Order %s / Fulfilment %s',
+                    $summary->order->order_number,
+                    $summary->fulfilment->fulfilment_number,
+                ),
                 'description' => $description,
                 'quantity' => 1,
                 'unit_cost' => (float)$summary->line_amount,
