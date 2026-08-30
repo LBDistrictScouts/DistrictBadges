@@ -1,0 +1,19 @@
+{
+  "name": "LBA Scouts District Badge Shop",
+  "short_name": "LBA Badges",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#7413dc",
+  "background_color": "#7413dc",
+  "display": "standalone"
+}

@@ -9,15 +9,15 @@ use Cake\ORM\Entity;
  * InvoiceLine Entity
  *
  * @property string $id
- * @property string $invoice_id
- * @property string $badge_id
+ * @property string $invoice_summary_id
+ * @property string|null $badge_id
  * @property string $description
  * @property int $quantity
  * @property string $unit_price
  * @property string $line_amount
  *
- * @property \App\Model\Entity\Invoice $invoice
- * @property \App\Model\Entity\Badge $badge
+ * @property \App\Model\Entity\InvoiceSummary $invoice_summary
+ * @property \App\Model\Entity\Badge|null $badge
  */
 class InvoiceLine extends Entity
 {
@@ -31,13 +31,13 @@ class InvoiceLine extends Entity
      * @var array<string, bool>
      */
     protected array $_accessible = [
-        'invoice_id' => true,
+        'invoice_summary_id' => true,
         'badge_id' => true,
         'description' => true,
         'quantity' => true,
         'unit_price' => true,
         'line_amount' => true,
-        'invoice' => true,
+        'invoice_summary' => true,
         'badge' => true,
     ];
 }

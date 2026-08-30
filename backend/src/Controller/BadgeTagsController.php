@@ -21,14 +21,17 @@ class BadgeTagsController extends AppController
     {
         $categoryValue = $this->request->getQuery('category');
         $category = is_numeric($categoryValue) ? TagCategory::tryFrom((int)$categoryValue) : null;
-        $query = $this->BadgeTags->find()
-            ->orderByAsc('tag_category')
-            ->orderByAsc('tag_order')
-            ->orderByAsc('tag_name');
+        $query = $this->BadgeTags->find();
         if ($category !== null) {
             $query->where(['tag_category' => $category->value]);
         }
-        $badgeTags = $this->paginate($query);
+        $badgeTags = $this->paginate($query, [
+            'order' => [
+                'BadgeTags.tag_category' => 'ASC',
+                'BadgeTags.tag_order' => 'ASC',
+                'BadgeTags.tag_name' => 'ASC',
+            ],
+        ]);
 
         $this->set(compact('badgeTags', 'category'));
     }

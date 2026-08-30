@@ -21,7 +21,9 @@
     <title>
         <?= $this->fetch('title') ?>
     </title>
-    <?= $this->Html->meta('icon') ?>
+    <?= $this->Html->meta('icon', '/lba-icon.svg', ['type' => 'image/svg+xml']) ?>
+    <?= $this->Html->meta('icon', '/favicon-32.png', ['type' => 'image/png', 'sizes' => '32x32']) ?>
+    <?= $this->Html->meta('apple-touch-icon', '/apple-touch-icon.png') ?>
 
     <?= $this->Html->css(['normalize.min', 'milligram.min', 'fonts', 'cake']) ?>
 

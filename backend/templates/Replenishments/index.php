@@ -1,4 +1,6 @@
 <?php
+use App\Model\Enum\ReplenishmentStatus;
+
 /**
  * @var \App\View\AppView $this
  * @var iterable<\App\Model\Entity\Replenishment> $replenishments
@@ -9,6 +11,9 @@
 <div class="replenishments index content">
     <?= $this->Html->link(__('New Replenishment'), ['action' => 'add'], ['class' => 'button float-right']) ?>
     <h3><?= __('Replenishments') ?></h3>
+    <details class="badge-index-controls" data-badge-index-controls>
+    <summary><?= __('Filters') ?></summary>
+    <div class="badge-index-controls__body">
     <?= $this->Form->create(null, ['type' => 'get', 'class' => 'index-filters']) ?>
     <div class="index-filters__row">
         <?= $this->Form->control('number', [
@@ -39,11 +44,14 @@
         <?= $this->Html->link(__('Clear'), ['action' => 'index'], ['class' => 'button button-outline']) ?>
     </div>
     <?= $this->Form->end() ?>
+    </div>
+    </details>
+    <?= $this->Html->script('badge-index-controls', ['block' => true, 'defer' => true]) ?>
     <div class="table-responsive">
         <table class="replenishments-index-table">
             <thead>
                 <tr>
-                    <th><?= $this->Paginator->sort('wholesale_order_number', __('Replenishment')) ?></th>
+                    <th><?= $this->Paginator->sort('replenishment_number', __('Replenishment Number')) ?></th>
                     <th><?= $this->Paginator->sort('wholesaler_order_number', __('Wholesaler Order')) ?></th>
                     <th><?= $this->Paginator->sort('created_date', __('Created')) ?></th>
                     <th><?= $this->Paginator->sort('status') ?></th>
@@ -59,7 +67,7 @@
                 <tr>
                     <td>
                         <?= $this->Html->link(
-                            $replenishment->wholesale_order_number,
+                            $replenishment->replenishment_number,
                             ['action' => 'view', $replenishment->id],
                         ) ?>
                     </td>
@@ -73,20 +81,18 @@
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $replenishment->id]) ?>
                         <?php if (!$replenishment->received) : ?>
-                        <?= $this->Html->link(__('Edit'), ['action' => 'edit', $replenishment->id]) ?>
+                            <?= $this->Html->link(__('Edit'), ['action' => 'edit', $replenishment->id]) ?>
                         <?php endif; ?>
-                        <?php if (!in_array(
+                        <?php $canReceive = !in_array(
                             $replenishment->status,
-                            [
-                                \App\Model\Enum\ReplenishmentStatus::Received,
-                                \App\Model\Enum\ReplenishmentStatus::Cancelled,
-                            ],
+                            [ReplenishmentStatus::Received, ReplenishmentStatus::Cancelled],
                             true,
-                        )) : ?>
-                        <?= $this->Html->link(
-                            __('Receive'),
-                            ['action' => 'receive', $replenishment->id],
-                        ) ?>
+                        ); ?>
+                        <?php if ($canReceive) : ?>
+                            <?= $this->Html->link(
+                                __('Receive'),
+                                ['action' => 'receive', $replenishment->id],
+                            ) ?>
                         <?php endif; ?>
                     </td>
                 </tr>

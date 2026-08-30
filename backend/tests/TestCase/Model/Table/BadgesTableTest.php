@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
+use App\Model\Entity\Badge;
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\TagCategory;
@@ -436,5 +437,23 @@ class BadgesTableTest extends TestCase
             ->willReturn(1);
 
         $this->assertSame(1, $this->Badges->refreshAlgoliaIndex($service));
+    }
+
+    public function testUnlistedBadgeVirtualProperty(): void
+    {
+        $listed = new Badge(['national_product_code' => 123]);
+        $unlisted = new Badge(['national_product_code' => null]);
+        $unlistedWithImage = new Badge([
+            'national_product_code' => null,
+            'image_url' => 'https://example.com/unlisted-badge.jpg',
+        ]);
+
+        $this->assertFalse($listed->unlisted_badge);
+        $this->assertTrue($unlisted->unlisted_badge);
+        $this->assertTrue($unlisted->toArray()['unlisted_badge']);
+        $this->assertSame(
+            'https://example.com/unlisted-badge.jpg',
+            $unlistedWithImage->image_medium_url,
+        );
     }
 }

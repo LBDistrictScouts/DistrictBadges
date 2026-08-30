@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use Cake\Core\Configure;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -40,7 +41,7 @@ class AuditsTable extends Table
         parent::initialize($config);
 
         $this->setTable('audits');
-        $this->setDisplayField('id');
+        $this->setDisplayField('audit_number');
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp', [
@@ -49,6 +50,10 @@ class AuditsTable extends Table
                     'audit_timestamp' => 'new',
                 ],
             ],
+        ]);
+        $this->addBehavior('EntityNumber', [
+            'field' => 'audit_number',
+            'prefix' => Configure::read('EntityNumbers.auditPrefix', 'AUD'),
         ]);
 
         $this->belongsTo('Users', [
@@ -71,6 +76,11 @@ class AuditsTable extends Table
      */
     public function validationDefault(Validator $validator): Validator
     {
+        $validator
+            ->scalar('audit_number')
+            ->maxLength('audit_number', 64)
+            ->allowEmptyString('audit_number');
+
         $validator
             ->uuid('user_id')
             ->notEmptyString('user_id');

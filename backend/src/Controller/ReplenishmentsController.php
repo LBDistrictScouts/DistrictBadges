@@ -32,7 +32,7 @@ class ReplenishmentsController extends AppController
 
         if ($filters['number'] !== '') {
             $query->where([
-                'wholesale_order_number LIKE' => '%' . $filters['number'] . '%',
+                'replenishment_number LIKE' => '%' . $filters['number'] . '%',
             ]);
         }
 

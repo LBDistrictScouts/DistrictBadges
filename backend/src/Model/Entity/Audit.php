@@ -9,6 +9,7 @@ use Cake\ORM\Entity;
  * Audit Entity
  *
  * @property string $id
+ * @property string $audit_number
  * @property string $user_id
  * @property \Cake\I18n\DateTime $audit_timestamp
  * @property bool $audit_completed

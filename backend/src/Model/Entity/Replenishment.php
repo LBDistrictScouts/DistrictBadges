@@ -19,7 +19,7 @@ use Cake\ORM\Entity;
  * @property int $total_ordered_quantity
  * @property string $total_received_amount
  * @property int $total_received_quantity
- * @property string $wholesale_order_number
+ * @property string $replenishment_number
  * @property string|null $wholesaler_order_number
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions

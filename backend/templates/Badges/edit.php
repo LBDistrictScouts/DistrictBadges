@@ -3,10 +3,12 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Badge $badge
  * @var array<string, array<string, string>> $badgeTagOptions
+ * @var bool $showImageUrl
  */
 ?>
 <div class="row">
-    <aside class="column">
+    <aside class="column badge-view-sidebar">
+        <?= $this->element('badge_product_card', ['badge' => $badge]) ?>
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
             <?php if ($badge->canBeDeleted()) : ?>
@@ -30,6 +32,13 @@
                 <?php
                     echo $this->Form->control('badge_name');
                     echo $this->Form->control('national_product_code');
+                if ($showImageUrl) {
+                        echo $this->Form->control('image_url', [
+                            'label' => __('Image URL'),
+                            'type' => 'url',
+                            'placeholder' => 'https://example.com/badge.jpg',
+                        ]);
+                }
                     echo $this->Form->control('stocked');
                     echo $this->Form->control('reserve_quantity', ['min' => 0]);
                     echo $this->Form->control('price');

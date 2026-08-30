@@ -7,10 +7,19 @@ $badgeSections = $badge->badge_sections;
 $badgeTypes = $badge->badge_types;
 ?>
 <div class="row">
-    <aside class="column">
+    <aside class="column badge-view-sidebar">
+        <?= $this->element('badge_product_card', ['badge' => $badge]) ?>
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
-            <?= $this->Html->link(__('Edit Badge'), ['action' => 'edit', $badge->id], ['class' => 'side-nav-item']) ?>
+            <?= $this->Html->link(
+                __('Edit Badge'),
+                [
+                    'action' => 'edit',
+                    $badge->id,
+                    '?' => $badge->unlisted_badge ? ['unlisted' => 'true'] : [],
+                ],
+                ['class' => 'side-nav-item'],
+            ) ?>
             <?php if ($badge->canBeDeleted()) : ?>
                 <?= $this->Form->postLink(
                     __('Delete Badge'),
@@ -22,6 +31,11 @@ $badgeTypes = $badge->badge_types;
                 ) ?>
             <?php endif; ?>
             <?= $this->Html->link(__('List Badges'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
+            <?= $this->Html->link(
+                __('Stock Transactions'),
+                ['action' => 'stockTransactions', $badge->id],
+                ['class' => 'side-nav-item'],
+            ) ?>
             <?= $this->Html->link(__('New Badge'), ['action' => 'add'], ['class' => 'side-nav-item']) ?>
         </div>
     </aside>
@@ -54,36 +68,39 @@ $badgeTypes = $badge->badge_types;
                     </section>
                 <?php endif; ?>
             </div>
-            <table>
-                <tr>
-                    <th><?= __('Status') ?></th>
-                    <td><?= h($badge->status->label()) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Badge Name') ?></th>
-                    <td><?= h($badge->badge_name) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Image') ?></th>
-                    <td><img src="<?= $badge->image_large_url ?>" alt="<?= h($badge->badge_name) ?>"></td>
-                </tr>
-                <tr>
-                    <th><?= __('National Product Code') ?></th>
-                    <td><?= h((string)($badge->national_product_code ?? '')) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Stocked') ?></th>
-                    <td><?= $badge->stocked ? __('Yes') : __('No') ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Price') ?></th>
-                    <td><?= $this->Number->currency($badge->price) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Replenishment Price') ?></th>
-                    <td><?= $this->Number->currency($badge->replenishment_price) ?></td>
-                </tr>
-            </table>
+            <dl class="badge-detail-grid">
+                <div class="badge-detail-item">
+                    <dt><?= __('Status') ?></dt>
+                    <dd><?= h($badge->status->label()) ?></dd>
+                </div>
+                <div class="badge-detail-item">
+                    <?php if ($badge->unlisted_badge) : ?>
+                        <dt><?= __('Unlisted Badge') ?></dt>
+                        <dd class="badge-detail-tick">
+                            <span aria-hidden="true">✓</span>
+                            <?= __('Yes') ?>
+                        </dd>
+                    <?php else : ?>
+                        <dt><?= __('National Product Code') ?></dt>
+                        <dd><?= h((string)$badge->national_product_code) ?></dd>
+                    <?php endif; ?>
+                </div>
+                <div class="badge-detail-item">
+                    <dt><?= __('Stocked') ?></dt>
+                    <dd class="badge-detail-tick badge-detail-tick--<?= $badge->stocked ? 'yes' : 'no' ?>">
+                        <span aria-hidden="true"><?= $badge->stocked ? '✓' : '—' ?></span>
+                        <?= $badge->stocked ? __('Yes') : __('No') ?>
+                    </dd>
+                </div>
+                <div class="badge-detail-item">
+                    <dt><?= __('Price') ?></dt>
+                    <dd><?= $this->Number->currency($badge->price) ?></dd>
+                </div>
+                <div class="badge-detail-item">
+                    <dt><?= __('Replenishment Price') ?></dt>
+                    <dd><?= $this->Number->currency($badge->replenishment_price) ?></dd>
+                </div>
+            </dl>
             <div class="related badge-stock-summary">
                 <h4><?= __('Stock Amounts') ?></h4>
                 <div class="badge-stock-groups">
@@ -123,6 +140,12 @@ $badgeTypes = $badge->badge_types;
                                 <span class="badge-stock-card__label"><?= __('Fulfilled') ?></span>
                                 <strong class="badge-stock-card__amount" data-stock-amount="fulfilled">
                                     <?= $this->Number->format($badge->fulfilled_quantity) ?>
+                                </strong>
+                            </article>
+                            <article class="badge-stock-card badge-stock-card--invoiced">
+                                <span class="badge-stock-card__label"><?= __('Invoiced') ?></span>
+                                <strong class="badge-stock-card__amount" data-stock-amount="invoiced">
+                                    <?= $this->Number->format($badge->invoiced_quantity) ?>
                                 </strong>
                             </article>
                         </div>

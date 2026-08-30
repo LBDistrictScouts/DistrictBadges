@@ -20,10 +20,12 @@ use Cake\ORM\Entity;
  * @property int $receipted_quantity
  * @property int $pending_quantity
  * @property int $fulfilled_quantity
+ * @property int $invoiced_quantity
  * @property string $latest_hash
  * @property string $national_product_hash
  * @property string $price
  * @property string $replenishment_price
+ * @property string|null $image_url
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
  * @property \App\Model\Entity\InvoiceLine[] $invoice_lines
@@ -35,6 +37,7 @@ use Cake\ORM\Entity;
  * @property ?string $image_path
  * @property ?string $image_large_url
  * @property ?string $image_medium_url
+ * @property bool $unlisted_badge
  *
  * @property array $national_core_data
  */
@@ -60,10 +63,12 @@ class Badge extends Entity
         'receipted_quantity' => true,
         'pending_quantity' => true,
         'fulfilled_quantity' => true,
+        'invoiced_quantity' => true,
         'latest_hash' => true,
         'national_product_hash' => true,
         'price' => true,
         'replenishment_price' => true,
+        'image_url' => true,
         'stock_transactions' => true,
         'invoice_lines' => true,
         'order_lines' => true,
@@ -77,11 +82,24 @@ class Badge extends Entity
     ];
 
     protected array $_virtual = [
-        'national_core_data' => true,
-        'image_path' => true,
-        'image_large_url' => true,
-        'image_medium_url' => true,
+        'national_core_data',
+        'image_path',
+        'image_large_url',
+        'image_medium_url',
+        'unlisted_badge',
     ];
+
+    /**
+     * Whether this badge does not have a matching national shop product.
+     *
+     * @return bool
+     */
+    protected function _getUnlistedBadge(): bool
+    {
+        $productCode = $this->get('national_product_code');
+
+        return $productCode === null || $productCode === '';
+    }
 
     /**
      * @return array
@@ -107,7 +125,7 @@ class Badge extends Entity
     protected function _getImageLargeUrl(): ?string
     {
         if (is_null($this->image_path)) {
-            return null;
+            return $this->get('image_url') ?: null;
         }
 
         $large = 'https://shop.scouts.org.uk/tco-images/o/2560x2560/'
@@ -122,7 +140,7 @@ class Badge extends Entity
     protected function _getImageMediumUrl(): ?string
     {
         if (is_null($this->image_path)) {
-            return null;
+            return $this->get('image_url') ?: null;
         }
 
         $medium = 'https://shop.scouts.org.uk/tco-images/o/1154x1443/'

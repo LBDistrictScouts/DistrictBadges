@@ -1,4 +1,6 @@
 <?php
+use App\Model\Enum\TagCategory;
+
 /**
  * @var \App\View\AppView $this
  * @var array{orders: int, replenishments: int, fulfilments: int} $dashboardCounts
@@ -49,11 +51,11 @@ echo $this->Html->css('home', ['block' => true]);
         <nav class="record-links" aria-label="Browse records">
             <?= $this->Html->link('<span>Audits</span><small>Count stock and review differences</small>', ['controller' => 'Audits', 'action' => 'index'], ['escape' => false]) ?>
             <?= $this->Html->link('<span>Badge catalogue</span><small>Products, prices and stock</small>', ['controller' => 'Badges', 'action' => 'index'], ['escape' => false]) ?>
-            <?= $this->Html->link('<span>Badge tags</span><small>Manage catalogue classifications</small>', ['controller' => 'BadgeTags', 'action' => 'index'], ['escape' => false]) ?>
-            <?= $this->Html->link('<span>Sections</span><small>Manage badge section tags</small>', ['controller' => 'BadgeTags', 'action' => 'index', '?' => ['category' => 10]], ['escape' => false]) ?>
-            <?= $this->Html->link('<span>Stock transactions</span><small>View inventory movements</small>', ['controller' => 'StockTransactions', 'action' => 'index'], ['escape' => false]) ?>
+            <?= $this->Html->link('<span>Badge Type Tags</span><small>Manage catalogue classifications</small>', ['controller' => 'BadgeTags', 'action' => 'index', '?' => ['category' => TagCategory::BadgeTypes->value]], ['escape' => false]) ?>
+            <?= $this->Html->link('<span>Section Tags</span><small>Manage badge section tags</small>', ['controller' => 'BadgeTags', 'action' => 'index', '?' => ['category' => TagCategory::Sections->value]], ['escape' => false]) ?>
             <?= $this->Html->link('<span>Groups</span><small>Manage customer groups</small>', ['controller' => 'Groups', 'action' => 'index'], ['escape' => false]) ?>
             <?= $this->Html->link('<span>Accounts</span><small>Billing and account details</small>', ['controller' => 'Accounts', 'action' => 'index'], ['escape' => false]) ?>
+            <?= $this->Html->link('<span>Invoices</span><small>Create invoices and manage billing dates</small>', ['controller' => 'Invoices', 'action' => 'index'], ['escape' => false]) ?>
             <?= $this->Html->link('<span>Users</span><small>Manage operations access</small>', ['controller' => 'Users', 'action' => 'index'], ['escape' => false]) ?>
         </nav>
     </section>

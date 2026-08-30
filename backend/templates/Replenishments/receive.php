@@ -26,7 +26,7 @@
             <?= $this->Form->create($replenishment) ?>
             <fieldset>
                 <legend>
-                    <?= __('Receive Replenishment {0}', $replenishment->wholesale_order_number) ?>
+                    <?= __('Receive Replenishment {0}', $replenishment->replenishment_number) ?>
                 </legend>
                 <p>
                     <?= __('Enter the quantity received. Leave a field blank to record zero items.') ?>

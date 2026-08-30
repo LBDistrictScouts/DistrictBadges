@@ -7,6 +7,7 @@ use App\Model\Enum\BadgeStatus;
  * @var array<string, string> $filters
  * @var array<int, string> $statusOptions
  * @var array<string, string> $stockedOptions
+ * @var array<string, string> $listedOptions
  * @var \Cake\Collection\CollectionInterface|array<string, string> $sectionTagOptions
  * @var \Cake\Collection\CollectionInterface|array<string, string> $typeTagOptions
  */
@@ -14,44 +15,25 @@ use App\Model\Enum\BadgeStatus;
 <div class="badges index content">
     <?= $this->Html->link(__('New Badge'), ['action' => 'add'], ['class' => 'button float-right']) ?>
     <h3><?= __('Badges') ?></h3>
-    <?= $this->Form->create(null, ['type' => 'get', 'class' => 'index-filters']) ?>
-    <div class="index-filters__row">
-        <?= $this->Form->control('name', [
-            'label' => __('Name'),
-            'value' => $filters['name'],
+    <div class="badge-index-view-switch">
+        <span aria-current="page"><?= __('Table') ?></span>
+        <?= $this->Html->link(__('Cards'), [
+            'action' => 'cards',
+            '?' => $this->request->getQueryParams(),
         ]) ?>
-        <?= $this->Form->control('status', [
-            'label' => __('Availability Status'),
-            'options' => $statusOptions,
-            'empty' => __('All availability statuses'),
-            'value' => $filters['status'],
-        ]) ?>
-        <?= $this->Form->control('stocked', [
-            'label' => __('Stocking'),
-            'options' => $stockedOptions,
-            'empty' => __('All badges'),
-            'value' => $filters['stocked'],
+        <?= $this->Html->link(__('Stock'), [
+            'action' => 'stock',
+            '?' => $this->request->getQueryParams(),
         ]) ?>
     </div>
-    <div class="index-filters__row">
-        <?= $this->Form->control('section_tag', [
-            'label' => __('Section'),
-            'options' => $sectionTagOptions,
-            'empty' => __('All sections'),
-            'value' => $filters['section_tag'],
-        ]) ?>
-        <?= $this->Form->control('type_tag', [
-            'label' => __('Badge Type'),
-            'options' => $typeTagOptions,
-            'empty' => __('All badge types'),
-            'value' => $filters['type_tag'],
-        ]) ?>
-    </div>
-    <div class="index-filters__actions">
-        <?= $this->Form->button(__('Filter')) ?>
-        <?= $this->Html->link(__('Clear'), ['action' => 'index'], ['class' => 'button button-outline']) ?>
-    </div>
-    <?= $this->Form->end() ?>
+    <?= $this->element('badge_filters', compact(
+        'filters',
+        'listedOptions',
+        'sectionTagOptions',
+        'statusOptions',
+        'stockedOptions',
+        'typeTagOptions',
+    ) + ['clearAction' => 'index']) ?>
     <div class="table-responsive">
         <table>
             <thead>
@@ -80,7 +62,15 @@ use App\Model\Enum\BadgeStatus;
                     <td><?= h($badge->status->label()) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $badge->id]) ?>
-                        <?= $this->Html->link(__('Edit'), ['action' => 'edit', $badge->id]) ?>
+                        <?= $this->Html->link(
+                            __('Transactions'),
+                            ['action' => 'stockTransactions', $badge->id],
+                        ) ?>
+                        <?= $this->Html->link(__('Edit'), [
+                            'action' => 'edit',
+                            $badge->id,
+                            '?' => $badge->unlisted_badge ? ['unlisted' => 'true'] : [],
+                        ]) ?>
                         <?php if ($badge->status === BadgeStatus::Unstocked) : ?>
                             <?= $this->Form->postLink(
                                 __('Stock'),

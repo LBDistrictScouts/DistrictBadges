@@ -26,6 +26,9 @@ $entityCategories = [
     'FulfilmentLines' => 'fulfilments',
     'Orders' => 'orders',
     'OrderLines' => 'orders',
+    'Invoices' => 'invoices',
+    'InvoiceLines' => 'invoices',
+    'InvoiceSummaries' => 'invoices',
     'Badges' => 'badges',
     'BadgeSections' => 'badges',
     'BadgeTags' => 'badges',
@@ -43,7 +46,9 @@ $entityCategory = $entityCategories[$controller] ?? 'default';
         <?= $appDescription ?>:
         <?= $this->fetch('title') ?>
     </title>
-    <?= $this->Html->meta('icon') ?>
+    <?= $this->Html->meta('icon', '/lba-icon.svg', ['type' => 'image/svg+xml']) ?>
+    <?= $this->Html->meta('icon', '/favicon-32.png', ['type' => 'image/png', 'sizes' => '32x32']) ?>
+    <?= $this->Html->meta('apple-touch-icon', '/apple-touch-icon.png') ?>
 
     <?= $this->Html->css([
         'normalize.min',
@@ -83,6 +88,7 @@ $entityCategory = $entityCategories[$controller] ?? 'default';
             <?= $this->Html->link('Fulfilments', ['controller' => 'Fulfilments', 'action' => 'index'], ['class' => $entityCategory === 'fulfilments' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Replenishments', ['controller' => 'Replenishments', 'action' => 'index'], ['class' => $entityCategory === 'replenishments' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Audits', ['controller' => 'Audits', 'action' => 'index'], ['class' => $entityCategory === 'audits' ? 'is-active' : '']) ?>
+            <?= $this->Html->link('Invoices', ['controller' => 'Invoices', 'action' => 'index'], ['class' => $entityCategory === 'invoices' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Badges', ['controller' => 'Badges', 'action' => 'index'], ['class' => $entityCategory === 'badges' ? 'is-active' : '']) ?>
         </div>
         <div class="top-nav-overlay" data-nav-overlay></div>

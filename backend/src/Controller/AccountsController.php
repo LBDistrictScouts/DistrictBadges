@@ -33,7 +33,17 @@ class AccountsController extends AppController
      */
     public function view(?string $id = null)
     {
-        $account = $this->Accounts->get($id, contain: ['Groups', 'Invoices', 'Orders']);
+        $account = $this->Accounts->get($id, contain: [
+            'Groups',
+            'Sections' => fn($query) => $query->orderByAsc('section_name'),
+            'Users' => fn($query) => $query->orderByAsc('last_name')->orderByAsc('first_name'),
+            'Invoices' => fn($query) => $query
+                ->contain(['InvoiceSummaries'])
+                ->orderByDesc('invoice_date'),
+            'Orders' => fn($query) => $query
+                ->contain(['Users', 'Sections'])
+                ->orderByDesc('placed_date'),
+        ]);
         $this->set(compact('account'));
     }
 
@@ -67,10 +77,51 @@ class AccountsController extends AppController
      */
     public function edit(?string $id = null)
     {
-        $account = $this->Accounts->get($id, contain: []);
+        $account = $this->Accounts->get($id, contain: ['Sections']);
+        $selectedSectionIds = array_map(
+            static fn($section): string => (string)$section->id,
+            $account->sections,
+        );
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $account = $this->Accounts->patchEntity($account, $this->request->getData());
-            if ($this->Accounts->save($account)) {
+            $data = $this->request->getData();
+            $selectedSectionIds = array_values(array_unique(array_filter(
+                (array)($data['section_ids'] ?? []),
+                'is_string',
+            )));
+            $account = $this->Accounts->patchEntity($account, $data);
+            $validSectionCount = $selectedSectionIds === [] ? 0 : $this->Accounts->Sections->find()
+                ->where([
+                    'Sections.id IN' => $selectedSectionIds,
+                    'Sections.group_id' => $account->group_id,
+                ])
+                ->count();
+            if ($validSectionCount !== count($selectedSectionIds)) {
+                $account->setError('section_ids', __('Select only sections belonging to the selected group.'));
+            }
+            $saved = false;
+            if (!$account->hasErrors()) {
+                $saved = $this->Accounts->getConnection()->transactional(function () use (
+                    $account,
+                    $selectedSectionIds,
+                ): bool {
+                    if (!$this->Accounts->save($account)) {
+                        return false;
+                    }
+                    $this->Accounts->Sections->updateAll(
+                        ['account_id' => null],
+                        ['account_id' => $account->id],
+                    );
+                    if ($selectedSectionIds !== []) {
+                        $this->Accounts->Sections->updateAll(
+                            ['account_id' => $account->id],
+                            ['id IN' => $selectedSectionIds],
+                        );
+                    }
+
+                    return true;
+                });
+            }
+            if ($saved) {
                 $this->Flash->success(__('The account has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
@@ -78,7 +129,13 @@ class AccountsController extends AppController
             $this->Flash->error(__('The account could not be saved. Please, try again.'));
         }
         $groups = $this->Accounts->Groups->find('list', limit: 200)->all();
-        $this->set(compact('account', 'groups'));
+        $sections = $this->Accounts->Sections->find()
+            ->select(['id', 'group_id', 'section_name'])
+            ->orderByAsc('section_name')
+            ->all();
+        $sectionOptions = $sections->combine('id', 'section_name')->toArray();
+        $sectionGroups = $sections->combine('id', 'group_id')->toArray();
+        $this->set(compact('account', 'groups', 'sectionOptions', 'sectionGroups', 'selectedSectionIds'));
     }
 
     /**

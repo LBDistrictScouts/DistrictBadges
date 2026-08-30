@@ -30,7 +30,7 @@ class ReplenishmentsFixture extends TestFixture
                 'total_ordered_quantity' => 1,
                 'total_received_amount' => 0,
                 'total_received_quantity' => 0,
-                'wholesale_order_number' => 'Lorem ipsum dolor sit amet',
+                'replenishment_number' => 'REP-2026-02-01',
                 'wholesaler_order_number' => 'SUP-12345',
             ],
         ];

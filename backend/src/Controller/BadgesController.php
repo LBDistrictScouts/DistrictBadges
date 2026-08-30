@@ -5,6 +5,8 @@ namespace App\Controller;
 
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\TagCategory;
+use App\Model\Enum\TransactionType;
+use Cake\I18n\Date;
 
 /**
  * Badges Controller
@@ -13,6 +15,8 @@ use App\Model\Enum\TagCategory;
  */
 class BadgesController extends AppController
 {
+    private const VIEW_STYLE_SESSION_KEY = 'Badges.viewStyle';
+
     /**
      * Index method
      *
@@ -20,11 +24,18 @@ class BadgesController extends AppController
      */
     public function index()
     {
-        $query = $this->Badges->find();
+        $viewStyle = (string)$this->request->getSession()->read(self::VIEW_STYLE_SESSION_KEY);
+        if (in_array($viewStyle, ['cards', 'stock'], true)) {
+            $this->viewBuilder()->setTemplate($viewStyle);
+        }
+
+        $query = $this->Badges->find()
+            ->contain(['BadgeSections', 'BadgeTypes']);
         $filters = [
             'name' => trim((string)$this->request->getQuery('name')),
             'status' => (string)$this->request->getQuery('status'),
             'stocked' => (string)$this->request->getQuery('stocked', '1'),
+            'listed' => (string)$this->request->getQuery('listed'),
             'section_tag' => (string)$this->request->getQuery('section_tag'),
             'type_tag' => (string)$this->request->getQuery('type_tag'),
         ];
@@ -52,6 +63,12 @@ class BadgesController extends AppController
             $query->where(['stocked' => $filters['stocked'] === '1']);
         }
 
+        if ($filters['listed'] === '1') {
+            $query->where(['national_product_code IS NOT' => null]);
+        } elseif ($filters['listed'] === '0') {
+            $query->where(['national_product_code IS' => null]);
+        }
+
         if ($filters['section_tag'] !== '') {
             $sectionBadgeIds = $this->Badges->BadgesBadgeTags->find()
                 ->select(['badge_id'])
@@ -66,7 +83,6 @@ class BadgesController extends AppController
             $query->where(['Badges.id IN' => $typeBadgeIds]);
         }
 
-        $query->distinct(['Badges.id']);
         $badges = $this->paginate($query);
         $statusOptions = [];
         foreach ($availabilityStatuses as $case) {
@@ -75,6 +91,10 @@ class BadgesController extends AppController
         $stockedOptions = [
             '1' => __('Stocked'),
             '0' => __('Unstocked'),
+        ];
+        $listedOptions = [
+            '1' => __('Listed'),
+            '0' => __('Unlisted'),
         ];
         $sectionTagOptions = $this->Badges->BadgeSections->find('list')
             ->orderByAsc('tag_order')
@@ -88,11 +108,48 @@ class BadgesController extends AppController
         $this->set(compact(
             'badges',
             'filters',
+            'listedOptions',
             'sectionTagOptions',
             'statusOptions',
             'stockedOptions',
             'typeTagOptions',
         ));
+    }
+
+    /**
+     * Display the badge catalogue as webstore-style cards.
+     *
+     * @return \Cake\Http\Response|null|void Renders view
+     */
+    public function cards()
+    {
+        $this->request->getSession()->write(self::VIEW_STYLE_SESSION_KEY, 'cards');
+        $this->viewBuilder()->setTemplate('cards');
+        $this->index();
+    }
+
+    /**
+     * Display badges as a stock-focused grid.
+     *
+     * @return \Cake\Http\Response|null|void Renders view
+     */
+    public function stock()
+    {
+        $this->request->getSession()->write(self::VIEW_STYLE_SESSION_KEY, 'stock');
+        $this->viewBuilder()->setTemplate('stock');
+        $this->index();
+    }
+
+    /**
+     * Display badges as a table and remember that preference.
+     *
+     * @return \Cake\Http\Response|null|void Renders view
+     */
+    public function table()
+    {
+        $this->request->getSession()->write(self::VIEW_STYLE_SESSION_KEY, 'table');
+        $this->viewBuilder()->setTemplate('index');
+        $this->index();
     }
 
     /**
@@ -106,6 +163,60 @@ class BadgesController extends AppController
     {
         $badge = $this->Badges->get($id, contain: ['BadgeSections', 'BadgeTypes']);
         $this->set(compact('badge'));
+    }
+
+    /**
+     * Display the stock transaction ledger for a badge.
+     *
+     * @param string|null $id Badge id.
+     * @return \Cake\Http\Response|null|void Renders view
+     */
+    public function stockTransactions(?string $id = null)
+    {
+        $badge = $this->Badges->get($id, contain: ['BadgeSections', 'BadgeTypes']);
+        $filters = [
+            'transaction_type' => (string)$this->request->getQuery('transaction_type'),
+            'date_from' => trim((string)$this->request->getQuery('date_from')),
+            'date_to' => trim((string)$this->request->getQuery('date_to')),
+        ];
+
+        $query = $this->Badges->StockTransactions->find()
+            ->where(['StockTransactions.badge_id' => $badge->id])
+            ->contain(['Fulfilments', 'Audits', 'Replenishments'])
+            ->orderByDesc('StockTransactions.transaction_timestamp')
+            ->orderByDesc('StockTransactions.id');
+
+        $transactionType = filter_var($filters['transaction_type'], FILTER_VALIDATE_INT);
+        if ($transactionType !== false && TransactionType::tryFrom($transactionType) !== null) {
+            $query->where(['StockTransactions.transaction_type' => $transactionType]);
+        }
+
+        $dateFrom = $filters['date_from'] === ''
+            ? null
+            : Date::parseDate($filters['date_from'], 'yyyy-MM-dd');
+        if ($dateFrom !== null) {
+            $query->where(['StockTransactions.transaction_timestamp >=' => $dateFrom->startOfDay()]);
+        }
+        $dateTo = $filters['date_to'] === ''
+            ? null
+            : Date::parseDate($filters['date_to'], 'yyyy-MM-dd');
+        if ($dateTo !== null) {
+            $query->where(['StockTransactions.transaction_timestamp <=' => $dateTo->endOfDay()]);
+        }
+        $stockTransactions = $this->paginate($query);
+        $transactionTypeOptions = [];
+        foreach (TransactionType::cases() as $case) {
+            $transactionTypeOptions[$case->value] = $case->label();
+        }
+        $transactionTypeOptions[TransactionType::ReplenishmentOrder->value] = __('Rep. Order');
+        $transactionTypeOptions[TransactionType::ReplenishmentReceipt->value] = __('Rep. Receipt');
+
+        $this->set(compact(
+            'badge',
+            'filters',
+            'stockTransactions',
+            'transactionTypeOptions',
+        ));
     }
 
     /**
@@ -142,11 +253,17 @@ class BadgesController extends AppController
      */
     public function edit(?string $id = null)
     {
-        $badge = $this->Badges->get($id, contain: ['BadgeTags']);
+        $badge = $this->Badges->get($id, contain: ['BadgeTags', 'BadgeSections', 'BadgeTypes']);
+        $showImageUrl = $badge->unlisted_badge
+            && filter_var($this->request->getQuery('unlisted'), FILTER_VALIDATE_BOOLEAN);
         if ($this->request->is(['patch', 'post', 'put'])) {
+            $data = $this->request->getData();
+            if (!$showImageUrl) {
+                unset($data['image_url']);
+            }
             $badge = $this->Badges->patchEntity(
                 $badge,
-                $this->request->getData(),
+                $data,
                 ['associated' => ['BadgeTags']],
             );
             if ($this->Badges->save($badge)) {
@@ -157,7 +274,7 @@ class BadgesController extends AppController
             $this->Flash->error(__('The badge could not be saved. Please, try again.'));
         }
         $badgeTagOptions = $this->getBadgeTagOptions();
-        $this->set(compact('badge', 'badgeTagOptions'));
+        $this->set(compact('badge', 'badgeTagOptions', 'showImageUrl'));
     }
 
     /**

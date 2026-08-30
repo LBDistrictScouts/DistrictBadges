@@ -26,8 +26,12 @@ class InvoiceLinesTableTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
+        'app.Users',
         'app.Invoices',
         'app.Badges',
+        'app.Orders',
+        'app.Fulfilments',
+        'app.InvoiceSummaries',
         'app.InvoiceLines',
     ];
 
@@ -64,7 +68,7 @@ class InvoiceLinesTableTest extends TestCase
     public function testValidationDefault(): void
     {
         $entity = $this->InvoiceLines->newEntity([
-            'invoice_id' => 'not-a-uuid',
+            'invoice_summary_id' => 'not-a-uuid',
             'badge_id' => 'not-a-uuid',
             'description' => '',
             'quantity' => null,
@@ -73,7 +77,7 @@ class InvoiceLinesTableTest extends TestCase
         ]);
 
         $errors = $entity->getErrors();
-        $this->assertArrayHasKey('invoice_id', $errors);
+        $this->assertArrayHasKey('invoice_summary_id', $errors);
         $this->assertArrayHasKey('badge_id', $errors);
         $this->assertArrayHasKey('description', $errors);
         $this->assertArrayHasKey('quantity', $errors);
@@ -81,7 +85,7 @@ class InvoiceLinesTableTest extends TestCase
         $this->assertArrayHasKey('line_amount', $errors);
 
         $valid = $this->InvoiceLines->newEntity([
-            'invoice_id' => 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138',
+            'invoice_summary_id' => '788807d0-23df-42db-bb06-26c4c30f450a',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'description' => 'Valid invoice line',
             'quantity' => 1,
@@ -100,7 +104,7 @@ class InvoiceLinesTableTest extends TestCase
     public function testBuildRules(): void
     {
         $entity = $this->InvoiceLines->newEntity([
-            'invoice_id' => '11111111-1111-1111-1111-111111111111',
+            'invoice_summary_id' => '11111111-1111-1111-1111-111111111111',
             'badge_id' => '11111111-1111-1111-1111-111111111111',
             'description' => 'Broken invoice line',
             'quantity' => 1,
@@ -110,14 +114,14 @@ class InvoiceLinesTableTest extends TestCase
 
         $result = $this->InvoiceLines->save($entity);
         $this->assertFalse($result);
-        $this->assertArrayHasKey('invoice_id', $entity->getErrors());
+        $this->assertArrayHasKey('invoice_summary_id', $entity->getErrors());
         $this->assertArrayHasKey('badge_id', $entity->getErrors());
     }
 
     public function testSave(): void
     {
         $entity = $this->InvoiceLines->newEntity([
-            'invoice_id' => 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138',
+            'invoice_summary_id' => '788807d0-23df-42db-bb06-26c4c30f450a',
             'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
             'description' => 'Saved invoice line',
             'quantity' => 2,
@@ -134,5 +138,43 @@ class InvoiceLinesTableTest extends TestCase
         $this->assertSame(2, (int)$saved->quantity);
         $this->assertEquals(12.75, (float)$saved->unit_price);
         $this->assertEquals(25.5, (float)$saved->line_amount);
+    }
+
+    public function testSavePostageLineWithoutBadge(): void
+    {
+        $entity = $this->InvoiceLines->newEntity([
+            'invoice_summary_id' => '788807d0-23df-42db-bb06-26c4c30f450a',
+            'badge_id' => null,
+            'description' => 'Postage',
+            'quantity' => 1,
+            'unit_price' => 4.5,
+            'line_amount' => 4.5,
+        ]);
+
+        $this->assertNotFalse($this->InvoiceLines->save($entity));
+        $this->assertNull($entity->badge_id);
+    }
+
+    public function testCounterCacheUpdatesBadgeInvoicedQuantity(): void
+    {
+        $badgeId = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+        $entity = $this->InvoiceLines->newEntity([
+            'invoice_summary_id' => '788807d0-23df-42db-bb06-26c4c30f450a',
+            'badge_id' => $badgeId,
+            'description' => 'Another invoiced badge',
+            'quantity' => 3,
+            'unit_price' => 1.5,
+            'line_amount' => 4.5,
+        ]);
+
+        $this->InvoiceLines->saveOrFail($entity);
+        $this->assertSame(4, (int)$this->InvoiceLines->Badges->get($badgeId)->invoiced_quantity);
+
+        $entity->set('quantity', 2);
+        $this->InvoiceLines->saveOrFail($entity);
+        $this->assertSame(3, (int)$this->InvoiceLines->Badges->get($badgeId)->invoiced_quantity);
+
+        $this->InvoiceLines->deleteOrFail($entity);
+        $this->assertSame(1, (int)$this->InvoiceLines->Badges->get($badgeId)->invoiced_quantity);
     }
 }

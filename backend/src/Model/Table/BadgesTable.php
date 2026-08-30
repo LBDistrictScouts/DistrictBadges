@@ -279,6 +279,12 @@ class BadgesTable extends Table
             ->allowEmptyString('national_data');
 
         $validator
+            ->scalar('image_url')
+            ->maxLength('image_url', 2048)
+            ->url('image_url')
+            ->allowEmptyString('image_url');
+
+        $validator
             ->boolean('stocked')
             ->requirePresence('stocked', 'create')
             ->notEmptyString('stocked');
@@ -291,6 +297,10 @@ class BadgesTable extends Table
         $validator
             ->integer('fulfilled_quantity')
             ->notEmptyString('fulfilled_quantity');
+
+        $validator
+            ->integer('invoiced_quantity')
+            ->notEmptyString('invoiced_quantity');
 
         $validator
             ->scalar('national_product_hash')

@@ -69,14 +69,14 @@ class ReplenishmentsTableTest extends TestCase
     public function testValidationDefault(): void
     {
         $entity = $this->Replenishments->newEntity([
-            'wholesale_order_number' => '',
+            'replenishment_number' => '',
         ]);
 
         $errors = $entity->getErrors();
-        $this->assertArrayNotHasKey('wholesale_order_number', $errors);
+        $this->assertArrayNotHasKey('replenishment_number', $errors);
 
         $valid = $this->Replenishments->newEntity([
-            'wholesale_order_number' => 'WO-123',
+            'replenishment_number' => 'WO-123',
         ]);
         $this->assertSame([], $valid->getErrors());
     }
@@ -91,7 +91,7 @@ class ReplenishmentsTableTest extends TestCase
             $this->Replenishments->newEmptyEntity(),
         );
 
-        $this->assertSame('REP-2025-04-1', $replenishment->wholesale_order_number);
+        $this->assertSame('REP-2025-04-01', $replenishment->replenishment_number);
         $this->assertSame(ReplenishmentStatus::Draft, $replenishment->status);
         $this->assertFalse($replenishment->order_submitted);
         $this->assertFalse($replenishment->received);

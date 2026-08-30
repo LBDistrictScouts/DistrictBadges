@@ -43,6 +43,51 @@ class BadgeTagsControllerTest extends TestCase
         $this->assertResponseContains(TagCategory::Sections->label());
         $this->assertResponseContains(TagCategory::BadgeTypes->label());
         $this->assertResponseContains('Tag Order');
+        $this->assertResponseContains('<h3>Badge Tags</h3>');
+        $this->assertResponseNotContains('Show All Tags');
+        $this->assertResponseContains('href="/badge-tags?category=' . TagCategory::Sections->value . '"');
+        $this->assertResponseContains('href="/badge-tags?category=' . TagCategory::BadgeTypes->value . '"');
+    }
+
+    public function testIndexWithCategoryShowsCategoryTitleAndShowAllLink(): void
+    {
+        $this->get('/badge-tags?category=' . TagCategory::BadgeTypes->value);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('<h3>Badge Type Tags</h3>');
+        $this->assertResponseContains('Show All Tags');
+        $this->assertResponseContains('button button-outline float-right');
+        $this->assertResponseNotContains('Beavers');
+
+        $this->get('/badge-tags?category=' . TagCategory::Sections->value);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('<h3>Section Tags</h3>');
+    }
+
+    public function testIndexSortingOverridesDefaultOrder(): void
+    {
+        $badgeTags = $this->getTableLocator()->get('BadgeTags');
+        $badgeTags->saveOrFail($badgeTags->newEntity([
+            'tag_name' => 'AAA sortable tag',
+            'tag_search_text' => 'aaa sortable tag',
+            'tag_category' => TagCategory::Sections->value,
+            'tag_order' => 999,
+        ]));
+
+        $this->get('/badge-tags');
+        $defaultBody = (string)$this->_response->getBody();
+        $this->assertLessThan(
+            strpos($defaultBody, 'AAA sortable tag'),
+            strpos($defaultBody, 'Beavers'),
+        );
+
+        $this->get('/badge-tags?sort=tag_name&direction=asc');
+        $sortedBody = (string)$this->_response->getBody();
+        $this->assertLessThan(
+            strpos($sortedBody, 'Beavers'),
+            strpos($sortedBody, 'AAA sortable tag'),
+        );
     }
 
     /**
