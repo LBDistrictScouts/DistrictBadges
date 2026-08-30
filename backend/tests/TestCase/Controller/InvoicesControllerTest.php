@@ -142,6 +142,7 @@ class InvoicesControllerTest extends TestCase
         $this->assertResponseContains('id="toggle-downloaded"');
         $this->assertResponseContains('Show Previously Downloaded Invoices');
         $this->assertResponseContains('id="select-all-invoices"');
+        $this->assertResponseContains('document.write(await response.text())');
     }
 
     public function testDownloadSelectionCanShowPreviouslyDownloadedInvoices(): void
@@ -188,6 +189,10 @@ class InvoicesControllerTest extends TestCase
         $invoices = $this->getTableLocator()->get('Invoices');
         // The shared summary fixture represents this fulfilment as already invoiced.
         $this->getTableLocator()->get('InvoiceSummaries')->deleteAll([]);
+        $this->getTableLocator()->get('Fulfilments')->updateAll(
+            ['dispatched_date' => '2026-02-28 23:59:59.500000'],
+            ['id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a'],
+        );
         $stockTransactions = $this->getTableLocator()->get('StockTransactions');
         $stockTransactions->getConnection()->insertQuery()
             ->insert([
@@ -369,6 +374,19 @@ class InvoicesControllerTest extends TestCase
 
         $updated = $invoices->get($id);
         $this->assertSame($originalNumber, $updated->invoice_number);
+    }
+
+    public function testEditReturnsValidationErrorsForMalformedBillingPeriod(): void
+    {
+        $id = 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138';
+        $this->enableCsrfToken();
+        $this->put("/invoices/edit/{$id}", [
+            'period_start_date' => 'not-a-date',
+            'period_end_date' => '2026-02-28',
+        ]);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Edit Invoice');
     }
 
     /**

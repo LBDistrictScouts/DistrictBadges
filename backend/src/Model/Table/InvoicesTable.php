@@ -103,18 +103,20 @@ class InvoicesTable extends Table
                     if ($value === null || $value === '') {
                         return true;
                     }
-                    $end = new DateTimeImmutable(
-                        $value instanceof DateTimeInterface ? $value->format('Y-m-d') : (string)$value,
-                    );
-                    if ($end >= new DateTimeImmutable('today')) {
+                    $end = $value instanceof DateTimeInterface ? $value->format('Y-m-d') : (string)$value;
+                    $startValue = $context['data']['period_start_date'] ?? null;
+                    $start = $startValue instanceof DateTimeInterface
+                        ? $startValue->format('Y-m-d')
+                        : (string)$startValue;
+                    if (!self::isExactDate($end) || ($start !== '' && !self::isExactDate($start))) {
+                        // The individual date rules provide the malformed-date errors.
+                        return true;
+                    }
+                    if ($end >= (new DateTimeImmutable('today'))->format('Y-m-d')) {
                         return false;
                     }
-                    $start = $context['data']['period_start_date'] ?? null;
 
-                    return $start === null || $start === ''
-                        || new DateTimeImmutable(
-                            $start instanceof DateTimeInterface ? $start->format('Y-m-d') : (string)$start,
-                        ) <= $end;
+                    return $start === '' || $start <= $end;
                 },
                 'message' => 'The billing period must end before today and not before its start date.',
             ]);
@@ -137,6 +139,16 @@ class InvoicesTable extends Table
             ->allowEmptyDateTime('last_downloaded');
 
         return $validator;
+    }
+
+    /**
+     * Check an ISO date without allowing PHP's date normalization.
+     */
+    private static function isExactDate(string $value): bool
+    {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+        return $date !== false && $date->format('Y-m-d') === $value;
     }
 
     /**
@@ -291,7 +303,8 @@ class InvoicesTable extends Table
         float $minimumTotal = 0.0,
     ): Invoice {
         $start = new DateTimeImmutable($startDate->format('Y-m-d 00:00:00'));
-        $end = new DateTimeImmutable($endDate->format('Y-m-d 23:59:59'));
+        $end = new DateTimeImmutable($endDate->format('Y-m-d 00:00:00'));
+        $endExclusive = $end->modify('+1 day');
         if ($start > $end) {
             throw new InvalidArgumentException('The invoice start date must be on or before the end date.');
         }
@@ -313,7 +326,7 @@ class InvoicesTable extends Table
             ->where([
                 'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
                 'Fulfilments.dispatched_date >=' => $start,
-                'Fulfilments.dispatched_date <=' => $end,
+                'Fulfilments.dispatched_date <' => $endExclusive,
                 'Orders.account_id' => $accountId,
                 'Fulfilments.id NOT IN' => $alreadyInvoiced,
             ])

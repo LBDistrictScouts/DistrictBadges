@@ -99,7 +99,9 @@ document.getElementById('invoice-download-form').addEventListener('submit', asyn
         });
         const contentType = response.headers.get('Content-Type') || '';
         if (!response.ok || !contentType.includes('application/zip')) {
-            window.location.reload();
+            document.open();
+            document.write(await response.text());
+            document.close();
             return;
         }
 
