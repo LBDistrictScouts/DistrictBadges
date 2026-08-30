@@ -20,6 +20,7 @@ class AuditsFixture extends TestFixture
         $this->records = [
             [
                 'id' => '003b39f5-34f6-4f49-b1ff-97204ffc4336',
+                'audit_number' => 'AUD-2026-02-01',
                 'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
                 'audit_timestamp' => 1771723146,
                 'audit_completed' => 1,

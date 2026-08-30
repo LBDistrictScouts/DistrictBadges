@@ -20,7 +20,7 @@ class InvoiceLinesFixture extends TestFixture
         $this->records = [
             [
                 'id' => 'fff26903-c4ab-4880-8286-63fdedbe4abd',
-                'invoice_id' => 'a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138',
+                'invoice_summary_id' => '788807d0-23df-42db-bb06-26c4c30f450a',
                 'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                 'description' => 'Lorem ipsum dolor sit amet',
                 'quantity' => 1,

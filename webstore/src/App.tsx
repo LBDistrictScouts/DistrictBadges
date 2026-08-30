@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Badge, Button, Container, Form, Modal, Offcanvas, Spinner } from 'react-bootstrap'
 import coreData from './generated/core-data.json'
+import { buildOrderPayload, type OrderCheckoutDetails } from './orderPayload'
 import './App.css'
 
 type Product = {
@@ -30,19 +31,7 @@ type BasketItem = {
 
 type AlgoliaResponse = { hits: Product[]; nbHits: number; nbPages: number }
 
-type CheckoutDetails = {
-  firstName: string
-  lastName: string
-  email: string
-  groupId: string
-  sectionId: string
-  postage: boolean
-  addressLine1: string
-  addressLine2: string
-  town: string
-  county: string
-  postcode: string
-}
+type CheckoutDetails = OrderCheckoutDetails
 
 type ApiErrorResponse = {
   message?: string
@@ -333,29 +322,7 @@ function App() {
       const response = await fetch(`${apiBaseUrl}/api/orders.json`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          idempotency_key: idempotencyKey.current,
-          first_name: checkoutDetails.firstName,
-          last_name: checkoutDetails.lastName,
-          email: checkoutDetails.email,
-          group_id: checkoutDetails.groupId,
-          section_id: checkoutDetails.sectionId,
-          postage: checkoutDetails.postage,
-          ...(checkoutDetails.postage ? {
-            dispatch_address: {
-              address_line_1: checkoutDetails.addressLine1,
-              ...(checkoutDetails.addressLine2.trim() ? { address_line_2: checkoutDetails.addressLine2 } : {}),
-              town: checkoutDetails.town,
-              ...(checkoutDetails.county.trim() ? { county: checkoutDetails.county } : {}),
-              postcode: checkoutDetails.postcode,
-            },
-          } : {}),
-          lines: basket.map((item) => ({
-            badge_id: item.id,
-            quantity: item.quantity,
-            unit_price: item.price,
-          })),
-        }),
+        body: JSON.stringify(buildOrderPayload(idempotencyKey.current, checkoutDetails, basket)),
       })
 
       if (!response.ok) {
@@ -451,13 +418,16 @@ function App() {
                       {product.image_medium_url ? <img src={product.image_medium_url} alt="" loading="lazy" /> : <div className="image-placeholder" aria-hidden="true">Badge</div>}
                     </div>
                     <div className="product-content">
-                      <div className="product-tags">{(product.section_tags ?? []).slice(0, 2).map((tag) => <span key={tag}>{tag}</span>)}</div>
                       <h3>{product.badge_name}</h3>
                       <div className="product-footer">
                         <strong>{formatPrice(product.price)}</strong>
                         <Button variant={addedProductId === product.id ? 'success' : 'primary'} onClick={() => openQuantityPicker(product)} aria-label={`Choose a quantity of ${product.badge_name}`}>
                           {addedProductId === product.id ? 'Added ✓' : 'Add to basket'}
                         </Button>
+                      </div>
+                      <div className="product-tags">
+                        {(product.section_tags ?? []).map((tag) => <span key={`section-${tag}`} data-tag={tag.toLowerCase()}>{tag}</span>)}
+                        {(product.type_tags ?? []).map((tag) => <span key={`type-${tag}`} data-tag={tag.toLowerCase()}>{tag}</span>)}
                       </div>
                     </div>
                   </article>

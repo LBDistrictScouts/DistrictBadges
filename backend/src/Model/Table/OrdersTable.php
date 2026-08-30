@@ -5,6 +5,7 @@ namespace App\Model\Table;
 
 use App\Model\Enum\OrderStatus;
 use ArrayObject;
+use Cake\Core\Configure;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -59,7 +60,7 @@ class OrdersTable extends Table
         ]);
         $this->addBehavior('EntityNumber', [
             'field' => 'order_number',
-            'prefix' => 'ORD',
+            'prefix' => Configure::read('EntityNumbers.orderPrefix', 'ORD'),
         ]);
 
         $this->belongsTo('Accounts', [

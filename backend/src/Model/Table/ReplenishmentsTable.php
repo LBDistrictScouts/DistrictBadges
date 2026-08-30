@@ -5,6 +5,7 @@ namespace App\Model\Table;
 
 use App\Model\Enum\ReplenishmentStatus;
 use ArrayObject;
+use Cake\Core\Configure;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -44,7 +45,7 @@ class ReplenishmentsTable extends Table
         parent::initialize($config);
 
         $this->setTable('replenishments');
-        $this->setDisplayField('wholesale_order_number');
+        $this->setDisplayField('replenishment_number');
         $this->setPrimaryKey('id');
         $this->getSchema()->setColumnType(
             'status',
@@ -59,8 +60,8 @@ class ReplenishmentsTable extends Table
             ],
         ]);
         $this->addBehavior('EntityNumber', [
-            'field' => 'wholesale_order_number',
-            'prefix' => 'REP',
+            'field' => 'replenishment_number',
+            'prefix' => Configure::read('EntityNumbers.replenishmentPrefix', 'REP'),
         ]);
 
         $this->hasMany('StockTransactions', [
@@ -83,9 +84,9 @@ class ReplenishmentsTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->scalar('wholesale_order_number')
-            ->maxLength('wholesale_order_number', 64)
-            ->allowEmptyString('wholesale_order_number');
+            ->scalar('replenishment_number')
+            ->maxLength('replenishment_number', 64)
+            ->allowEmptyString('replenishment_number');
 
         $validator
             ->scalar('wholesaler_order_number')

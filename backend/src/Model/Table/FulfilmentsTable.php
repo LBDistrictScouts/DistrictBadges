@@ -6,6 +6,7 @@ namespace App\Model\Table;
 use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use ArrayObject;
+use Cake\Core\Configure;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -64,7 +65,7 @@ class FulfilmentsTable extends Table
         ]);
         $this->addBehavior('EntityNumber', [
             'field' => 'fulfilment_number',
-            'prefix' => 'FUL',
+            'prefix' => Configure::read('EntityNumbers.fulfilmentPrefix', 'FUL'),
         ]);
 
         $this->hasMany('StockTransactions', [

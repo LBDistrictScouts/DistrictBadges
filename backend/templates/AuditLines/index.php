@@ -32,7 +32,7 @@
                     <td><?= h($auditLine->audit_hash) ?></td>
                     <td><?= $auditLine->hasValue('fulfilment') ? $this->Html->link($auditLine->fulfilment->fulfilment_number, ['controller' => 'Fulfilments', 'action' => 'view', $auditLine->fulfilment->id]) : '' ?></td>
                     <td><?= $auditLine->hasValue('audit') ? $this->Html->link($auditLine->audit->id, ['controller' => 'Audits', 'action' => 'view', $auditLine->audit->id]) : '' ?></td>
-                    <td><?= $auditLine->hasValue('replenishment') ? $this->Html->link($auditLine->replenishment->wholesale_order_number, ['controller' => 'Replenishments', 'action' => 'view', $auditLine->replenishment->id]) : '' ?></td>
+                    <td><?= $auditLine->hasValue('replenishment') ? $this->Html->link($auditLine->replenishment->replenishment_number, ['controller' => 'Replenishments', 'action' => 'view', $auditLine->replenishment->id]) : '' ?></td>
                     <td><?= $this->Number->format($auditLine->on_hand_quantity_change) ?></td>
                     <td><?= $this->Number->format($auditLine->receipted_quantity_change) ?></td>
                     <td><?= $this->Number->format($auditLine->pending_quantity_change) ?></td>

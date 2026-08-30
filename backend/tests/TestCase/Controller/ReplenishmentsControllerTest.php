@@ -46,7 +46,7 @@ class ReplenishmentsControllerTest extends TestCase
         $this->get('/replenishments');
         $this->assertResponseOk();
         $this->assertResponseNotContains('>Delete<');
-        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('REP-2026-02-01');
         $this->assertResponseContains('Ord. Qty');
         $this->assertResponseContains('Ord. Value');
         $this->assertResponseContains('Rec. Qty');
@@ -57,30 +57,58 @@ class ReplenishmentsControllerTest extends TestCase
         $this->assertResponseContains('Created To');
     }
 
+    public function testIndexSortingOverridesDefaultOrder(): void
+    {
+        $this->getTableLocator()->get('Replenishments')->getConnection()->insertQuery()
+            ->insert(['id', 'replenishment_number', 'created_date', 'status'])
+            ->into('replenishments')
+            ->values([
+                'id' => 'f519b9b5-c5ca-46e0-ad6b-2d018387bb13',
+                'replenishment_number' => 'AAA-sortable-replenishment',
+                'created_date' => '2020-01-01 00:00:00',
+                'status' => ReplenishmentStatus::Draft->value,
+            ])
+            ->execute();
+
+        $this->get('/replenishments');
+        $defaultBody = (string)$this->_response->getBody();
+        $this->assertLessThan(
+            strpos($defaultBody, 'AAA-sortable-replenishment'),
+            strpos($defaultBody, 'REP-2026-02-01'),
+        );
+
+        $this->get('/replenishments?sort=replenishment_number&direction=asc');
+        $sortedBody = (string)$this->_response->getBody();
+        $this->assertLessThan(
+            strpos($sortedBody, 'REP-2026-02-01'),
+            strpos($sortedBody, 'AAA-sortable-replenishment'),
+        );
+    }
+
     public function testIndexFiltersByStatus(): void
     {
         $this->get('/replenishments?status=' . ReplenishmentStatus::Received->value);
         $this->assertResponseOk();
-        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('REP-2026-02-01');
 
         $this->get('/replenishments?status=' . ReplenishmentStatus::Submitted->value);
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('REP-2026-02-01');
     }
 
     public function testIndexFiltersByNumberAndDate(): void
     {
-        $this->get('/replenishments?number=Lorem');
+        $this->get('/replenishments?number=REP-2026');
         $this->assertResponseOk();
-        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('REP-2026-02-01');
 
         $this->get('/replenishments?number=Missing');
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('REP-2026-02-01');
 
         $this->get('/replenishments?created_from=2030-01-01');
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('REP-2026-02-01');
     }
 
     public function testIndexPaginationPreservesFalseyStatusFilter(): void
@@ -110,7 +138,7 @@ class ReplenishmentsControllerTest extends TestCase
     {
         $this->get('/replenishments/view/f6d1f429-877b-4d92-83a0-cb305d853da7');
         $this->assertResponseOk();
-        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('REP-2026-02-01');
         $this->assertResponseContains('Ordered Lines');
         $this->assertResponseContains('Received Lines');
         $this->assertResponseNotContains('Transaction Type');
@@ -138,7 +166,7 @@ class ReplenishmentsControllerTest extends TestCase
             'total_ordered_quantity' => 5,
             'total_received_amount' => 10.5,
             'total_received_quantity' => 4,
-            'wholesale_order_number' => 'WO-NEW',
+            'replenishment_number' => 'WO-NEW',
             'wholesaler_order_number' => 'SUP-67890',
             'replenishment_order_lines' => [
                 [
@@ -155,10 +183,10 @@ class ReplenishmentsControllerTest extends TestCase
         $this->assertSame($before + 1, $replenishments->find()->count());
 
         $saved = $replenishments->find()
-            ->where(['wholesale_order_number LIKE' => 'REP-%'])
+            ->where(['replenishment_number LIKE' => 'REP-%'])
             ->orderByDesc('created_date')
             ->firstOrFail();
-        $this->assertMatchesRegularExpression('/^REP-\d{4}-\d{2}-\d+$/', $saved->wholesale_order_number);
+        $this->assertMatchesRegularExpression('/^REP-\d{4}-\d{2}-\d+$/', $saved->replenishment_number);
         $this->assertSame(ReplenishmentStatus::Submitted, $saved->status);
         $this->assertTrue($saved->order_submitted);
         $this->assertNotNull($saved->order_submitted_date);
@@ -559,7 +587,7 @@ class ReplenishmentsControllerTest extends TestCase
             'total_ordered_quantity' => 3,
             'total_received_amount' => 8.0,
             'total_received_quantity' => 2,
-            'wholesale_order_number' => 'WO-DELETE',
+            'replenishment_number' => 'WO-DELETE',
         ]);
         $replenishments->saveOrFail($entity);
         $id = $entity->id;

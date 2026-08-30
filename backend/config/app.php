@@ -105,6 +105,22 @@ return [
         'price' => max(0.0, (float)env('POSTAGE_PRICE', '2.4')),
     ],
 
+    'Invoices' => [
+        'minimumTotal' => max(0, (int)env('INVOICE_MINIMUM_TOTAL', '15')),
+    ],
+
+    'InvoiceGenerator' => [
+        'from' => env('INVOICE_GENERATOR_FROM', 'LBA Scouts District Badge Shop'),
+    ],
+
+    'EntityNumbers' => [
+        'orderPrefix' => env('ORDER_NUMBER_PREFIX', 'ORD'),
+        'fulfilmentPrefix' => env('FULFILMENT_NUMBER_PREFIX', 'FUL'),
+        'replenishmentPrefix' => env('REPLENISHMENT_NUMBER_PREFIX', 'REP'),
+        'auditPrefix' => env('AUDIT_NUMBER_PREFIX', 'AUD'),
+        'invoicePrefix' => env('INVOICE_NUMBER_PREFIX', 'BDG'),
+    ],
+
     'Sqs' => [
         'region' => env('AWS_REGION', 'eu-west-1'),
         'profile' => env('AWS_PROFILE', null),

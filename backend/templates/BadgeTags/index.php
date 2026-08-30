@@ -1,13 +1,25 @@
 <?php
+use App\Model\Enum\TagCategory;
+
 /**
  * @var \App\View\AppView $this
  * @var iterable<\App\Model\Entity\BadgeTag> $badgeTags
  * @var \App\Model\Enum\TagCategory|null $category
  */
+$title = match ($category) {
+    TagCategory::Sections => __('Section Tags'),
+    TagCategory::BadgeTypes => __('Badge Type Tags'),
+    null => __('Badge Tags'),
+};
 ?>
 <div class="badgeTags index content">
-    <?= $this->Html->link(__('New Badge Tag'), ['action' => 'add'], ['class' => 'button float-right']) ?>
-    <h3><?= h($category?->label() ?? __('Badge Tags')) ?></h3>
+    <div class="badge-tag-index-actions float-right">
+        <?php if ($category !== null) : ?>
+            <?= $this->Html->link(__('Show All Tags'), ['action' => 'index'], ['class' => 'button button-outline float-right']) ?>
+        <?php endif; ?>
+        <?= $this->Html->link(__('New Badge Tag'), ['action' => 'add'], ['class' => 'button float-right']) ?>
+    </div>
+    <h3><?= h($title) ?></h3>
     <div class="table-responsive">
         <table>
             <thead>
@@ -24,7 +36,14 @@
                 <tr>
                     <td><?= h($badgeTag->tag_name) ?></td>
                     <td><?= h($badgeTag->tag_search_text) ?></td>
-                    <td><?= $badgeTag->tag_category === null ? '' : h($badgeTag->tag_category->label()) ?></td>
+                    <td>
+                        <?php if ($badgeTag->tag_category !== null) : ?>
+                            <?= $this->Html->link(
+                                $badgeTag->tag_category->label(),
+                                ['action' => 'index', '?' => ['category' => $badgeTag->tag_category->value]],
+                            ) ?>
+                        <?php endif; ?>
+                    </td>
                     <td><?= $this->Number->format($badgeTag->tag_order) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $badgeTag->id]) ?>

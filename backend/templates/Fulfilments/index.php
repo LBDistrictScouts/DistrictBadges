@@ -11,6 +11,9 @@ use App\Model\Enum\FulfilmentStatus;
 <div class="fulfilments index content">
     <?= $this->Html->link(__('New Fulfilment'), ['action' => 'add'], ['class' => 'button float-right']) ?>
     <h3><?= __('Fulfilments') ?></h3>
+    <details class="badge-index-controls" data-badge-index-controls>
+    <summary><?= __('Filters') ?></summary>
+    <div class="badge-index-controls__body">
     <?= $this->Form->create(null, ['type' => 'get', 'class' => 'index-filters']) ?>
     <div class="index-filters__row">
         <?= $this->Form->control('number', [
@@ -41,6 +44,9 @@ use App\Model\Enum\FulfilmentStatus;
         <?= $this->Html->link(__('Clear'), ['action' => 'index'], ['class' => 'button button-outline']) ?>
     </div>
     <?= $this->Form->end() ?>
+    </div>
+    </details>
+    <?= $this->Html->script('badge-index-controls', ['block' => true, 'defer' => true]) ?>
     <div class="table-responsive">
         <table>
             <thead>

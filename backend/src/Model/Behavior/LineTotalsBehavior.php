@@ -61,7 +61,7 @@ class LineTotalsBehavior extends Behavior
     {
         $foreignKey = (string)$this->getConfig('foreignKey');
         $targetAmountField = (string)$this->getConfig('targetAmountField');
-        $targetQuantityField = (string)$this->getConfig('targetQuantityField');
+        $targetQuantityField = $this->getConfig('targetQuantityField');
         $throughAssociation = $this->getConfig('throughAssociation');
         $sourceIds = array_unique([
             $entity->get($foreignKey),
@@ -78,10 +78,11 @@ class LineTotalsBehavior extends Behavior
         $target = $this->getTargetTable();
 
         foreach ($parentIds as $parentId) {
-            $target->updateAll([
-                $targetAmountField => $this->getTotalAmountForParent((string)$parentId),
-                $targetQuantityField => $this->getTotalQuantityForParent((string)$parentId),
-            ], [
+            $totals = [$targetAmountField => $this->getTotalAmountForParent((string)$parentId)];
+            if ($targetQuantityField !== null) {
+                $totals[(string)$targetQuantityField] = $this->getTotalQuantityForParent((string)$parentId);
+            }
+            $target->updateAll($totals, [
                 $target->getPrimaryKey() => $parentId,
             ]);
         }

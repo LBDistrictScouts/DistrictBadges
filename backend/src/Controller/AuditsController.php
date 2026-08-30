@@ -23,13 +23,47 @@ class AuditsController extends AppController
     {
         $query = $this->Audits->find()
             ->contain(['Users', 'AuditLines']);
+        $filters = [
+            'number' => trim((string)$this->request->getQuery('number')),
+            'user_id' => (string)$this->request->getQuery('user_id'),
+            'completed' => (string)$this->request->getQuery('completed'),
+            'audited_from' => (string)$this->request->getQuery('audited_from'),
+            'audited_to' => (string)$this->request->getQuery('audited_to'),
+        ];
+
+        if ($filters['number'] !== '') {
+            $query->where(['Audits.audit_number LIKE' => '%' . $filters['number'] . '%']);
+        }
+        if ($filters['user_id'] !== '') {
+            $query->where(['Audits.user_id' => $filters['user_id']]);
+        }
+        if (in_array($filters['completed'], ['0', '1'], true)) {
+            $query->where(['Audits.audit_completed' => $filters['completed'] === '1']);
+        }
+        $auditedFrom = $this->validDateFilter($filters['audited_from']);
+        if ($auditedFrom !== null) {
+            $query->where(['Audits.audit_timestamp >=' => $auditedFrom . ' 00:00:00']);
+        }
+        $auditedTo = $this->validDateFilter($filters['audited_to']);
+        if ($auditedTo !== null) {
+            $query->where(['Audits.audit_timestamp <' => date('Y-m-d', strtotime($auditedTo . ' +1 day'))]);
+        }
+
         $audits = $this->paginate($query);
+        $userOptions = $this->Audits->Users->find('list')
+            ->orderByAsc('last_name')
+            ->orderByAsc('first_name')
+            ->all();
+        $completionOptions = [
+            '0' => __('Open'),
+            '1' => __('Completed'),
+        ];
         $openAudit = $this->Audits->find()
             ->where(['audit_completed' => false])
             ->orderBy(['audit_timestamp' => 'ASC'])
             ->first();
 
-        $this->set(compact('audits', 'openAudit'));
+        $this->set(compact('audits', 'completionOptions', 'filters', 'openAudit', 'userOptions'));
     }
 
     /**

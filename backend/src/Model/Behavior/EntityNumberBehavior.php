@@ -61,7 +61,7 @@ class EntityNumberBehavior extends Behavior
             throw new RuntimeException('Unable to generate entity number.');
         }
 
-        $entity->set($field, sprintf('%s-%s-%d', $prefix, $period, $increment));
+        $entity->set($field, sprintf('%s-%s-%02d', $prefix, $period, $increment));
     }
 
     /**

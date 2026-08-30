@@ -32,7 +32,7 @@
                     <td><?= h($replenishmentOrderLine->audit_hash) ?></td>
                     <td><?= $replenishmentOrderLine->hasValue('fulfilment') ? $this->Html->link($replenishmentOrderLine->fulfilment->fulfilment_number, ['controller' => 'Fulfilments', 'action' => 'view', $replenishmentOrderLine->fulfilment->id]) : '' ?></td>
                     <td><?= $replenishmentOrderLine->hasValue('audit') ? $this->Html->link($replenishmentOrderLine->audit->id, ['controller' => 'Audits', 'action' => 'view', $replenishmentOrderLine->audit->id]) : '' ?></td>
-                    <td><?= $replenishmentOrderLine->hasValue('replenishment') ? $this->Html->link($replenishmentOrderLine->replenishment->wholesale_order_number, ['controller' => 'Replenishments', 'action' => 'view', $replenishmentOrderLine->replenishment->id]) : '' ?></td>
+                    <td><?= $replenishmentOrderLine->hasValue('replenishment') ? $this->Html->link($replenishmentOrderLine->replenishment->replenishment_number, ['controller' => 'Replenishments', 'action' => 'view', $replenishmentOrderLine->replenishment->id]) : '' ?></td>
                     <td><?= $this->Number->format($replenishmentOrderLine->on_hand_quantity_change) ?></td>
                     <td><?= $this->Number->format($replenishmentOrderLine->receipted_quantity_change) ?></td>
                     <td><?= $this->Number->format($replenishmentOrderLine->pending_quantity_change) ?></td>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Model\Table;
 
 use App\Model\Table\InvoicesTable;
+use Cake\Core\Configure;
 use Cake\I18n\DateTime;
 use Cake\TestSuite\TestCase;
 
@@ -29,6 +30,11 @@ class InvoicesTableTest extends TestCase
         'app.Accounts',
         'app.Users',
         'app.Invoices',
+        'app.Badges',
+        'app.Orders',
+        'app.Fulfilments',
+        'app.InvoiceSummaries',
+        'app.InvoiceLines',
     ];
 
     /**
@@ -127,9 +133,46 @@ class InvoicesTableTest extends TestCase
         $this->assertNotEmpty($result->id);
 
         $saved = $this->Invoices->get($result->id);
-        $this->assertSame('INV-2025-03-1', $saved->invoice_number);
+        $this->assertSame(
+            Configure::read('EntityNumbers.invoicePrefix') . '-2025-03-01',
+            $saved->invoice_number,
+        );
         $this->assertSame('2025-03-01 09:00:00', $saved->invoice_date->format('Y-m-d H:i:s'));
         $this->assertSame('2025-03-10 09:00:00', $saved->due_date->format('Y-m-d H:i:s'));
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
+    }
+
+    public function testToInvoiceGeneratorData(): void
+    {
+        $invoiceLines = $this->getTableLocator()->get('InvoiceLines');
+        $invoiceLines->saveOrFail($invoiceLines->newEntity([
+            'invoice_summary_id' => '788807d0-23df-42db-bb06-26c4c30f450a',
+            'badge_id' => null,
+            'description' => 'Postage',
+            'quantity' => 1,
+            'unit_price' => '4.50',
+            'line_amount' => '4.50',
+        ]));
+        $this->getTableLocator()->get('InvoiceSummaries')->updateAll(
+            ['line_amount' => '6.00'],
+            ['id' => '788807d0-23df-42db-bb06-26c4c30f450a'],
+        );
+        $data = $this->Invoices->toInvoiceGeneratorData('a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138');
+
+        $this->assertSame('invoice', $data['type']);
+        $this->assertSame(Configure::read('InvoiceGenerator.from'), $data['from']);
+        $this->assertSame('Lorem ipsum dolor sit amet', $data['to']);
+        $this->assertSame('GBP', $data['currency']);
+        $this->assertSame('Lorem ipsum dolor sit amet', $data['number']);
+        $this->assertSame('2026-02-21', $data['date']);
+        $this->assertSame('2026-02-21', $data['due_date']);
+        $this->assertSame([[
+            'name' => 'Order Lorem ipsum dolor sit amet / Fulfilment Lorem ipsum dolor sit amet',
+            'description' => '1 badges + £4.50 postage. Ordered by: Lorem ipsum dolor sit amet '
+                . 'Lorem ipsum dolor sit amet. Section: Not specified.',
+            'quantity' => 1,
+            'unit_cost' => 6.0,
+        ]], $data['items']);
+        $this->assertIsString(json_encode($data, JSON_THROW_ON_ERROR));
     }
 }

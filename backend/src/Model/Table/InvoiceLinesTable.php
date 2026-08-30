@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use ArrayObject;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -10,7 +13,7 @@ use Cake\Validation\Validator;
 /**
  * InvoiceLines Model
  *
- * @property \App\Model\Table\InvoicesTable&\Cake\ORM\Association\BelongsTo $Invoices
+ * @property \App\Model\Table\InvoiceSummariesTable&\Cake\ORM\Association\BelongsTo $InvoiceSummaries
  * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsTo $Badges
  * @method \App\Model\Entity\InvoiceLine newEmptyEntity()
  * @method \App\Model\Entity\InvoiceLine newEntity(array $data, array $options = [])
@@ -29,6 +32,71 @@ use Cake\Validation\Validator;
 class InvoiceLinesTable extends Table
 {
     /**
+     * Refresh cached badge invoice quantities after a line is saved.
+     *
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Invoice line.
+     * @param \ArrayObject $options Save options.
+     * @return void
+     */
+    public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        $this->refreshAffectedBadges($entity);
+    }
+
+    /**
+     * Refresh cached badge invoice quantities after a line is deleted.
+     *
+     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Invoice line.
+     * @param \ArrayObject $options Delete options.
+     * @return void
+     */
+    public function afterDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        $this->refreshAffectedBadges($entity);
+    }
+
+    /**
+     * @param \Cake\Datasource\EntityInterface $entity Invoice line.
+     * @return void
+     */
+    private function refreshAffectedBadges(EntityInterface $entity): void
+    {
+        $badgeIds = array_unique(array_filter([
+            $entity->get('badge_id'),
+            $entity->getOriginal('badge_id'),
+        ]));
+
+        foreach ($badgeIds as $badgeId) {
+            $this->refreshBadgeInvoicedQuantity((string)$badgeId);
+        }
+    }
+
+    /**
+     * Recalculate a badge's cached invoiced quantity.
+     *
+     * @param string $badgeId Badge id.
+     * @return void
+     */
+    public function refreshBadgeInvoicedQuantity(string $badgeId): void
+    {
+        $totals = $this->find()
+            ->select(['quantity' => $this->find()->func()->sum('quantity')])
+            ->where(['badge_id' => $badgeId])
+            ->disableHydration()
+            ->first();
+
+        $badge = $this->Badges->get($badgeId);
+        $badge->set('invoiced_quantity', (int)($totals['quantity'] ?? 0));
+        $this->Badges->saveOrFail($badge, [
+            'checkRules' => false,
+            'validate' => false,
+            'skipAlgolia' => true,
+        ]);
+    }
+
+    /**
      * Initialize method
      *
      * @param array<string, mixed> $config The configuration for the Table.
@@ -42,13 +110,13 @@ class InvoiceLinesTable extends Table
         $this->setDisplayField('description');
         $this->setPrimaryKey('id');
 
-        $this->belongsTo('Invoices', [
-            'foreignKey' => 'invoice_id',
+        $this->belongsTo('InvoiceSummaries', [
+            'foreignKey' => 'invoice_summary_id',
             'joinType' => 'INNER',
         ]);
         $this->belongsTo('Badges', [
             'foreignKey' => 'badge_id',
-            'joinType' => 'INNER',
+            'joinType' => 'LEFT',
         ]);
     }
 
@@ -61,12 +129,12 @@ class InvoiceLinesTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->uuid('invoice_id')
-            ->notEmptyString('invoice_id');
+            ->uuid('invoice_summary_id')
+            ->notEmptyString('invoice_summary_id');
 
         $validator
             ->uuid('badge_id')
-            ->notEmptyString('badge_id');
+            ->allowEmptyString('badge_id');
 
         $validator
             ->scalar('description')
@@ -101,8 +169,21 @@ class InvoiceLinesTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->existsIn(['invoice_id'], 'Invoices'), ['errorField' => 'invoice_id']);
-        $rules->add($rules->existsIn(['badge_id'], 'Badges'), ['errorField' => 'badge_id']);
+        $rules->add($rules->existsIn(['invoice_summary_id'], 'InvoiceSummaries'), [
+            'errorField' => 'invoice_summary_id',
+        ]);
+        $rules->add(
+            function (EntityInterface $entity): bool {
+                $badgeId = $entity->get('badge_id');
+
+                return $badgeId === null || $badgeId === '' || $this->Badges->exists(['id' => $badgeId]);
+            },
+            'badgeExists',
+            [
+                'errorField' => 'badge_id',
+                'message' => __('This value does not exist.'),
+            ],
+        );
 
         return $rules;
     }

@@ -198,7 +198,7 @@ erDiagram
         timestamp received_date
         decimal total_amount
         integer total_quantity
-        string wholesale_order_number
+        string replenishment_number
     }
     audits {
         uuid id PK

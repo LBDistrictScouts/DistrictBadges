@@ -53,7 +53,7 @@
     </aside>
     <div class="column column-80">
         <div class="replenishments view content">
-            <h3><?= h($replenishment->wholesale_order_number) ?></h3>
+            <h3><?= h($replenishment->replenishment_number) ?></h3>
             <table>
                 <tr>
                     <th><?= __('Wholesaler Order Number') ?></th>

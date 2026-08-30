@@ -40,7 +40,7 @@
                 </tr>
                 <tr>
                     <th><?= __('Replenishment') ?></th>
-                    <td><?= $replenishmentOrderLine->hasValue('replenishment') ? $this->Html->link($replenishmentOrderLine->replenishment->wholesale_order_number, ['controller' => 'Replenishments', 'action' => 'view', $replenishmentOrderLine->replenishment->id]) : '' ?></td>
+                    <td><?= $replenishmentOrderLine->hasValue('replenishment') ? $this->Html->link($replenishmentOrderLine->replenishment->replenishment_number, ['controller' => 'Replenishments', 'action' => 'view', $replenishmentOrderLine->replenishment->id]) : '' ?></td>
                 </tr>
                 <tr>
                     <th><?= __('On Hand Quantity Change') ?></th>

@@ -41,8 +41,28 @@ class AuditsControllerTest extends TestCase
     {
         $this->get('/audits');
         $this->assertResponseOk();
+        $this->assertResponseContains('Audit Number');
+        $this->assertResponseContains('AUD-2026-02-01');
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('data-badge-index-controls');
+        $this->assertResponseContains('All users');
+        $this->assertResponseContains('All statuses');
         $this->assertResponseNotContains('>Edit<');
+    }
+
+    public function testIndexFilters(): void
+    {
+        $this->get('/audits?number=AUD-2026&completed=1');
+        $this->assertResponseOk();
+        $this->assertSame(2, substr_count((string)$this->_response->getBody(), '<tr>'));
+
+        $this->get('/audits?completed=0');
+        $this->assertResponseOk();
+        $this->assertSame(1, substr_count((string)$this->_response->getBody(), '<tr>'));
+
+        $this->get('/audits?audited_from=2030-01-01');
+        $this->assertResponseOk();
+        $this->assertSame(1, substr_count((string)$this->_response->getBody(), '<tr>'));
     }
 
     /**
@@ -55,6 +75,7 @@ class AuditsControllerTest extends TestCase
     {
         $this->get('/audits/view/003b39f5-34f6-4f49-b1ff-97204ffc4336');
         $this->assertResponseOk();
+        $this->assertResponseContains('Stock audit AUD-2026-02-01');
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseNotContains('Edit Audit');
     }
@@ -86,6 +107,7 @@ class AuditsControllerTest extends TestCase
         $this->assertSame($before + 1, $audits->find()->count());
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
         $this->assertFalse($saved->audit_completed);
+        $this->assertMatchesRegularExpression('/^AUD-\d{4}-\d{2}-\d+$/', $saved->audit_number);
     }
 
     public function testCannotBeginSecondAuditWhileOneIsOpen(): void

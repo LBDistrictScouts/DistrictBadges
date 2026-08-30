@@ -11,11 +11,15 @@ use Cake\ORM\Entity;
  * @property string $id
  * @property \Cake\I18n\DateTime $invoice_date
  * @property \Cake\I18n\DateTime $due_date
+ * @property \Cake\I18n\Date|null $period_start_date
+ * @property \Cake\I18n\Date|null $period_end_date
  * @property string $invoice_number
  * @property string $account_id
+ * @property string $total_amount
+ * @property \Cake\I18n\DateTime|null $last_downloaded
  *
  * @property \App\Model\Entity\Account $account
- * @property \App\Model\Entity\InvoiceLine[] $invoice_lines
+ * @property \App\Model\Entity\InvoiceSummary[] $invoice_summaries
  */
 class Invoice extends Entity
 {
@@ -31,8 +35,12 @@ class Invoice extends Entity
     protected array $_accessible = [
         'invoice_date' => true,
         'due_date' => true,
+        'period_start_date' => true,
+        'period_end_date' => true,
         'account_id' => true,
+        'total_amount' => false,
+        'last_downloaded' => false,
         'account' => true,
-        'invoice_lines' => true,
+        'invoice_summaries' => true,
     ];
 }

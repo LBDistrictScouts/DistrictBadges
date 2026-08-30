@@ -99,7 +99,7 @@ class FulfilmentsTableTest extends TestCase
         $this->assertNotEmpty($result->id);
 
         $saved = $this->Fulfilments->get($result->id);
-        $this->assertSame('FUL-2025-01-1', $saved->fulfilment_number);
+        $this->assertSame('FUL-2025-01-01', $saved->fulfilment_number);
         $this->assertSame('2025-01-02 09:00:00', $saved->fulfilment_date->format('Y-m-d H:i:s'));
         $this->assertSame(FulfilmentStatus::Draft, $saved->status);
         $this->assertNull($saved->dispatched_date);
@@ -116,8 +116,8 @@ class FulfilmentsTableTest extends TestCase
         $behavior->setDate(new DateTime('2098-12-01 10:00:00'));
         $third = $this->Fulfilments->saveOrFail($this->Fulfilments->newEmptyEntity());
 
-        $this->assertSame('FUL-2098-11-1', $first->fulfilment_number);
-        $this->assertSame('FUL-2098-11-2', $second->fulfilment_number);
-        $this->assertSame('FUL-2098-12-1', $third->fulfilment_number);
+        $this->assertSame('FUL-2098-11-01', $first->fulfilment_number);
+        $this->assertSame('FUL-2098-11-02', $second->fulfilment_number);
+        $this->assertSame('FUL-2098-12-01', $third->fulfilment_number);
     }
 }

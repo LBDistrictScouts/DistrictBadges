@@ -26,6 +26,9 @@ $entityCategories = [
     'FulfilmentLines' => 'fulfilments',
     'Orders' => 'orders',
     'OrderLines' => 'orders',
+    'Invoices' => 'invoices',
+    'InvoiceLines' => 'invoices',
+    'InvoiceSummaries' => 'invoices',
     'Badges' => 'badges',
     'BadgeSections' => 'badges',
     'BadgeTags' => 'badges',
@@ -83,6 +86,7 @@ $entityCategory = $entityCategories[$controller] ?? 'default';
             <?= $this->Html->link('Fulfilments', ['controller' => 'Fulfilments', 'action' => 'index'], ['class' => $entityCategory === 'fulfilments' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Replenishments', ['controller' => 'Replenishments', 'action' => 'index'], ['class' => $entityCategory === 'replenishments' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Audits', ['controller' => 'Audits', 'action' => 'index'], ['class' => $entityCategory === 'audits' ? 'is-active' : '']) ?>
+            <?= $this->Html->link('Invoices', ['controller' => 'Invoices', 'action' => 'index'], ['class' => $entityCategory === 'invoices' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Badges', ['controller' => 'Badges', 'action' => 'index'], ['class' => $entityCategory === 'badges' ? 'is-active' : '']) ?>
         </div>
         <div class="top-nav-overlay" data-nav-overlay></div>

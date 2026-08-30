@@ -33,7 +33,17 @@ class AccountsController extends AppController
      */
     public function view(?string $id = null)
     {
-        $account = $this->Accounts->get($id, contain: ['Groups', 'Sections', 'Invoices', 'Orders']);
+        $account = $this->Accounts->get($id, contain: [
+            'Groups',
+            'Sections' => fn($query) => $query->orderByAsc('section_name'),
+            'Users' => fn($query) => $query->orderByAsc('last_name')->orderByAsc('first_name'),
+            'Invoices' => fn($query) => $query
+                ->contain(['InvoiceSummaries'])
+                ->orderByDesc('invoice_date'),
+            'Orders' => fn($query) => $query
+                ->contain(['Users', 'Sections'])
+                ->orderByDesc('placed_date'),
+        ]);
         $this->set(compact('account'));
     }
 

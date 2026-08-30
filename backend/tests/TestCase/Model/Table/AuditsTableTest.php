@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Model\Table;
 
 use App\Model\Table\AuditsTable;
+use Cake\I18n\DateTime;
 use Cake\TestSuite\TestCase;
 
 /**
@@ -94,6 +95,20 @@ class AuditsTableTest extends TestCase
         $result = $this->Audits->save($entity);
         $this->assertNotFalse($result);
         $this->assertNotNull($result->get('audit_timestamp'));
+    }
+
+    public function testSaveGeneratesAuditNumber(): void
+    {
+        $this->Audits
+            ->getBehavior('EntityNumber')
+            ->setDate(new DateTime('2025-04-01 09:00:00'));
+
+        $audit = $this->Audits->saveOrFail($this->Audits->newEntity([
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'audit_completed' => false,
+        ]));
+
+        $this->assertSame('AUD-2025-04-01', $audit->audit_number);
     }
 
     /**

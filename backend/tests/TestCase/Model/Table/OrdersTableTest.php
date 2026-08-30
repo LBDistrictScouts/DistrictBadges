@@ -143,7 +143,7 @@ class OrdersTableTest extends TestCase
         $this->assertNotEmpty($result->id);
 
         $saved = $this->Orders->get($result->id);
-        $this->assertSame('ORD-2025-03-1', $saved->order_number);
+        $this->assertSame('ORD-2025-03-01', $saved->order_number);
         $this->assertSame('2025-03-01 10:00:00', $saved->placed_date->format('Y-m-d H:i:s'));
         $this->assertSame(OrderStatus::Draft, $saved->status);
         $this->assertFalse((bool)$saved->fulfilled);

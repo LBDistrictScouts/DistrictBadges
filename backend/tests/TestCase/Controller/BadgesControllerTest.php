@@ -5,6 +5,7 @@ namespace App\Test\TestCase\Controller;
 
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\TagCategory;
+use App\Model\Enum\TransactionType;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -23,9 +24,18 @@ class BadgesControllerTest extends TestCase
      * @var array<string>
      */
     protected array $fixtures = [
+        'app.Groups',
+        'app.Accounts',
+        'app.Users',
+        'app.Audits',
         'app.Badges',
         'app.BadgeTags',
         'app.BadgesBadgeTags',
+        'app.Fulfilments',
+        'app.Replenishments',
+        'app.Orders',
+        'app.OrderLines',
+        'app.StockTransactions',
     ];
 
     /**
@@ -47,8 +57,13 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseContains('Availability Status');
         $this->assertResponseContains('Stocking');
         $this->assertResponseContains('All badges');
+        $this->assertResponseContains('Listing');
+        $this->assertResponseContains('All listings');
         $this->assertResponseContains('All sections');
         $this->assertResponseContains('All badge types');
+        $this->assertResponseContains(
+            '/badges/stock-transactions/f525eb6d-021c-4ef2-811f-feac8db8d35d',
+        );
         $this->assertResponseNotContains(
             '/badges/delete/f525eb6d-021c-4ef2-811f-feac8db8d35d',
         );
@@ -72,6 +87,103 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Second badge');
+    }
+
+    public function testCardsUsesCatalogueLayoutWithIndexFiltersAndActions(): void
+    {
+        $this->get('/badges/cards?name=Lorem');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('badge-card-grid');
+        $this->assertResponseContains('data-badge-index-controls');
+        $this->assertResponseContains('badge-product-card');
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+        $this->assertResponseContains('All availability statuses');
+        $this->assertResponseContains('All sections');
+        $this->assertResponseContains('/badges/view/f525eb6d-021c-4ef2-811f-feac8db8d35d');
+        $this->assertResponseContains('/badges/edit/f525eb6d-021c-4ef2-811f-feac8db8d35d');
+        $this->assertResponseContains(
+            '/badges/stock-transactions/f525eb6d-021c-4ef2-811f-feac8db8d35d',
+        );
+    }
+
+    public function testStockUsesCountGridWithoutImages(): void
+    {
+        $this->get('/badges/stock?name=Lorem');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('badge-stock-grid');
+        $this->assertResponseContains('Filters & Sorting');
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+        $this->assertResponseNotContains('<img');
+        $this->assertResponseContains('badge-tag--section');
+        $this->assertResponseContains('badge-tag--type');
+        foreach (['On Hand', 'Pending', 'Reserve', 'Receipted', 'Fulfilled', 'Invoiced'] as $label) {
+            $this->assertResponseContains($label);
+        }
+        $this->assertResponseContains('/badges/view/f525eb6d-021c-4ef2-811f-feac8db8d35d');
+        $this->assertResponseContains(
+            '/badges/stock-transactions/f525eb6d-021c-4ef2-811f-feac8db8d35d',
+        );
+    }
+
+    public function testStockCanSortByStockAmounts(): void
+    {
+        $badges = $this->getTableLocator()->get('Badges');
+        $badges->updateAll(['on_hand_quantity' => 2], [
+            'id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+        ]);
+        $badges->updateAll(['on_hand_quantity' => 20, 'stocked' => true], [
+            'id' => '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70',
+        ]);
+
+        $this->get('/badges/stock?sort=on_hand_quantity&direction=desc');
+
+        $this->assertResponseOk();
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(
+            strpos($body, 'Lorem ipsum dolor sit amet'),
+            strpos($body, 'Second badge'),
+        );
+        foreach (
+            [
+                'on_hand_quantity',
+                'pending_quantity',
+                'reserve_quantity',
+                'receipted_quantity',
+                'fulfilled_quantity',
+                'invoiced_quantity',
+            ] as $field
+        ) {
+            $this->assertResponseContains(sprintf('value="%s"', $field));
+        }
+        $this->assertResponseContains('Ascending');
+        $this->assertResponseContains('Descending');
+    }
+
+    public function testBadgeViewStyleIsRetainedForTheSession(): void
+    {
+        $this->get('/badges/stock');
+        $this->assertResponseOk();
+        $this->assertResponseContains('badge-stock-grid');
+
+        $this->_session = ['Badges' => ['viewStyle' => 'stock']];
+        $this->get('/badges');
+        $this->assertResponseOk();
+        $this->assertResponseContains('badge-stock-grid');
+
+        $this->get('/badges/table');
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('badge-stock-grid');
+        $this->assertResponseContains('<table>');
+
+        $this->_session = ['Badges' => ['viewStyle' => 'table']];
+        $this->get('/badges');
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('badge-stock-grid');
+        $this->assertResponseContains('<table>');
     }
 
     public function testIndexPaginationPreservesFilters(): void
@@ -153,6 +265,19 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
         $this->assertResponseNotContains('Second badge');
+    }
+
+    public function testIndexFiltersListedAndUnlistedBadges(): void
+    {
+        $this->get('/badges?stocked=&listed=1');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseNotContains('Second badge');
+
+        $this->get('/badges?stocked=&listed=0');
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Second badge');
     }
 
     public function testIndexDefaultsToStockedBadges(): void
@@ -248,12 +373,14 @@ class BadgesControllerTest extends TestCase
                 'pending_quantity' => 12,
                 'receipted_quantity' => 13,
                 'fulfilled_quantity' => 14,
+                'invoiced_quantity' => 15,
             ],
             ['id' => $id],
         );
 
         $this->get("/badges/view/{$id}");
         $this->assertResponseOk();
+        $this->assertResponseContains('badge-product-card');
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Available');
         $this->assertResponseContains('Stock Amounts');
@@ -270,6 +397,60 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseRegExp('/data-stock-amount="pending">\s*12\s*<\/strong>/');
         $this->assertResponseRegExp('/data-stock-amount="receipted">\s*13\s*<\/strong>/');
         $this->assertResponseRegExp('/data-stock-amount="fulfilled">\s*14\s*<\/strong>/');
+        $this->assertResponseRegExp('/data-stock-amount="invoiced">\s*15\s*<\/strong>/');
+        $this->assertResponseContains('/badges/stock-transactions/' . $id);
+    }
+
+    public function testStockTransactionsShowsDetailedBadgeLedger(): void
+    {
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->get("/badges/stock-transactions/{$id}");
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Stock Transactions: Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('badge-product-card');
+        $this->assertResponseContains('All transaction types');
+        $this->assertResponseContains('Rep. Order');
+        $this->assertResponseContains('Rep. Receipt');
+        $this->assertResponseNotContains('Replenishment Order');
+        $this->assertResponseNotContains('Replenishment Receipt');
+        $this->assertResponseContains('Audit E/A');
+        $this->assertResponseRegExp(
+            '#href="/replenishments/view/f6d1f429-877b-4d92-83a0-cb305d853da7"'
+            . '>REP-2026-02-01</a>#',
+        );
+        $this->assertResponseRegExp(
+            '#href="/audits/view/003b39f5-34f6-4f49-b1ff-97204ffc4336"'
+            . '>AUD-2026-02-01</a>#',
+        );
+        foreach (TransactionType::cases() as $type) {
+            if (
+                in_array(
+                    $type,
+                    [TransactionType::ReplenishmentOrder, TransactionType::ReplenishmentReceipt],
+                    true,
+                )
+            ) {
+                continue;
+            }
+            $this->assertResponseContains($type->label());
+        }
+        $this->assertSame(5, substr_count((string)$this->_response->getBody(), '<tr>'));
+    }
+
+    public function testStockTransactionsFiltersByTransactionType(): void
+    {
+        $id = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+
+        $this->get(
+            "/badges/stock-transactions/{$id}?transaction_type="
+            . TransactionType::ReplenishmentOrder->value,
+        );
+
+        $this->assertResponseOk();
+        $this->assertSame(2, substr_count((string)$this->_response->getBody(), '<tr>'));
+        $this->assertResponseContains('£1.50');
     }
 
     /**
@@ -379,6 +560,37 @@ class BadgesControllerTest extends TestCase
         $this->assertSame(7, $updated->reserve_quantity);
         $this->assertSame(5.25, (float)$updated->price);
         $this->assertSame(3.25, (float)$updated->replenishment_price);
+    }
+
+    public function testEditUnlistedBadgeExposesAndSavesImageUrl(): void
+    {
+        $id = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+
+        $this->get("/badges/edit/{$id}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('badge-product-card');
+        $this->assertResponseNotContains('Image URL');
+
+        $this->get("/badges/edit/{$id}?unlisted=true");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Image URL');
+        $this->assertResponseContains('name="image_url"');
+
+        $this->enableCsrfToken();
+        $this->put("/badges/edit/{$id}?unlisted=true", [
+            'badge_name' => 'Second badge',
+            'national_product_code' => null,
+            'image_url' => 'https://example.com/unlisted-badge.jpg',
+            'stocked' => true,
+            'reserve_quantity' => 0,
+            'price' => '2.50',
+            'replenishment_price' => '1.50',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Badges', 'action' => 'index']);
+        $badge = $this->getTableLocator()->get('Badges')->get($id);
+        $this->assertSame('https://example.com/unlisted-badge.jpg', $badge->image_url);
+        $this->assertSame($badge->image_url, $badge->image_medium_url);
     }
 
     public function testEditReplacesSelectedTags(): void

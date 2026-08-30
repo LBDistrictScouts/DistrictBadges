@@ -8,7 +8,7 @@ foreach ($audit->audit_lines as $line) {
 <div class="audits view content">
     <div class="audit-heading">
         <div>
-            <h3><?= __('Stock audit') ?></h3>
+            <h3><?= __('Stock audit {0}', h($audit->audit_number)) ?></h3>
             <p><?= h($audit->user->full_name) ?> · <?= h($audit->audit_timestamp) ?> ·
                 <strong><?= $audit->audit_completed ? __('Completed') : __('Open') ?></strong></p>
         </div>
