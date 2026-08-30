@@ -97,7 +97,27 @@ class InvoicesTable extends Table
 
         $validator
             ->date('period_end_date')
-            ->allowEmptyDate('period_end_date');
+            ->allowEmptyDate('period_end_date')
+            ->add('period_end_date', 'validPeriod', [
+                'rule' => static function ($value, array $context): bool {
+                    if ($value === null || $value === '') {
+                        return true;
+                    }
+                    $end = new DateTimeImmutable(
+                        $value instanceof DateTimeInterface ? $value->format('Y-m-d') : (string)$value,
+                    );
+                    if ($end >= new DateTimeImmutable('today')) {
+                        return false;
+                    }
+                    $start = $context['data']['period_start_date'] ?? null;
+
+                    return $start === null || $start === ''
+                        || new DateTimeImmutable(
+                            $start instanceof DateTimeInterface ? $start->format('Y-m-d') : (string)$start,
+                        ) <= $end;
+                },
+                'message' => 'The billing period must end before today and not before its start date.',
+            ]);
 
         $validator
             ->scalar('invoice_number')

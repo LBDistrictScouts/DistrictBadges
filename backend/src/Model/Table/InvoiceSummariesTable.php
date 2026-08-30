@@ -79,7 +79,7 @@ class InvoiceSummariesTable extends Table
         $rules->add($rules->existsIn(['invoice_id'], 'Invoices'), ['errorField' => 'invoice_id']);
         $rules->add($rules->existsIn(['order_id'], 'Orders'), ['errorField' => 'order_id']);
         $rules->add($rules->existsIn(['fulfilment_id'], 'Fulfilments'), ['errorField' => 'fulfilment_id']);
-        $rules->add($rules->isUnique(['invoice_id', 'order_id', 'fulfilment_id']), [
+        $rules->add($rules->isUnique(['order_id', 'fulfilment_id']), [
             'errorField' => 'fulfilment_id',
         ]);
 

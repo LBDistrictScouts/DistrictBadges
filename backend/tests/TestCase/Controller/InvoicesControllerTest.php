@@ -275,6 +275,23 @@ class InvoicesControllerTest extends TestCase
         $this->assertSame($before, $invoices->find()->count());
     }
 
+    public function testAddRejectsNonexistentCalendarDate(): void
+    {
+        $invoices = $this->getTableLocator()->get('Invoices');
+        $before = $invoices->find()->count();
+
+        $this->enableCsrfToken();
+        $this->post('/invoices/add', [
+            'start_date' => '2026-02-31',
+            'end_date' => '2026-03-31',
+            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+        ]);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Enter a valid start and end date.');
+        $this->assertSame($before, $invoices->find()->count());
+    }
+
     /**
      * The generation form defaults its cutoff to the last completed day.
      *

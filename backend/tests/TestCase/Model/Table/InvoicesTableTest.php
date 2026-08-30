@@ -95,6 +95,21 @@ class InvoicesTableTest extends TestCase
         $this->assertSame([], $valid->getErrors());
     }
 
+    public function testValidationRejectsInvalidBillingPeriod(): void
+    {
+        $reversed = $this->Invoices->newEntity([
+            'period_start_date' => '2026-03-01',
+            'period_end_date' => '2026-02-28',
+        ]);
+        $this->assertArrayHasKey('period_end_date', $reversed->getErrors());
+
+        $future = $this->Invoices->newEntity([
+            'period_start_date' => '2026-01-01',
+            'period_end_date' => (new DateTimeImmutable('tomorrow'))->format('Y-m-d'),
+        ]);
+        $this->assertArrayHasKey('period_end_date', $future->getErrors());
+    }
+
     /**
      * Test buildRules method
      *
@@ -113,6 +128,27 @@ class InvoicesTableTest extends TestCase
         $result = $this->Invoices->save($entity);
         $this->assertFalse($result);
         $this->assertArrayHasKey('account_id', $entity->getErrors());
+    }
+
+    public function testFulfilmentCanOnlyBeClaimedByOneInvoice(): void
+    {
+        $secondInvoice = $this->Invoices->saveOrFail($this->Invoices->newEntity([
+            'invoice_date' => '2026-03-01 09:00:00',
+            'due_date' => '2026-03-31 09:00:00',
+            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'total_amount' => '1.50',
+        ]));
+        $summaries = $this->getTableLocator()->get('InvoiceSummaries');
+        $duplicate = $summaries->newEntity([
+            'invoice_id' => $secondInvoice->id,
+            'order_id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644',
+            'fulfilment_id' => 'be5a0a9f-9d87-4191-b819-b7e1c1c50a3a',
+            'quantity' => 1,
+            'line_amount' => '1.50',
+        ]);
+
+        $this->assertFalse($summaries->save($duplicate));
+        $this->assertArrayHasKey('fulfilment_id', $duplicate->getErrors());
     }
 
     /**

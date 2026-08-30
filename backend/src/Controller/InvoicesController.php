@@ -197,15 +197,21 @@ class InvoicesController extends AppController
         }
         if ($this->request->is('post')) {
             try {
+                $startInput = (string)$this->request->getData('start_date');
+                $endInput = (string)$this->request->getData('end_date');
                 $startDate = DateTimeImmutable::createFromFormat(
                     '!Y-m-d',
-                    (string)$this->request->getData('start_date'),
+                    $startInput,
                 );
                 $endDate = DateTimeImmutable::createFromFormat(
                     '!Y-m-d',
-                    (string)$this->request->getData('end_date'),
+                    $endInput,
                 );
-                if ($startDate === false || $endDate === false) {
+                if (
+                    $startDate === false || $endDate === false
+                    || $startDate->format('Y-m-d') !== $startInput
+                    || $endDate->format('Y-m-d') !== $endInput
+                ) {
                     throw new InvalidArgumentException('Enter a valid start and end date.');
                 }
                 $invoice = $this->Invoices->generate(

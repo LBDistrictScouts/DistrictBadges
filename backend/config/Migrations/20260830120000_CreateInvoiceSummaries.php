@@ -18,7 +18,7 @@ class CreateInvoiceSummaries extends BaseMigration
             ->addColumn('quantity', 'integer', ['null' => false])
             ->addColumn('line_amount', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => false])
             ->addIndex(['invoice_id'])->addIndex(['order_id'])->addIndex(['fulfilment_id'])
-            ->addIndex(['invoice_id', 'order_id', 'fulfilment_id'], ['unique' => true])
+            ->addIndex(['order_id', 'fulfilment_id'], ['unique' => true])
             ->addForeignKey('invoice_id', 'invoices', 'id', ['update' => 'CASCADE', 'delete' => 'CASCADE'])
             ->addForeignKey('order_id', 'orders', 'id', ['update' => 'CASCADE', 'delete' => 'RESTRICT'])
             ->addForeignKey('fulfilment_id', 'fulfilments', 'id', ['update' => 'CASCADE', 'delete' => 'RESTRICT'])
