@@ -186,6 +186,8 @@ class InvoicesControllerTest extends TestCase
     public function testAdd(): void
     {
         $invoices = $this->getTableLocator()->get('Invoices');
+        // The shared summary fixture represents this fulfilment as already invoiced.
+        $this->getTableLocator()->get('InvoiceSummaries')->deleteAll([]);
         $stockTransactions = $this->getTableLocator()->get('StockTransactions');
         $stockTransactions->getConnection()->insertQuery()
             ->insert([

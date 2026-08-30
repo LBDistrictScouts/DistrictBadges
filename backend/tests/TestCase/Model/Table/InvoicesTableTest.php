@@ -7,6 +7,8 @@ use App\Model\Table\InvoicesTable;
 use Cake\Core\Configure;
 use Cake\I18n\DateTime;
 use Cake\TestSuite\TestCase;
+use DateTimeImmutable;
+use DomainException;
 
 /**
  * App\Model\Table\InvoicesTable Test Case
@@ -32,7 +34,9 @@ class InvoicesTableTest extends TestCase
         'app.Invoices',
         'app.Badges',
         'app.Orders',
+        'app.OrderLines',
         'app.Fulfilments',
+        'app.FulfilmentLines',
         'app.InvoiceSummaries',
         'app.InvoiceLines',
     ];
@@ -174,5 +178,34 @@ class InvoicesTableTest extends TestCase
             'unit_cost' => 6.0,
         ]], $data['items']);
         $this->assertIsString(json_encode($data, JSON_THROW_ON_ERROR));
+    }
+
+    public function testGenerateExcludesAlreadyInvoicedFulfilments(): void
+    {
+        $this->getTableLocator()->get('FulfilmentLines')->updateAll([
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+            'unit_price' => '1.50',
+            'monetary_amount' => '1.50',
+        ], ['id' => '2e3f4051-2222-4c3b-9d4e-1b2c3d4e5f60']);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('No dispatched badges were found');
+
+        $this->Invoices->generate(
+            new DateTimeImmutable('2026-02-01'),
+            new DateTimeImmutable('2026-02-28'),
+            'ae471706-04cc-4c9c-8916-e4be1f913edf',
+        );
+    }
+
+    public function testDeleteRefreshesBadgeInvoicedQuantityAfterCascade(): void
+    {
+        $badgeId = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+        $badges = $this->getTableLocator()->get('Badges');
+        $this->assertSame(1, (int)$badges->get($badgeId)->invoiced_quantity);
+
+        $this->Invoices->deleteOrFail($this->Invoices->get('a3b8ec1a-f6fd-4b85-bca6-ad62a27a7138'));
+
+        $this->assertSame(0, (int)$badges->get($badgeId)->invoiced_quantity);
     }
 }

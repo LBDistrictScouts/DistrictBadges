@@ -30,8 +30,8 @@ class InvoiceSummariesTable extends Table
         ]);
 
         $this->belongsTo('Invoices', ['foreignKey' => 'invoice_id', 'joinType' => 'INNER']);
-        $this->belongsTo('Orders', ['foreignKey' => 'order_id', 'joinType' => 'INNER']);
-        $this->belongsTo('Fulfilments', ['foreignKey' => 'fulfilment_id', 'joinType' => 'INNER']);
+        $this->belongsTo('Orders', ['foreignKey' => 'order_id', 'joinType' => 'LEFT']);
+        $this->belongsTo('Fulfilments', ['foreignKey' => 'fulfilment_id', 'joinType' => 'LEFT']);
         $this->hasMany('InvoiceLines', [
             'foreignKey' => 'invoice_summary_id',
             'saveStrategy' => 'replace',
@@ -47,8 +47,8 @@ class InvoiceSummariesTable extends Table
     public function findOrdered(SelectQuery $query): SelectQuery
     {
         return $query
-            ->innerJoinWith('Orders')
-            ->innerJoinWith('Fulfilments')
+            ->leftJoinWith('Orders')
+            ->leftJoinWith('Fulfilments')
             ->orderBy([
                 'Orders.order_number' => 'ASC',
                 'Fulfilments.fulfilment_number' => 'ASC',
@@ -62,8 +62,8 @@ class InvoiceSummariesTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator->uuid('invoice_id')->notEmptyString('invoice_id');
-        $validator->uuid('order_id')->notEmptyString('order_id');
-        $validator->uuid('fulfilment_id')->notEmptyString('fulfilment_id');
+        $validator->uuid('order_id')->allowEmptyString('order_id');
+        $validator->uuid('fulfilment_id')->allowEmptyString('fulfilment_id');
         $validator->integer('quantity')->greaterThan('quantity', 0)->notEmptyString('quantity');
         $validator->decimal('line_amount')->greaterThanOrEqual('line_amount', 0)->notEmptyString('line_amount');
 

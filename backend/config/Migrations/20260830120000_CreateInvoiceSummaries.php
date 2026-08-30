@@ -13,8 +13,10 @@ class CreateInvoiceSummaries extends BaseMigration
         $this->table('invoice_summaries', ['id' => false, 'primary_key' => ['id']])
             ->addColumn('id', 'uuid', ['null' => false])
             ->addColumn('invoice_id', 'uuid', ['null' => false])
-            ->addColumn('order_id', 'uuid', ['null' => false])
-            ->addColumn('fulfilment_id', 'uuid', ['null' => false])
+            // Legacy invoices predate order/fulfilment provenance. Keep their
+            // lines accessible without inventing an unreliable association.
+            ->addColumn('order_id', 'uuid', ['null' => true, 'default' => null])
+            ->addColumn('fulfilment_id', 'uuid', ['null' => true, 'default' => null])
             ->addColumn('quantity', 'integer', ['null' => false])
             ->addColumn('line_amount', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => false])
             ->addIndex(['invoice_id'])->addIndex(['order_id'])->addIndex(['fulfilment_id'])
@@ -33,7 +35,7 @@ class CreateInvoiceSummaries extends BaseMigration
 
         $lineCount = (int)$this->fetchRow('SELECT COUNT(*) AS count FROM invoice_lines')['count'];
         if ($lineCount > 0) {
-            $this->backfillSummaries($lineCount);
+            $this->backfillLegacySummaries();
         }
 
         $this->table('invoice_lines')
@@ -43,53 +45,26 @@ class CreateInvoiceSummaries extends BaseMigration
     }
 
     /**
-     * @param int $lineCount Existing invoice line count.
      * @return void
      */
-    private function backfillSummaries(int $lineCount): void
+    private function backfillLegacySummaries(): void
     {
-        // Old lines can span fulfilments. Rebuild them from their source transactions.
+        // The old schema did not record enough information to reliably recover
+        // an order or fulfilment. Preserve each invoice as a provenance-free
+        // summary instead of guessing from mutable stock transactions.
         $this->execute(<<<'SQL'
 INSERT INTO invoice_summaries (id, invoice_id, order_id, fulfilment_id, quantity, line_amount)
-SELECT gen_random_uuid(),
-       i.id, o.id, f.id, SUM(st.fulfilled_quantity_change), SUM(st.monetary_amount)
-FROM invoices i
-JOIN invoice_lines il ON il.invoice_id = i.id
-JOIN orders o ON o.id = il.order_id
-JOIN order_lines ol ON ol.order_id = o.id AND ol.badge_id = il.badge_id
-JOIN stock_transactions st ON st.order_line_id = ol.id AND st.unit_price = il.unit_price
-JOIN fulfilments f ON f.id = st.fulfilment_id
-WHERE f.dispatched_date >= i.period_start_date
-  AND f.dispatched_date < i.period_end_date + INTERVAL '1 day'
-GROUP BY i.id, o.id, f.id
+SELECT gen_random_uuid(), il.invoice_id, NULL, NULL, SUM(il.quantity), SUM(il.line_amount)
+FROM invoice_lines il
+GROUP BY il.invoice_id
 SQL);
-
-        $matched = (int)$this->fetchRow(<<<'SQL'
-SELECT COUNT(*) AS count FROM invoice_lines il WHERE EXISTS (
-    SELECT 1 FROM invoice_summaries s
-    WHERE s.invoice_id = il.invoice_id AND s.order_id = il.order_id
-)
-SQL)['count'];
-        if ($matched !== $lineCount) {
-            throw new RuntimeException(
-                'Some invoice lines could not be reconciled to dispatched fulfilments; migration aborted.',
-            );
-        }
 
         $this->execute(<<<'SQL'
-INSERT INTO invoice_lines
-    (id, invoice_id, invoice_summary_id, badge_id, order_id, description, quantity, unit_price, line_amount)
-SELECT gen_random_uuid(),
-       il.invoice_id, s.id, il.badge_id, il.order_id, il.description,
-       SUM(st.fulfilled_quantity_change), il.unit_price, SUM(st.monetary_amount)
-FROM invoice_lines il
-JOIN invoice_summaries s ON s.invoice_id = il.invoice_id AND s.order_id = il.order_id
-JOIN order_lines ol ON ol.order_id = s.order_id AND ol.badge_id = il.badge_id
-JOIN stock_transactions st ON st.order_line_id = ol.id AND st.fulfilment_id = s.fulfilment_id
-    AND st.unit_price = il.unit_price
-GROUP BY il.id, s.id, il.invoice_id, il.badge_id, il.order_id, il.description, il.unit_price
+UPDATE invoice_lines il
+SET invoice_summary_id = s.id
+FROM invoice_summaries s
+WHERE s.invoice_id = il.invoice_id AND s.order_id IS NULL AND s.fulfilment_id IS NULL
 SQL);
-        $this->execute('DELETE FROM invoice_lines WHERE invoice_summary_id IS NULL');
     }
 
     /**

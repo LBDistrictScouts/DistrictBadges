@@ -5,7 +5,10 @@ namespace App\Model\Table;
 
 use App\Model\Entity\Invoice;
 use App\Model\Enum\FulfilmentStatus;
+use ArrayObject;
 use Cake\Core\Configure;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
 use Cake\I18n\DateTime;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -159,17 +162,21 @@ class InvoicesTable extends Table
             if ($postage > 0) {
                 $description .= sprintf(' + £%.2f postage', $postage);
             }
-            $description .= sprintf(
-                '. Ordered by: %s. Section: %s.',
-                $summary->order->user->full_name,
-                $summary->order->section?->section_name ?? 'Not specified',
-            );
+            if ($summary->order !== null) {
+                $description .= sprintf(
+                    '. Ordered by: %s. Section: %s.',
+                    $summary->order->user->full_name,
+                    $summary->order->section?->section_name ?? 'Not specified',
+                );
+            }
             $items[] = [
-                'name' => sprintf(
-                    'Order %s / Fulfilment %s',
-                    $summary->order->order_number,
-                    $summary->fulfilment->fulfilment_number,
-                ),
+                'name' => $summary->order === null || $summary->fulfilment === null
+                    ? 'Legacy invoice items'
+                    : sprintf(
+                        'Order %s / Fulfilment %s',
+                        $summary->order->order_number,
+                        $summary->fulfilment->fulfilment_number,
+                    ),
                 'description' => $description,
                 'quantity' => 1,
                 'unit_cost' => (float)$summary->line_amount,
@@ -281,6 +288,9 @@ class InvoicesTable extends Table
         }
 
         $fulfilmentLines = TableRegistry::getTableLocator()->get('FulfilmentLines');
+        $alreadyInvoiced = $this->InvoiceSummaries->find()
+            ->select(['fulfilment_id'])
+            ->where(['fulfilment_id IS NOT' => null]);
         $billableLines = $fulfilmentLines->find()
             ->contain(['Badges', 'OrderLines', 'Fulfilments'])
             ->innerJoinWith('OrderLines.Orders')
@@ -289,6 +299,7 @@ class InvoicesTable extends Table
                 'Fulfilments.dispatched_date >=' => $start,
                 'Fulfilments.dispatched_date <=' => $end,
                 'Orders.account_id' => $accountId,
+                'Fulfilments.id NOT IN' => $alreadyInvoiced,
             ])
             ->all();
 
@@ -381,5 +392,35 @@ class InvoicesTable extends Table
         return $this->getConnection()->transactional(function () use ($invoice): Invoice {
             return $this->saveOrFail($invoice, ['associated' => ['InvoiceSummaries']]);
         });
+    }
+
+    /**
+     * Capture badge ids before database cascades remove the invoice lines.
+     */
+    public function beforeDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        $badgeIds = $this->InvoiceSummaries->InvoiceLines->find()
+            ->select(['badge_id'])
+            ->innerJoinWith('InvoiceSummaries')
+            ->where([
+                'InvoiceSummaries.invoice_id' => $entity->get('id'),
+                'badge_id IS NOT' => null,
+            ])
+            ->distinct(['badge_id'])
+            ->disableHydration()
+            ->all()
+            ->extract('badge_id')
+            ->toList();
+        $options['affectedBadgeIds'] = $badgeIds;
+    }
+
+    /**
+     * Refresh cached quantities after the invoice and its lines are gone.
+     */
+    public function afterDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        foreach ($options['affectedBadgeIds'] ?? [] as $badgeId) {
+            $this->InvoiceSummaries->InvoiceLines->refreshBadgeInvoicedQuantity((string)$badgeId);
+        }
     }
 }

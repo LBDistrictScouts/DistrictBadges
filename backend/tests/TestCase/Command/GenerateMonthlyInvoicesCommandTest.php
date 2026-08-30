@@ -32,6 +32,8 @@ class GenerateMonthlyInvoicesCommandTest extends TestCase
     {
         Configure::write('Invoices.minimumTotal', 0);
         $invoices = $this->getTableLocator()->get('Invoices');
+        // The shared summary fixture represents this fulfilment as already invoiced.
+        $this->getTableLocator()->get('InvoiceSummaries')->deleteAll([]);
         $this->getTableLocator()->get('StockTransactions')->getConnection()->insertQuery()
             ->insert([
                 'id', 'transaction_timestamp', 'badge_id', 'audit_hash', 'fulfilment_id',
