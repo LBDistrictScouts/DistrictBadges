@@ -14,6 +14,7 @@ if (!localPath && (!endpoint || !username || !password)) {
 
 const authorization = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
 const datasetBaseUrl = endpoint ? new URL(endpoint.endsWith('/') ? endpoint : `${endpoint}/`) : null
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function fetchDataset(filename) {
   if (localPath) return JSON.parse(await readFile(resolve(localPath, filename), 'utf8'))
@@ -27,7 +28,6 @@ async function fetchDataset(filename) {
 }
 
 function validateGroups(value) {
-  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   if (!Array.isArray(value) || value.length === 0 || value.some((group) => (
     typeof group?.id !== 'string'
     || !uuid.test(group.id)
@@ -37,7 +37,6 @@ function validateGroups(value) {
 }
 
 function validateSections(value) {
-  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   if (!Array.isArray(value) || value.length === 0 || value.some((section) => (
     typeof section?.id !== 'string'
     || !uuid.test(section.id)
