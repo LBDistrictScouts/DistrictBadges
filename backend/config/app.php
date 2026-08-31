@@ -7,6 +7,13 @@ use Cake\Log\Engine\FileLog;
 use Cake\Mailer\Transport\MailTransport;
 use function Cake\Core\env;
 
+$emailTransportDefaultUrl = env('EMAIL_TRANSPORT_DEFAULT_URL', null);
+if (is_string($emailTransportDefaultUrl)) {
+    // CakePHP retains percent escapes in DSN user-info, causing SES to receive
+    // the encoded value instead of the SMTP password.
+    $emailTransportDefaultUrl = rawurldecode($emailTransportDefaultUrl);
+}
+
 return [
     /*
      * Debug Level:
@@ -284,7 +291,7 @@ return [
             //'password' => null,
             'client' => null,
             'tls' => false,
-            'url' => env('EMAIL_TRANSPORT_DEFAULT_URL', null),
+            'url' => $emailTransportDefaultUrl,
         ],
     ],
 
