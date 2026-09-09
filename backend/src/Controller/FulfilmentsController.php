@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Entity\Order;
 use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
@@ -76,7 +77,29 @@ class FulfilmentsController extends AppController
     public function view(?string $id = null)
     {
         $fulfilment = $this->Fulfilments->get($id, contain: ['FulfilmentLines.Badges']);
-        $this->set(compact('fulfilment'));
+        $this->Fulfilments->loadInto($fulfilment, ['Users', 'Accounts.Groups']);
+        $user = $fulfilment->user;
+        $account = $fulfilment->account;
+        $group = $account?->group;
+        if ($user === null || $account === null) {
+            $this->Fulfilments->loadInto($fulfilment, [
+                'FulfilmentLines.OrderLines.Orders.Users',
+                'FulfilmentLines.OrderLines.Orders.Accounts.Groups',
+            ]);
+            foreach ($fulfilment->fulfilment_lines as $line) {
+                $order = $line->order_line?->order;
+                if ($order === null) {
+                    continue;
+                }
+                $user ??= $order->user;
+                $account ??= $order->account;
+                $group ??= $order->account?->group;
+                if ($user !== null && $account !== null && $group !== null) {
+                    break;
+                }
+            }
+        }
+        $this->set(compact('fulfilment', 'user', 'account', 'group'));
     }
 
     /**
@@ -136,6 +159,7 @@ class FulfilmentsController extends AppController
             );
             $this->StockTransactionLines->requireLines($fulfilment, $data, $config);
             $this->requireCompatibleOrderLines($fulfilment, $data);
+            $this->applyCustomerDetails($fulfilment, $data);
             $this->applyDispatchDetails($fulfilment, $data);
             if (
                 !$fulfilment->hasErrors()
@@ -153,6 +177,9 @@ class FulfilmentsController extends AppController
         $lineGrid = $this->fulfilmentLineConfig(
             $this->orderLineOptions(),
             $this->orderOptions(),
+            $this->orderLineGroups(),
+            $this->nonDistrictEmailOrderAlerts(),
+            $this->orderUserIds(),
         );
         $this->set(compact('fulfilment', 'badges', 'lineGrid'));
     }
@@ -209,12 +236,15 @@ class FulfilmentsController extends AppController
             return $this->jsonError(__('Select a valid order.'));
         }
 
-        $order = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
+        $orders = $this->Fulfilments->FulfilmentLines->OrderLines->Orders;
+        $order = $orders
             ->find()
             ->select([
                 'id',
                 'order_number',
                 'user_id',
+                'account_id',
+                'section_id',
                 'status',
                 'postage',
                 'dispatch_address_line_1',
@@ -224,8 +254,8 @@ class FulfilmentsController extends AppController
                 'dispatch_postcode',
             ])
             ->where([
-                'id' => $orderId,
-                'status NOT IN' => [
+                'Orders.id' => $orderId,
+                'Orders.status NOT IN' => [
                     OrderStatus::Fulfilled->value,
                     OrderStatus::Cancelled->value,
                 ],
@@ -234,10 +264,11 @@ class FulfilmentsController extends AppController
         if ($order === null) {
             return $this->jsonError(__('The selected order could not be fulfilled.'));
         }
-        if (!$this->orderLinesMatchUser($existingOrderLineIds, (string)$order->user_id)) {
-            return $this->jsonError(__('All orders in a fulfilment must belong to the same user.'));
+        $orders->loadInto($order, ['Users', 'Accounts.Groups', 'Sections.Groups']);
+        if (!$this->orderLinesMatchCustomer($existingOrderLineIds, (string)$order->user_id)) {
+            return $this->jsonError(__('All orders in a fulfilment must belong to the same user and account.'));
         }
-        $user = $this->Fulfilments->FulfilmentLines->OrderLines->Orders->Users->get($order->user_id);
+        $user = $order->user;
         $dispatchAddress = array_values(array_filter([
             $order->postage === true ? $order->dispatch_address_line_1 : $user->address_line_1,
             $order->postage === true ? $order->dispatch_address_line_2 : $user->address_line_2,
@@ -308,8 +339,18 @@ class FulfilmentsController extends AppController
             $allocatedByBadge[$badgeId] = ($allocatedByBadge[$badgeId] ?? 0) + $quantity;
             $index++;
         }
+        if ($html !== '') {
+            $html = $view->StockTransactionLines->orderGroup(
+                $this->orderGroupDetails($order),
+                $config,
+                $html,
+            );
+        }
 
         $alerts = [];
+        if ($user->non_district_email) {
+            $alerts[] = $this->nonDistrictEmailOrderAlert($order);
+        }
         if ($fulfilledOmitted > 0) {
             $alerts[] = [
                 'level' => 'info',
@@ -422,6 +463,9 @@ class FulfilmentsController extends AppController
     private function fulfilmentLineConfig(
         array $orderLines = [],
         array $orders = [],
+        array $orderLineGroups = [],
+        array $orderAlerts = [],
+        array $orderUserIds = [],
     ): array {
         return [
             'association' => 'FulfilmentLines',
@@ -438,11 +482,14 @@ class FulfilmentsController extends AppController
             ),
             'ajaxError' => __('Unable to add the fulfilment line.'),
             'hideLineBuilder' => true,
+            'rowGroups' => $orderLineGroups,
             'bulkLoader' => [
                 'field' => 'order_id',
                 'label' => __('Order'),
                 'empty' => __('Select an order'),
                 'options' => $orders,
+                'alerts' => $orderAlerts,
+                'optionUserIds' => $orderUserIds,
                 'url' => ['action' => 'orderLines'],
                 'addLabel' => __('Add Order'),
             ],
@@ -575,6 +622,123 @@ class FulfilmentsController extends AppController
     }
 
     /**
+     * @return array<string, string>
+     */
+    private function orderUserIds(): array
+    {
+        $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines;
+        $orderIds = $orderLines->find()
+            ->select(['order_id'])
+            ->distinct(['order_id'])
+            ->disableHydration()
+            ->all()
+            ->extract('order_id')
+            ->toList();
+        if ($orderIds === []) {
+            return [];
+        }
+
+        $orders = $orderLines->Orders->find()
+            ->select(['id', 'user_id'])
+            ->where([
+                'Orders.id IN' => $orderIds,
+                'Orders.status NOT IN' => [
+                    OrderStatus::Fulfilled->value,
+                    OrderStatus::Cancelled->value,
+                ],
+            ])
+            ->all();
+
+        $userIds = [];
+        foreach ($orders as $order) {
+            $userIds[(string)$order->id] = (string)$order->user_id;
+        }
+
+        return $userIds;
+    }
+
+    /**
+     * @return array<string, array{html: string}>
+     */
+    private function nonDistrictEmailOrderAlerts(): array
+    {
+        $alerts = [];
+        $orders = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
+            ->find()
+            ->contain(['Users'])
+            ->innerJoinWith('OrderLines')
+            ->where([
+                'Orders.status NOT IN' => [
+                    OrderStatus::Fulfilled->value,
+                    OrderStatus::Cancelled->value,
+                ],
+                'Users.non_district_email' => true,
+            ])
+            ->all();
+
+        foreach ($orders as $order) {
+            $alerts[(string)$order->id] = $this->nonDistrictEmailOrderAlert($order);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * @param \App\Model\Entity\Order $order Order whose user needs checking.
+     * @return array{html: string}
+     */
+    private function nonDistrictEmailOrderAlert(Order $order): array
+    {
+        return [
+            'html' => (string)$this->createView()->element('non_district_email_alert', [
+                'user' => $order->user,
+            ]),
+        ];
+    }
+
+    /**
+     * Map order lines to the order details displayed above their fulfilment table.
+     *
+     * @return array<string, array<string, string>>
+     */
+    private function orderLineGroups(): array
+    {
+        $groups = [];
+        $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines
+            ->find()
+            ->contain([
+                'Orders.Users',
+                'Orders.Accounts.Groups',
+                'Orders.Sections.Groups',
+            ])
+            ->all();
+
+        foreach ($orderLines as $orderLine) {
+            $groups[(string)$orderLine->id] = $this->orderGroupDetails($orderLine->order);
+        }
+
+        return $groups;
+    }
+
+    /**
+     * @param \App\Model\Entity\Order $order Source order.
+     * @return array<string, string>
+     */
+    private function orderGroupDetails(Order $order): array
+    {
+        $section = $order->section;
+        $group = $section?->group ?? $order->account?->group;
+
+        return [
+            'id' => (string)$order->id,
+            'order_number' => (string)$order->order_number,
+            'section' => (string)($section?->section_name ?? __('No section')),
+            'user' => (string)$order->user->full_name,
+            'group' => (string)($group?->group_name ?? __('No group')),
+        ];
+    }
+
+    /**
      * Require all submitted order lines to belong to one user.
      *
      * @param \Cake\Datasource\EntityInterface $fulfilment Fulfilment entity.
@@ -589,7 +753,7 @@ class FulfilmentsController extends AppController
         )));
         if (
             count($orderLineIds) !== count(array_unique($orderLineIds))
-            || !$this->orderLinesMatchUser($orderLineIds)
+            || !$this->orderLinesMatchCustomer($orderLineIds)
             || !$this->orderLinesAreFulfillable($orderLineIds)
             || !$this->quantitiesFitAvailableStock($data['fulfilment_lines'] ?? [])
         ) {
@@ -600,6 +764,36 @@ class FulfilmentsController extends AppController
                     . 'belong to fulfilable orders, and not exceed available stock.',
                 ),
             );
+        }
+    }
+
+    /**
+     * Copy the customer relationship from the source orders onto the fulfilment.
+     *
+     * @param \Cake\Datasource\EntityInterface $fulfilment Fulfilment entity.
+     * @param array<string, mixed> $data Normalised request data.
+     * @return void
+     */
+    private function applyCustomerDetails(EntityInterface $fulfilment, array $data): void
+    {
+        $orderLineIds = array_values(array_filter(array_map(
+            static fn(array $line): string => (string)($line['order_line_id'] ?? ''),
+            $data['fulfilment_lines'] ?? [],
+        )));
+        if ($orderLineIds === []) {
+            return;
+        }
+
+        $order = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
+            ->find()
+            ->select(['Orders.id', 'Orders.user_id', 'Orders.account_id'])
+            ->innerJoinWith('OrderLines', function ($query) use ($orderLineIds) {
+                return $query->where(['OrderLines.id IN' => $orderLineIds]);
+            })
+            ->first();
+        if ($order !== null) {
+            $fulfilment->set('user_id', $order->user_id);
+            $fulfilment->set('account_id', $order->account_id);
         }
     }
 
@@ -774,7 +968,7 @@ class FulfilmentsController extends AppController
      * @param string|null $expectedUserId Expected user id.
      * @return bool
      */
-    private function orderLinesMatchUser(array $orderLineIds, ?string $expectedUserId = null): bool
+    private function orderLinesMatchCustomer(array $orderLineIds, ?string $expectedUserId = null): bool
     {
         if ($orderLineIds === []) {
             return true;
@@ -785,6 +979,7 @@ class FulfilmentsController extends AppController
             ->select([
                 'order_line_id' => 'OrderLines.id',
                 'user_id' => 'Orders.user_id',
+                'account_id' => 'Orders.account_id',
             ])
             ->innerJoinWith('Orders')
             ->where(['OrderLines.id IN' => $orderLineIds])
@@ -795,8 +990,10 @@ class FulfilmentsController extends AppController
             return false;
         }
         $users = array_values(array_unique(array_column($rows, 'user_id')));
+        $accounts = array_values(array_unique(array_column($rows, 'account_id')));
 
         return count($users) === 1
+            && count($accounts) === 1
             && ($expectedUserId === null || (string)$users[0] === $expectedUserId);
     }
 

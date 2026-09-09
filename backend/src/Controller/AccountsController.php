@@ -43,6 +43,7 @@ class AccountsController extends AppController
             'Orders' => fn($query) => $query
                 ->contain(['Users', 'Sections'])
                 ->orderByDesc('placed_date'),
+            'Fulfilments' => fn($query) => $query->orderByDesc('fulfilment_date'),
         ]);
         $this->set(compact('account'));
     }

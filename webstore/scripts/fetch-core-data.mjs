@@ -33,6 +33,10 @@ function validateGroups(value) {
     || !uuid.test(group.id)
     || typeof group?.group_name !== 'string'
     || !Number.isInteger(group?.sort_order)
+    || !Array.isArray(group?.domains)
+    || group.domains.length === 0
+    || group.domains.some((domain) => typeof domain !== 'string' || domain.length === 0)
+    || !['group', 'district'].includes(group?.type)
   ))) throw new Error('DistrictCoreData groups.json does not match the expected schema.')
 }
 

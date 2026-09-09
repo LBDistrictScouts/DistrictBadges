@@ -42,6 +42,8 @@ class OrdersControllerTest extends TestCase
         $this->assertNotEmpty($payload['badges']);
 
         $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $payload['groups'][0]['id']);
+        $this->assertSame(['example.org'], $payload['groups'][0]['domains']);
+        $this->assertSame('group', $payload['groups'][0]['type']);
         $this->assertSame('d9534dcb-a846-5a22-a2fe-b67580555563', $payload['sections'][0]['id']);
         $this->assertSame('f525eb6d-021c-4ef2-811f-feac8db8d35d', $payload['badges'][0]['id']);
     }
@@ -187,8 +189,6 @@ class OrdersControllerTest extends TestCase
             'last_name' => 'Leader',
             'email' => 'existing@example.org',
             'account_id' => $accountId,
-            'admin_role' => 0,
-            'can_login' => false,
         ]);
         $users->saveOrFail($user);
         $beforeUsers = $users->find()->count();

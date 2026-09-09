@@ -23,6 +23,8 @@ class FulfilmentsFixture extends TestFixture
                 'fulfilment_date' => 1771712826,
                 'dispatched_date' => 1771712826,
                 'fulfilment_number' => 'Lorem ipsum dolor sit amet',
+                'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+                'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
                 'status' => 10,
                 'total_amount' => 0,
                 'total_quantity' => 0,

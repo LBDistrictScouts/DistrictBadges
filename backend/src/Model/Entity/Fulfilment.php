@@ -12,6 +12,8 @@ use Cake\ORM\Entity;
  * @property \Cake\I18n\DateTime $fulfilment_date
  * @property \Cake\I18n\DateTime|null $dispatched_date
  * @property string $fulfilment_number
+ * @property string|null $user_id
+ * @property string|null $account_id
  * @property \App\Model\Enum\FulfilmentStatus $status
  * @property string $total_amount
  * @property int $total_quantity
@@ -26,6 +28,8 @@ use Cake\ORM\Entity;
  *
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions
  * @property \App\Model\Entity\FulfilmentLine[] $fulfilment_lines
+ * @property \App\Model\Entity\User|null $user
+ * @property \App\Model\Entity\Account|null $account
  */
 class Fulfilment extends Entity
 {
@@ -39,6 +43,8 @@ class Fulfilment extends Entity
      * @var array<string, bool>
      */
     protected array $_accessible = [
+        'user_id' => true,
+        'account_id' => true,
         'total_amount' => true,
         'total_quantity' => true,
         'dispatch_type' => true,
@@ -50,5 +56,7 @@ class Fulfilment extends Entity
         'dispatch_postcode' => true,
         'stock_transactions' => true,
         'fulfilment_lines' => true,
+        'user' => true,
+        'account' => true,
     ];
 }

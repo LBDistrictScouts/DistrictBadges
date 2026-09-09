@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Model\Enum\GroupType;
 use Cake\Core\Configure;
 use Cake\Http\Client;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -65,11 +66,14 @@ class DistrictCoreDataService
         $sections = $this->getTableLocator()->get('Sections');
         /** @var \App\Model\Table\AccountsTable $accounts */
         $accounts = $this->getTableLocator()->get('Accounts');
+        /** @var \App\Model\Table\UsersTable $users */
+        $users = $this->getTableLocator()->get('Users');
 
         return $groups->getConnection()->transactional(function () use (
             $groups,
             $sections,
             $accounts,
+            $users,
             $groupData,
             $sectionData,
         ): array {
@@ -92,6 +96,8 @@ class DistrictCoreDataService
                 $groups->patchEntity($entity, [
                     'group_name' => $record['group_name'],
                     'sort_order' => $record['sort_order'],
+                    'domains' => $record['domains'],
+                    'type' => $record['type'],
                 ]);
                 $groups->saveOrFail($entity);
 
@@ -144,6 +150,10 @@ class DistrictCoreDataService
                 $sections->saveOrFail($entity);
             }
 
+            foreach ($users->find()->contain(['Accounts.Groups']) as $user) {
+                $users->refreshNonDistrictEmail($user);
+            }
+
             return ['groups' => count($groupData), 'sections' => count($sectionData)];
         });
     }
@@ -189,10 +199,18 @@ class DistrictCoreDataService
         $groupIds = [];
         foreach ($groups as $group) {
             if (
-                !isset($group['id'], $group['group_name'], $group['sort_order'])
+                !isset($group['id'], $group['group_name'], $group['sort_order'], $group['domains'], $group['type'])
                 || !is_string($group['id'])
                 || !is_string($group['group_name'])
                 || !is_int($group['sort_order'])
+                || !is_array($group['domains'])
+                || $group['domains'] === []
+                || array_filter(
+                    $group['domains'],
+                    static fn(mixed $domain): bool => !is_string($domain) || $domain === '',
+                ) !== []
+                || !is_string($group['type'])
+                || GroupType::tryFrom($group['type']) === null
             ) {
                 throw new RuntimeException('DistrictCoreData group record is invalid.');
             }

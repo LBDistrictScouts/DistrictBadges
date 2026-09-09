@@ -3,6 +3,13 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\User $user
  */
+$address = array_filter([
+    $user->address_line_1,
+    $user->address_line_2,
+    $user->town,
+    $user->county,
+    $user->postcode,
+], static fn($line): bool => trim((string)$line) !== '');
 ?>
 <div class="row">
     <aside class="column">
@@ -16,83 +23,97 @@
     </aside>
     <div class="column column-80">
         <div class="users view content">
-            <h3><?= h($user->full_name) ?></h3>
-            <table>
-                <tr>
-                    <th><?= __('Full Name') ?></th>
-                    <td><?= h($user->full_name) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('First Name') ?></th>
-                    <td><?= h($user->first_name) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Last Name') ?></th>
-                    <td><?= h($user->last_name) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Account') ?></th>
-                    <td><?= $user->hasValue('account') ? $this->Html->link($user->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $user->account->id]) : '' ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Email') ?></th>
-                    <td><?= h($user->email) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Login') ?></th>
-                    <td><?= h($user->login) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Admin Role') ?></th>
-                    <td><?= $this->Number->format($user->admin_role) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Can Login') ?></th>
-                    <td><?= $user->can_login ? __('Yes') : __('No'); ?></td>
-                </tr>
-            </table>
-            <div class="related">
-                <h4><?= __('Related Orders') ?></h4>
-                <?php if (!empty($user->orders)) : ?>
-                <div class="table-responsive">
-                    <table>
-                        <tr>
-                            <th><?= __('Order Number') ?></th>
-                            <th><?= __('Placed Date') ?></th>
-                            <th><?= __('Fulfilled') ?></th>
-                            <th><?= __('Total Ordered Amount') ?></th>
-                            <th><?= __('Total Ordered Quantity') ?></th>
-                            <th><?= __('Total Fulfilled Amount') ?></th>
-                            <th><?= __('Total Fulfilled Quantity') ?></th>
-                            <th class="actions"><?= __('Actions') ?></th>
-                        </tr>
-                        <?php foreach ($user->orders as $order) : ?>
-                        <tr>
-                            <td><?= h($order->order_number) ?></td>
-                            <td><?= h($order->placed_date) ?></td>
-                            <td><?= h($order->fulfilled) ?></td>
-                            <td><?= h($order->total_ordered_amount) ?></td>
-                            <td><?= h($order->total_ordered_quantity) ?></td>
-                            <td><?= h($order->total_fulfilled_amount) ?></td>
-                            <td><?= h($order->total_fulfilled_quantity) ?></td>
-                            <td class="actions">
-                                <?= $this->Html->link(__('View'), ['controller' => 'Orders', 'action' => 'view', $order->id]) ?>
-                                <?= $this->Html->link(__('Edit'), ['controller' => 'Orders', 'action' => 'edit', $order->id]) ?>
-                                <?= $this->Form->postLink(
-                                    __('Delete'),
-                                    ['controller' => 'Orders', 'action' => 'delete', $order->id],
-                                    [
-                                        'method' => 'delete',
-                                        'confirm' => __('Are you sure you want to delete this order?'),
-                                    ],
-                                ) ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </table>
+            <?= $this->element('non_district_email_alert', ['user' => $user]) ?>
+
+            <header class="user-view-heading">
+                <div>
+                    <p class="user-view-eyebrow"><?= __('User') ?></p>
+                    <h3><?= h($user->full_name) ?></h3>
+                    <p><?= h($user->email) ?></p>
                 </div>
+                <?= $this->Html->link(__('Edit User'), ['action' => 'edit', $user->id], ['class' => 'button button-outline']) ?>
+            </header>
+
+            <dl class="user-detail-grid user-detail-grid--single" aria-label="<?= __('User details') ?>">
+                <div class="user-detail-item">
+                    <dt><?= __('Account') ?></dt>
+                    <dd><?= $user->hasValue('account') ? $this->Html->link($user->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $user->account->id]) : __('Not assigned') ?></dd>
+                </div>
+            </dl>
+
+            <?php if ($address !== []) : ?>
+                <section class="related user-view-section">
+                    <div class="user-section-heading"><h4><?= __('Address') ?></h4></div>
+                    <address class="user-address">
+                        <?php foreach ($address as $line) : ?>
+                            <?= h($line) ?><br>
+                        <?php endforeach; ?>
+                    </address>
+                </section>
+            <?php endif; ?>
+
+            <section class="related user-view-section">
+                <div class="user-section-heading"><h4><?= __('Orders') ?></h4><span><?= __('{0} total', count($user->orders)) ?></span></div>
+                <?php if (empty($user->orders)) : ?>
+                    <p class="user-empty-state"><?= __('This user has not placed any orders.') ?></p>
+                <?php else : ?>
+                    <div class="table-responsive">
+                        <table>
+                            <thead><tr>
+                                <th><?= __('Order') ?></th>
+                                <th><?= __('Placed') ?></th>
+                                <th><?= __('Status') ?></th>
+                                <th><?= __('Ordered') ?></th>
+                                <th><?= __('Fulfilled') ?></th>
+                            </tr></thead>
+                            <tbody>
+                            <?php foreach ($user->orders as $order) : ?>
+                            <tr>
+                                <td><?= $this->Html->link($order->order_number, ['controller' => 'Orders', 'action' => 'view', $order->id]) ?></td>
+                                <td><?= h($order->placed_date?->i18nFormat('dd MMM yyyy')) ?></td>
+                                <td><?= h($order->status->label()) ?></td>
+                                <td><?= $this->Number->format($order->total_ordered_quantity) ?> · <?= $this->Number->currency($order->total_ordered_amount) ?></td>
+                                <td><?= $this->Number->format($order->total_fulfilled_quantity) ?> · <?= $this->Number->currency($order->total_fulfilled_amount) ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 <?php endif; ?>
-            </div>
+            </section>
+
+            <section class="related user-view-section">
+                <div class="user-section-heading"><h4><?= __('Fulfilments') ?></h4><span><?= __('{0} total', count($user->fulfilments)) ?></span></div>
+                <?php if (empty($user->fulfilments)) : ?>
+                    <p class="user-empty-state"><?= __('This user has no fulfilments.') ?></p>
+                <?php else : ?>
+                    <div class="table-responsive">
+                        <table>
+                            <thead><tr>
+                                <th><?= __('Fulfilment') ?></th>
+                                <th><?= __('Created') ?></th>
+                                <th><?= __('Status') ?></th>
+                                <th><?= __('Quantity') ?></th>
+                                <th><?= __('Amount') ?></th>
+                            </tr></thead>
+                            <tbody>
+                            <?php foreach ($user->fulfilments as $fulfilment) : ?>
+                            <tr>
+                            <td><?= $this->Html->link(
+                                $fulfilment->fulfilment_number,
+                                ['controller' => 'Fulfilments', 'action' => 'view', $fulfilment->id],
+                            ) ?></td>
+                            <td><?= h($fulfilment->fulfilment_date?->i18nFormat('dd MMM yyyy')) ?></td>
+                            <td><?= h($fulfilment->status->label()) ?></td>
+                            <td><?= $this->Number->format($fulfilment->total_quantity) ?></td>
+                            <td><?= $this->Number->currency($fulfilment->total_amount) ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </section>
         </div>
     </div>
 </div>

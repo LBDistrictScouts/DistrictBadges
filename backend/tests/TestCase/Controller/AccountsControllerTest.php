@@ -23,6 +23,8 @@ class AccountsControllerTest extends TestCase
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',
+        'app.Users',
+        'app.Fulfilments',
         'app.Sections',
     ];
 
@@ -60,6 +62,8 @@ class AccountsControllerTest extends TestCase
         $this->assertResponseContains('Example Beavers');
         $this->assertResponseContains('Thursday');
         $this->assertResponseContains('17:30–18:30');
+        $this->assertResponseContains('<h4>Fulfilments</h4>');
+        $this->assertResponseContains('/fulfilments/view/be5a0a9f-9d87-4191-b819-b7e1c1c50a3a');
     }
 
     /**

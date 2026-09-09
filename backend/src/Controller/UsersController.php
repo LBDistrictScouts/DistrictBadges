@@ -33,7 +33,11 @@ class UsersController extends AppController
      */
     public function view(?string $id = null)
     {
-        $user = $this->Users->get($id, contain: ['Accounts', 'Orders']);
+        $user = $this->Users->get($id, contain: [
+            'Accounts',
+            'Orders',
+            'Fulfilments' => ['sort' => ['Fulfilments.fulfilment_date' => 'DESC']],
+        ]);
         $this->set(compact('user'));
     }
 

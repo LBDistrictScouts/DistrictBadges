@@ -18,7 +18,7 @@ class OrdersController extends AppController
 
         $groups = $this->fetchTable('Groups')
             ->find()
-            ->select(['id', 'group_name', 'sort_order'])
+            ->select(['id', 'group_name', 'sort_order', 'domains', 'type'])
             ->orderBy(['sort_order' => 'ASC', 'group_name' => 'ASC'])
             ->enableHydration(false)
             ->toArray();

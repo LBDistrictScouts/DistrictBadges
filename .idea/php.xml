@@ -83,7 +83,6 @@
       <path value="$PROJECT_DIR$/backend/vendor/psr/http-server-middleware" />
       <path value="$PROJECT_DIR$/backend/vendor/psr/log" />
       <path value="$PROJECT_DIR$/backend/vendor/psr/simple-cache" />
-      <path value="$PROJECT_DIR$/backend/vendor/ralouphie/getallheaders" />
       <path value="$PROJECT_DIR$/backend/vendor/react/promise" />
       <path value="$PROJECT_DIR$/backend/vendor/sebastian/cli-parser" />
       <path value="$PROJECT_DIR$/backend/vendor/sebastian/comparator" />
@@ -137,9 +136,13 @@
       <path value="$PROJECT_DIR$/backend/vendor/psr/event-dispatcher" />
       <path value="$PROJECT_DIR$/backend/vendor/sebastian/file-filter" />
       <path value="$PROJECT_DIR$/backend/vendor/symfony/polyfill-php85" />
+      <path value="$PROJECT_DIR$/backend/vendor/symfony/polyfill-php82" />
+      <path value="$PROJECT_DIR$/backend/vendor/psr/link" />
+      <path value="$PROJECT_DIR$/backend/vendor/dereuromark/cakephp-ide-helper" />
+      <path value="$PROJECT_DIR$/backend/vendor/phpstan/phpstan" />
     </include_path>
   </component>
-  <component name="PhpProjectSharedConfiguration" php_language_level="8.2">
+  <component name="PhpProjectSharedConfiguration">
     <option name="suggestChangeDefaultLanguageLevel" value="false" />
   </component>
   <component name="PhpRuntimeConfiguration">
@@ -231,6 +234,7 @@
   <component name="PhpStan">
     <PhpStan_settings>
       <phpstan_by_interpreter asDefaultInterpreter="true" interpreter_id="33f6821f-a717-4996-a4fc-e56d2c73ec8d" timeout="60000" />
+      <PhpStanConfiguration tool_path="$PROJECT_DIR$/backend/vendor/bin/phpstan" />
     </PhpStan_settings>
   </component>
   <component name="PhpStanOptionsConfiguration">

@@ -24,6 +24,7 @@ class UsersControllerTest extends TestCase
         'app.Groups',
         'app.Accounts',
         'app.Users',
+        'app.Fulfilments',
     ];
 
     /**
@@ -34,9 +35,16 @@ class UsersControllerTest extends TestCase
      */
     public function testIndex(): void
     {
+        $users = $this->getTableLocator()->get('Users');
+        $user = $users->get('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
+        $user->email = 'member@example.net';
+        $users->saveOrFail($user);
+
         $this->get('/users');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('class="user-email-warning"');
+        $this->assertResponseContains('⚠');
     }
 
     /**
@@ -47,9 +55,18 @@ class UsersControllerTest extends TestCase
      */
     public function testView(): void
     {
+        $users = $this->getTableLocator()->get('Users');
+        $user = $users->get('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
+        $user->email = 'member@example.net';
+        $users->saveOrFail($user);
+
         $this->get('/users/view/30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Danger: Non-District Email');
+        $this->assertResponseContains('member@example.net');
+        $this->assertResponseContains('User details');
+        $this->assertResponseContains('Fulfilments');
     }
 
     /**
@@ -69,9 +86,6 @@ class UsersControllerTest extends TestCase
             'last_name' => 'User',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'email' => 'integration.user@example.com',
-            'login' => 'integration.user',
-            'admin_role' => 0,
-            'can_login' => true,
         ]);
 
         $this->assertRedirect(['controller' => 'Users', 'action' => 'index']);
@@ -83,7 +97,6 @@ class UsersControllerTest extends TestCase
             ->firstOrFail();
         $this->assertSame('New', $saved->first_name);
         $this->assertSame('User', $saved->last_name);
-        $this->assertSame('integration.user', $saved->login);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
     }
 
@@ -104,9 +117,6 @@ class UsersControllerTest extends TestCase
             'last_name' => 'User',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'email' => 'updated.user@example.com',
-            'login' => 'updated.user',
-            'admin_role' => 1,
-            'can_login' => false,
         ]);
 
         $this->assertRedirect(['controller' => 'Users', 'action' => 'index']);
@@ -115,7 +125,6 @@ class UsersControllerTest extends TestCase
         $updated = $users->get($id);
         $this->assertSame('Updated', $updated->first_name);
         $this->assertSame('updated.user@example.com', $updated->email);
-        $this->assertFalse((bool)$updated->can_login);
     }
 
     /**
@@ -132,9 +141,6 @@ class UsersControllerTest extends TestCase
             'last_name' => 'User',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'email' => 'delete.user@example.com',
-            'login' => 'delete.user',
-            'admin_role' => 0,
-            'can_login' => true,
         ]);
         $users->saveOrFail($entity);
         $id = $entity->id;

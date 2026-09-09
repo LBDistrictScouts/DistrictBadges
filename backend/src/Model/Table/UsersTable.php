@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Entity\User;
+use ArrayObject;
+use Cake\Datasource\EntityInterface;
+use Cake\Event\EventInterface;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -11,6 +15,7 @@ use Cake\Validation\Validator;
  * Users Model
  *
  * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
+ * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\HasMany $Fulfilments
  * @property \App\Model\Table\OrdersTable&\Cake\ORM\Association\HasMany $Orders
  * @method \App\Model\Entity\User newEmptyEntity()
  * @method \App\Model\Entity\User newEntity(array $data, array $options = [])
@@ -49,6 +54,7 @@ class UsersTable extends Table
         $this->hasMany('Orders', [
             'foreignKey' => 'user_id',
         ]);
+        $this->hasMany('Fulfilments', ['foreignKey' => 'user_id']);
     }
 
     /**
@@ -80,19 +86,6 @@ class UsersTable extends Table
             ->requirePresence('email', 'create')
             ->notEmptyString('email');
 
-        $validator
-            ->scalar('login')
-            ->maxLength('login', 255)
-            ->allowEmptyString('login');
-
-        $validator
-            ->integer('admin_role')
-            ->notEmptyString('admin_role');
-
-        $validator
-            ->boolean('can_login')
-            ->notEmptyString('can_login');
-
         foreach (
             ['address_line_1', 'address_line_2', 'town', 'county', 'postcode'] as $field
         ) {
@@ -106,6 +99,67 @@ class UsersTable extends Table
     }
 
     /**
+     * Keep the stored email-domain flag in sync whenever a user is saved.
+     *
+     * @param \Cake\Event\EventInterface $event Event instance.
+     * @param \Cake\Datasource\EntityInterface $entity User being saved.
+     * @param \ArrayObject<string, mixed> $options Save options.
+     * @return void
+     */
+    public function beforeSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
+    {
+        if (!$entity instanceof User) {
+            return;
+        }
+
+        $entity->set('non_district_email', $this->calculateNonDistrictEmail($entity));
+    }
+
+    /**
+     * Recalculate and persist a user's email-domain flag.
+     *
+     * @param \App\Model\Entity\User $user User with its account and group loaded.
+     * @return void
+     */
+    public function refreshNonDistrictEmail(User $user): void
+    {
+        $user->set('non_district_email', $this->calculateNonDistrictEmail($user));
+        $this->saveOrFail($user, ['checkRules' => false, 'validate' => false]);
+    }
+
+    /**
+     * @param \App\Model\Entity\User $user User to inspect.
+     * @return bool
+     */
+    private function calculateNonDistrictEmail(User $user): bool
+    {
+        $account = $user->get('account');
+        if ($account === null || (string)$account->id !== (string)$user->account_id) {
+            $account = $this->Accounts->find()
+                ->contain(['Groups'])
+                ->where(['Accounts.id' => $user->account_id])
+                ->first();
+        }
+        $domains = $account?->group?->domains;
+        if (!is_array($domains) || $domains === []) {
+            return false;
+        }
+
+        $emailDomain = strrchr(trim($user->email), '@');
+        if ($emailDomain === false || $emailDomain === '@') {
+            return false;
+        }
+
+        $emailDomain = strtolower(substr($emailDomain, 1));
+        $domains = array_map(
+            static fn(mixed $domain): string => strtolower(rtrim(ltrim(trim((string)$domain), '@'), '.')),
+            $domains,
+        );
+
+        return !in_array($emailDomain, $domains, true);
+    }
+
+    /**
      * Returns a rules checker object that will be used for validating
      * application integrity.
      *
@@ -115,7 +169,6 @@ class UsersTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->isUnique(['email']), ['errorField' => 'email']);
-        $rules->add($rules->isUnique(['login']), ['errorField' => 'login']);
         $rules->add($rules->existsIn(['account_id'], 'Accounts'), ['errorField' => 'account_id']);
 
         return $rules;

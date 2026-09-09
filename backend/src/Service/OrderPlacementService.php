@@ -303,9 +303,6 @@ class OrderPlacementService
                 'last_name' => trim((string)$data['last_name']),
                 'email' => $email,
                 'account_id' => $account->id,
-                'login' => null,
-                'admin_role' => 0,
-                'can_login' => false,
             ]);
             $users->saveOrFail($user);
         }

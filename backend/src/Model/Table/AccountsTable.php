@@ -12,6 +12,7 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\GroupsTable&\Cake\ORM\Association\BelongsTo $Groups
  * @property \App\Model\Table\InvoicesTable&\Cake\ORM\Association\HasMany $Invoices
+ * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\HasMany $Fulfilments
  * @property \App\Model\Table\OrdersTable&\Cake\ORM\Association\HasMany $Orders
  * @property \App\Model\Table\SectionsTable&\Cake\ORM\Association\HasMany $Sections
  * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\HasMany $Users
@@ -52,6 +53,7 @@ class AccountsTable extends Table
         $this->hasMany('Invoices', [
             'foreignKey' => 'account_id',
         ]);
+        $this->hasMany('Fulfilments', ['foreignKey' => 'account_id']);
         $this->hasMany('Orders', [
             'foreignKey' => 'account_id',
         ]);

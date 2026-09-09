@@ -22,9 +22,6 @@
                     echo $this->Form->control('last_name');
                     echo $this->Form->control('account_id', ['options' => $accounts]);
                     echo $this->Form->control('email');
-                    echo $this->Form->control('login');
-                    echo $this->Form->control('admin_role');
-                    echo $this->Form->control('can_login');
                 ?>
             </fieldset>
             <?= $this->Form->button(__('Submit')) ?>

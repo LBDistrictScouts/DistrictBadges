@@ -11,28 +11,26 @@
         <table>
             <thead>
                 <tr>
-                    <th><?= __('Full Name') ?></th>
                     <th><?= $this->Paginator->sort('first_name') ?></th>
                     <th><?= $this->Paginator->sort('last_name') ?></th>
                     <th><?= $this->Paginator->sort('account_id', __('Account')) ?></th>
                     <th><?= $this->Paginator->sort('email') ?></th>
-                    <th><?= $this->Paginator->sort('login') ?></th>
-                    <th><?= $this->Paginator->sort('admin_role') ?></th>
-                    <th><?= $this->Paginator->sort('can_login') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($users as $user): ?>
                 <tr>
-                    <td><?= h($user->full_name) ?></td>
                     <td><?= h($user->first_name) ?></td>
                     <td><?= h($user->last_name) ?></td>
                     <td><?= $user->hasValue('account') ? $this->Html->link($user->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $user->account->id]) : '' ?></td>
-                    <td><?= h($user->email) ?></td>
-                    <td><?= h($user->login) ?></td>
-                    <td><?= $this->Number->format($user->admin_role) ?></td>
-                    <td><?= h($user->can_login) ?></td>
+                    <td><?php if ($user->non_district_email) : ?>
+                        <span class="user-email-warning" title="<?= __('Non-District Email') ?>">
+                            <span aria-hidden="true">⚠</span><?= h($user->email) ?>
+                        </span>
+                    <?php else : ?>
+                        <?= h($user->email) ?>
+                    <?php endif; ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $user->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $user->id]) ?>

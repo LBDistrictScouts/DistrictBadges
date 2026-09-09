@@ -12,6 +12,8 @@ use Cake\ORM\Entity;
  * @property string $group_name
  * @property int $group_osm_id
  * @property int|null $sort_order
+ * @property string[]|null $domains
+ * @property \App\Model\Enum\GroupType|null $type
  *
  * @property \App\Model\Entity\Account[] $accounts
  * @property \App\Model\Entity\Section[] $sections
@@ -31,6 +33,8 @@ class Group extends Entity
         'group_name' => true,
         'group_osm_id' => true,
         'sort_order' => true,
+        'domains' => true,
+        'type' => true,
         'accounts' => true,
         'sections' => true,
     ];

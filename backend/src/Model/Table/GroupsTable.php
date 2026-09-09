@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Enum\GroupType;
+use Cake\Database\Type\EnumType;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
@@ -39,6 +41,8 @@ class GroupsTable extends Table
         $this->setTable('groups');
         $this->setDisplayField('group_name');
         $this->setPrimaryKey('id');
+        $this->getSchema()->setColumnType('type', EnumType::from(GroupType::class));
+        $this->getSchema()->setColumnType('domains', 'json');
 
         $this->hasMany('Accounts', [
             'foreignKey' => 'group_id',
@@ -70,6 +74,14 @@ class GroupsTable extends Table
             ->integer('sort_order')
             ->greaterThan('sort_order', 0)
             ->allowEmptyString('sort_order');
+
+        $validator
+            ->array('domains')
+            ->allowEmptyArray('domains');
+
+        $validator
+            ->enum('type', GroupType::class)
+            ->allowEmptyString('type');
 
         return $validator;
     }
