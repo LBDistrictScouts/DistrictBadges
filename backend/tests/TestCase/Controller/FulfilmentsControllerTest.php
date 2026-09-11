@@ -481,6 +481,7 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseContains('Select an order');
         $this->assertResponseContains('data-stock-line-bulk-source');
         $this->assertResponseContains('bulkOptionUserIds');
+        $this->assertResponseContains('bulkOptionAccountIds');
         $this->assertResponseContains('updateBulkOptions');
         $this->assertResponseContains('data-dispatch-type');
         $this->assertResponseContains('Local Drop Off');

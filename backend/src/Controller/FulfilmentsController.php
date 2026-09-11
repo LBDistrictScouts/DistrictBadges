@@ -180,6 +180,7 @@ class FulfilmentsController extends AppController
             $this->orderLineGroups(),
             $this->nonDistrictEmailOrderAlerts(),
             $this->orderUserIds(),
+            $this->orderAccountIds(),
         );
         $this->set(compact('fulfilment', 'badges', 'lineGrid'));
     }
@@ -397,6 +398,7 @@ class FulfilmentsController extends AppController
                 'next_index' => $index,
                 'alerts' => $alerts,
                 'user_id' => (string)$order->user_id,
+                'account_id' => (string)$order->account_id,
                 'dispatch_type' => ($order->postage === true
                     ? DispatchType::PostalDispatch
                     : DispatchType::ShopCollection)->value,
@@ -473,6 +475,7 @@ class FulfilmentsController extends AppController
         array $orderLineGroups = [],
         array $orderAlerts = [],
         array $orderUserIds = [],
+        array $orderAccountIds = [],
     ): array {
         return [
             'association' => 'FulfilmentLines',
@@ -497,6 +500,7 @@ class FulfilmentsController extends AppController
                 'options' => $orders,
                 'alerts' => $orderAlerts,
                 'optionUserIds' => $orderUserIds,
+                'optionAccountIds' => $orderAccountIds,
                 'url' => ['action' => 'orderLines'],
                 'addLabel' => __('Add Order'),
             ],
@@ -662,6 +666,42 @@ class FulfilmentsController extends AppController
         }
 
         return $userIds;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function orderAccountIds(): array
+    {
+        $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines;
+        $orderIds = $orderLines->find()
+            ->select(['order_id'])
+            ->distinct(['order_id'])
+            ->disableHydration()
+            ->all()
+            ->extract('order_id')
+            ->toList();
+        if ($orderIds === []) {
+            return [];
+        }
+
+        $orders = $orderLines->Orders->find()
+            ->select(['id', 'account_id'])
+            ->where([
+                'Orders.id IN' => $orderIds,
+                'Orders.status NOT IN' => [
+                    OrderStatus::Fulfilled->value,
+                    OrderStatus::Cancelled->value,
+                ],
+            ])
+            ->all();
+
+        $accountIds = [];
+        foreach ($orders as $order) {
+            $accountIds[(string)$order->id] = (string)$order->account_id;
+        }
+
+        return $accountIds;
     }
 
     /**

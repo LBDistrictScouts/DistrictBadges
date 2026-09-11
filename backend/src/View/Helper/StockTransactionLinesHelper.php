@@ -135,6 +135,7 @@ class StockTransactionLinesHelper extends Helper
         $bulkEndpoint = 'null';
         $bulkAlerts = '[]';
         $bulkOptionUserIds = '[]';
+        $bulkOptionAccountIds = '[]';
         if (is_array($bulkLoader)) {
             $bulkEndpoint = json_encode(
                 $this->Url->build($bulkLoader['url']),
@@ -142,6 +143,7 @@ class StockTransactionLinesHelper extends Helper
             );
             $bulkAlerts = json_encode($bulkLoader['alerts'] ?? [], JSON_THROW_ON_ERROR);
             $bulkOptionUserIds = json_encode($bulkLoader['optionUserIds'] ?? [], JSON_THROW_ON_ERROR);
+            $bulkOptionAccountIds = json_encode($bulkLoader['optionAccountIds'] ?? [], JSON_THROW_ON_ERROR);
             $bulkLoaderHtml = '<div class="row stock-line-bulk-loader"><div class="column stock-line-bulk-source">'
                 . $this->Form->control((string)$bulkLoader['field'], [
                     'label' => $bulkLoader['label'],
@@ -181,6 +183,7 @@ class StockTransactionLinesHelper extends Helper
                 $bulkEndpoint,
                 $bulkAlerts,
                 $bulkOptionUserIds,
+                $bulkOptionAccountIds,
                 $fallbackError,
                 $fields,
                 $selectors,
@@ -456,6 +459,7 @@ class StockTransactionLinesHelper extends Helper
      * @param string $bulkEndpoint JSON-encoded bulk loader endpoint.
      * @param string $bulkAlerts JSON-encoded alerts keyed by bulk-source option.
      * @param string $bulkOptionUserIds JSON-encoded user IDs keyed by bulk-source option.
+     * @param string $bulkOptionAccountIds JSON-encoded account IDs keyed by bulk-source option.
      * @param string $fallbackError JSON-encoded fallback error.
      * @param string $fields JSON-encoded field names.
      * @param string $selectors JSON-encoded selector field names.
@@ -467,6 +471,7 @@ class StockTransactionLinesHelper extends Helper
         string $bulkEndpoint,
         string $bulkAlerts,
         string $bulkOptionUserIds,
+        string $bulkOptionAccountIds,
         string $fallbackError,
         string $fields,
         string $selectors,
@@ -490,6 +495,7 @@ class StockTransactionLinesHelper extends Helper
     var bulkEndpoint = {$bulkEndpoint};
     var bulkAlerts = {$bulkAlerts};
     var bulkOptionUserIds = {$bulkOptionUserIds};
+    var bulkOptionAccountIds = {$bulkOptionAccountIds};
     var fields = {$fields};
     var fieldNames = Object.keys(fields);
     var selectorNames = {$selectors};
@@ -537,6 +543,7 @@ class StockTransactionLinesHelper extends Helper
         alerts.hidden = alerts.childElementCount === 0;
     };
     var activeBulkUserId = null;
+    var activeBulkAccountId = null;
     var updateBulkOptions = function () {
         if (!bulkSource) return;
         var selectedOrderIds = Array.from(
@@ -548,6 +555,7 @@ class StockTransactionLinesHelper extends Helper
             if (!option.value) return;
             var eligible = !activeBulkUserId
                 || (bulkOptionUserIds[option.value] === activeBulkUserId
+                    && bulkOptionAccountIds[option.value] === activeBulkAccountId
                     && !selectedOrderIds.includes(option.value));
             option.hidden = !eligible;
             option.disabled = !eligible;
@@ -643,6 +651,7 @@ class StockTransactionLinesHelper extends Helper
             }
             if (!grid.querySelector('[data-stock-line-order]')) {
                 activeBulkUserId = null;
+                activeBulkAccountId = null;
             }
             updateBulkOptions();
         }
@@ -723,6 +732,7 @@ class StockTransactionLinesHelper extends Helper
             nextIndex = payload.next_index;
             showAlerts(payload.alerts);
             activeBulkUserId = payload.html ? payload.user_id : activeBulkUserId;
+            activeBulkAccountId = payload.html ? payload.account_id : activeBulkAccountId;
             updateBulkOptions();
             container.dispatchEvent(new CustomEvent('stock-lines:bulk-loaded', {detail: payload}));
             bulkSource.value = '';
