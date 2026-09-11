@@ -244,6 +244,7 @@ class FulfilmentsController extends AppController
                 'order_number',
                 'user_id',
                 'account_id',
+                'contact_email',
                 'section_id',
                 'status',
                 'postage',
@@ -265,7 +266,13 @@ class FulfilmentsController extends AppController
             return $this->jsonError(__('The selected order could not be fulfilled.'));
         }
         $orders->loadInto($order, ['Users', 'Accounts.Groups', 'Sections.Groups']);
-        if (!$this->orderLinesMatchCustomer($existingOrderLineIds, (string)$order->user_id)) {
+        if (
+            !$this->orderLinesMatchCustomer(
+                $existingOrderLineIds,
+                (string)$order->user_id,
+                (string)$order->account_id,
+            )
+        ) {
             return $this->jsonError(__('All orders in a fulfilment must belong to the same user and account.'));
         }
         $user = $order->user;
@@ -348,7 +355,7 @@ class FulfilmentsController extends AppController
         }
 
         $alerts = [];
-        if ($user->non_district_email) {
+        if ($this->isNonDistrictEmailForOrder($order)) {
             $alerts[] = $this->nonDistrictEmailOrderAlert($order);
         }
         if ($fulfilledOmitted > 0) {
@@ -591,7 +598,7 @@ class FulfilmentsController extends AppController
 
         $orders = $orderLines->Orders
             ->find()
-            ->contain(['Users'])
+            ->contain(['Users', 'Accounts.Groups'])
             ->where([
                 'Orders.id IN' => $orderIds,
                 'Orders.status NOT IN' => [
@@ -665,35 +672,58 @@ class FulfilmentsController extends AppController
         $alerts = [];
         $orders = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
             ->find()
-            ->contain(['Users'])
+            ->contain(['Users', 'Accounts.Groups'])
             ->innerJoinWith('OrderLines')
             ->where([
                 'Orders.status NOT IN' => [
                     OrderStatus::Fulfilled->value,
                     OrderStatus::Cancelled->value,
                 ],
-                'Users.non_district_email' => true,
             ])
             ->all();
 
         foreach ($orders as $order) {
-            $alerts[(string)$order->id] = $this->nonDistrictEmailOrderAlert($order);
+            if ($this->isNonDistrictEmailForOrder($order)) {
+                $alerts[(string)$order->id] = $this->nonDistrictEmailOrderAlert($order);
+            }
         }
 
         return $alerts;
     }
 
     /**
-     * @param \App\Model\Entity\Order $order Order whose user needs checking.
+     * @param \App\Model\Entity\Order $order Order whose contact email needs checking.
      * @return array{html: string}
      */
     private function nonDistrictEmailOrderAlert(Order $order): array
     {
         return [
             'html' => (string)$this->createView()->element('non_district_email_alert', [
-                'user' => $order->user,
+                'email' => $this->orderContactEmail($order),
+                'isNonDistrictEmail' => true,
             ]),
         ];
+    }
+
+    /**
+     * @param \App\Model\Entity\Order $order Order whose contact email needs checking.
+     * @return bool
+     */
+    private function isNonDistrictEmailForOrder(Order $order): bool
+    {
+        return $this->getTableLocator()->get('Users')->isNonDistrictEmail(
+            $this->orderContactEmail($order),
+            $order->account,
+        );
+    }
+
+    /**
+     * @param \App\Model\Entity\Order $order Order whose contact email is required.
+     * @return string
+     */
+    private function orderContactEmail(Order $order): string
+    {
+        return trim((string)$order->contact_email) ?: (string)$order->user->email;
     }
 
     /**
@@ -966,10 +996,14 @@ class FulfilmentsController extends AppController
     /**
      * @param array<string> $orderLineIds Order line ids.
      * @param string|null $expectedUserId Expected user id.
+     * @param string|null $expectedAccountId Expected account id.
      * @return bool
      */
-    private function orderLinesMatchCustomer(array $orderLineIds, ?string $expectedUserId = null): bool
-    {
+    private function orderLinesMatchCustomer(
+        array $orderLineIds,
+        ?string $expectedUserId = null,
+        ?string $expectedAccountId = null,
+    ): bool {
         if ($orderLineIds === []) {
             return true;
         }
@@ -994,7 +1028,8 @@ class FulfilmentsController extends AppController
 
         return count($users) === 1
             && count($accounts) === 1
-            && ($expectedUserId === null || (string)$users[0] === $expectedUserId);
+            && ($expectedUserId === null || (string)$users[0] === $expectedUserId)
+            && ($expectedAccountId === null || (string)$accounts[0] === $expectedAccountId);
     }
 
     /**

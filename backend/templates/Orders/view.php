@@ -32,7 +32,10 @@ $multipleOrdersMessage = 'If the customer places multiple orders, they may be gr
     <div class="column column-80">
         <div class="orders view content">
             <h3><?= h($order->order_number) ?></h3>
-            <?= $this->element('non_district_email_alert', ['user' => $order->user]) ?>
+            <?= $this->element('non_district_email_alert', [
+                'email' => $contactEmail,
+                'isNonDistrictEmail' => $isNonDistrictEmail,
+            ]) ?>
             <table>
                 <tr>
                     <th><?= __('Status') ?></th>

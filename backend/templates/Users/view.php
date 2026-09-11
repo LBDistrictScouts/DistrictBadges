@@ -23,7 +23,10 @@ $address = array_filter([
     </aside>
     <div class="column column-80">
         <div class="users view content">
-            <?= $this->element('non_district_email_alert', ['user' => $user]) ?>
+            <?= $this->element('non_district_email_alert', [
+                'email' => $user->email,
+                'isNonDistrictEmail' => $user->non_district_email,
+            ]) ?>
 
             <header class="user-view-heading">
                 <div>

@@ -114,7 +114,9 @@ class OrdersController extends AppController
             'Users',
             'OrderLines.Badges',
         ]);
-        $this->set(compact('order'));
+        $contactEmail = trim((string)$order->contact_email) ?: (string)$order->user->email;
+        $isNonDistrictEmail = $this->Orders->Users->isNonDistrictEmail($contactEmail, $order->account);
+        $this->set(compact('order', 'contactEmail', 'isNonDistrictEmail'));
     }
 
     /**

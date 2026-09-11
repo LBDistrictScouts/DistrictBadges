@@ -567,9 +567,9 @@ class FulfilmentsControllerTest extends TestCase
 
     public function testOrderLinesWarnAboutANonDistrictEmail(): void
     {
-        $this->getTableLocator()->get('Users')->updateAll(
-            ['non_district_email' => true],
-            ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1'],
+        $this->getTableLocator()->get('Orders')->updateAll(
+            ['contact_email' => 'customer@outside.example'],
+            ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644'],
         );
 
         $this->get('/fulfilments/add');
@@ -720,6 +720,37 @@ class FulfilmentsControllerTest extends TestCase
 
         $this->assertResponseCode(422);
         $this->assertResponseContains('must belong to the same user');
+    }
+
+    public function testOrderLinesRejectsOrderForDifferentAccount(): void
+    {
+        $groups = $this->getTableLocator()->get('Groups');
+        $group = $groups->newEntity([
+            'group_name' => 'Second Group',
+            'group_osm_id' => 2,
+            'domains' => ['second.example.org'],
+            'type' => 'group',
+        ]);
+        $groups->saveOrFail($group);
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $account = $accounts->newEntity([
+            'account_name' => 'Second Account',
+            'group_id' => $group->id,
+        ]);
+        $accounts->saveOrFail($account);
+        $orderLine = $this->createOrderLine(
+            '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            (string)$account->id,
+        );
+
+        $this->get(
+            '/fulfilments/order-lines?order_id=' . $orderLine->order_id
+            . '&index=1'
+            . '&existing_order_line_ids[]=be20de8c-eea8-4114-a98e-1d55e483e8db',
+        );
+
+        $this->assertResponseCode(422);
+        $this->assertResponseContains('must belong to the same user and account');
     }
 
     public function testOrderLinesRejectsCancelledOrder(): void
@@ -960,11 +991,13 @@ class FulfilmentsControllerTest extends TestCase
      * @param string $userId User id.
      * @return \App\Model\Entity\OrderLine
      */
-    private function createOrderLine(string $userId)
-    {
+    private function createOrderLine(
+        string $userId,
+        string $accountId = 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+    ) {
         $orders = $this->getTableLocator()->get('Orders');
         $order = $orders->newEntity([
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'account_id' => $accountId,
             'user_id' => $userId,
         ]);
         $orders->saveOrFail($order);

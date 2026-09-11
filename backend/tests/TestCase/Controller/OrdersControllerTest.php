@@ -169,9 +169,9 @@ class OrdersControllerTest extends TestCase
 
     public function testViewWarnsAboutANonDistrictEmail(): void
     {
-        $this->getTableLocator()->get('Users')->updateAll(
-            ['non_district_email' => true],
-            ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1'],
+        $this->getTableLocator()->get('Orders')->updateAll(
+            ['contact_email' => 'customer@outside.example'],
+            ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644'],
         );
 
         $this->get('/orders/view/dd7b14cc-abe6-4e58-b63d-070678d78644');
@@ -181,6 +181,34 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains('⚠');
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Verify the customer before fulfilling the order.');
+    }
+
+    public function testViewChecksTheOrderEmailAgainstTheOrderAccount(): void
+    {
+        $groups = $this->getTableLocator()->get('Groups');
+        $group = $groups->newEntity([
+            'group_name' => 'Second Group',
+            'group_osm_id' => 2,
+            'domains' => ['second.example.org'],
+            'type' => 'group',
+        ]);
+        $groups->saveOrFail($group);
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $account = $accounts->newEntity([
+            'account_name' => 'Second Account',
+            'group_id' => $group->id,
+        ]);
+        $accounts->saveOrFail($account);
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'account_id' => $account->id,
+            'contact_email' => 'orderer@outside.example',
+        ], ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644']);
+
+        $this->get('/orders/view/dd7b14cc-abe6-4e58-b63d-070678d78644');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Danger: Non-District Email');
+        $this->assertResponseContains('orderer@outside.example');
     }
 
     public function testViewDisplaysPostageAddressAndTerms(): void

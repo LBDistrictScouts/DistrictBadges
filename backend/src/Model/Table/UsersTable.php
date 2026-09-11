@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Entity\Account;
 use App\Model\Entity\User;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
@@ -140,12 +141,25 @@ class UsersTable extends Table
                 ->where(['Accounts.id' => $user->account_id])
                 ->first();
         }
+
+        return $this->isNonDistrictEmail($user->email, $account);
+    }
+
+    /**
+     * Check an email address against an account's registered group domains.
+     *
+     * @param string $email Email address to inspect.
+     * @param \App\Model\Entity\Account|null $account Owning account, with its group loaded.
+     * @return bool
+     */
+    public function isNonDistrictEmail(string $email, ?Account $account): bool
+    {
         $domains = $account?->group?->domains;
         if (!is_array($domains) || $domains === []) {
             return false;
         }
 
-        $emailDomain = strrchr(trim($user->email), '@');
+        $emailDomain = strrchr(trim($email), '@');
         if ($emailDomain === false || $emailDomain === '@') {
             return false;
         }
