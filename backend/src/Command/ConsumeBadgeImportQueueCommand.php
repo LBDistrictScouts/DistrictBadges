@@ -5,6 +5,7 @@ namespace App\Command;
 
 use App\Queue\Processor\BadgeImportProcessor;
 use App\Service\BadgeImportQueueService;
+use App\Service\WorkerHeartbeat;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -57,11 +58,13 @@ class ConsumeBadgeImportQueueCommand extends Command
     {
         $service = $this->buildQueueService();
         $processor = new BadgeImportProcessor();
+        $heartbeat = new WorkerHeartbeat();
         $waitTime = (int)$args->getOption('wait-time');
+        $heartbeat->touch();
 
         do {
             try {
-                $count = $service->consumeBatch($processor, $waitTime);
+                $count = $service->consumeBatch($processor, $waitTime, [$heartbeat, 'touch']);
             } catch (Throwable $exception) {
                 Log::error('Badge import queue polling failed: {message}', [
                     'message' => $exception->getMessage(),
@@ -73,6 +76,8 @@ class ConsumeBadgeImportQueueCommand extends Command
 
                 sleep(5);
                 continue;
+            } finally {
+                $heartbeat->touch();
             }
             if ($count > 0) {
                 $io->verbose(sprintf('Processed %d badge import message(s).', $count));

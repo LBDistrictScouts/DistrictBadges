@@ -62,6 +62,7 @@ class BadgeImportQueueService
     public function consumeBatch(
         BadgeImportProcessor $processor,
         int $waitTimeSeconds = 20,
+        ?callable $heartbeat = null,
     ): int {
         $result = $this->client->receiveMessage([
             'QueueUrl' => $this->queueUrl,
@@ -72,6 +73,10 @@ class BadgeImportQueueService
         $messages = $result->get('Messages') ?? [];
 
         foreach ($messages as $message) {
+            if ($heartbeat !== null) {
+                $heartbeat();
+            }
+
             try {
                 $result = $processor->process((string)($message['Body'] ?? ''));
                 if (
@@ -89,6 +94,10 @@ class BadgeImportQueueService
                     'receiveCount' => $message['Attributes']['ApproximateReceiveCount'] ?? null,
                     'scope' => ['badge_import'],
                 ]);
+            } finally {
+                if ($heartbeat !== null) {
+                    $heartbeat();
+                }
             }
         }
 

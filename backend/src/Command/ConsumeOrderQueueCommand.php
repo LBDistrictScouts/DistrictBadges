@@ -5,6 +5,7 @@ namespace App\Command;
 
 use App\Queue\Processor\OrderProcessor;
 use App\Service\OrderQueueService;
+use App\Service\WorkerHeartbeat;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -46,10 +47,12 @@ class ConsumeOrderQueueCommand extends Command
     {
         $service = $this->buildQueueService();
         $processor = new OrderProcessor();
+        $heartbeat = new WorkerHeartbeat();
         $waitTime = (int)$args->getOption('wait-time');
+        $heartbeat->touch();
         do {
             try {
-                $count = $service->consumeBatch($processor, $waitTime);
+                $count = $service->consumeBatch($processor, $waitTime, [$heartbeat, 'touch']);
             } catch (Throwable $exception) {
                 Log::error('Order queue polling failed: {message}', [
                     'message' => $exception->getMessage(),
@@ -61,6 +64,8 @@ class ConsumeOrderQueueCommand extends Command
 
                 sleep(5);
                 continue;
+            } finally {
+                $heartbeat->touch();
             }
             if ($count > 0) {
                 $io->verbose(sprintf('Processed %d order message(s).', $count));

@@ -57,8 +57,11 @@ class OrderQueueService
     /**
      * Long poll and process one batch of orders.
      */
-    public function consumeBatch(OrderProcessor $processor, int $waitTimeSeconds = 20): int
-    {
+    public function consumeBatch(
+        OrderProcessor $processor,
+        int $waitTimeSeconds = 20,
+        ?callable $heartbeat = null,
+    ): int {
         $result = $this->client->receiveMessage([
             'QueueUrl' => $this->queueUrl,
             'MaxNumberOfMessages' => 10,
@@ -67,7 +70,17 @@ class OrderQueueService
         ]);
         $messages = $result->get('Messages') ?? [];
         foreach ($messages as $message) {
-            $outcome = $processor->process((string)($message['Body'] ?? ''));
+            if ($heartbeat !== null) {
+                $heartbeat();
+            }
+
+            try {
+                $outcome = $processor->process((string)($message['Body'] ?? ''));
+            } finally {
+                if ($heartbeat !== null) {
+                    $heartbeat();
+                }
+            }
             if ($outcome === OrderProcessor::ACK && !empty($message['ReceiptHandle'])) {
                 $this->client->deleteMessage([
                     'QueueUrl' => $this->queueUrl,

@@ -110,6 +110,34 @@ class OrderQueueServiceTest extends TestCase
         $this->assertSame('DeleteMessage', $mock->getLastCommand()?->getName());
     }
 
+    public function testConsumeBatchUpdatesHeartbeatAroundEachMessage(): void
+    {
+        $messages = [
+            ['Body' => '{"order":"first"}'],
+            ['Body' => '{"order":"second"}'],
+        ];
+        $mock = new MockHandler([new Result(['Messages' => $messages])]);
+        $client = new SqsClient([
+            'region' => 'us-east-1',
+            'version' => '2012-11-05',
+            'credentials' => ['key' => 'test', 'secret' => 'test'],
+            'handler' => $mock,
+        ]);
+        Configure::write('Sqs', ['queueUrl' => 'https://example.com/queue']);
+        $processor = $this->createMock(OrderProcessor::class);
+        $processor->expects($this->exactly(2))->method('process')->willReturn(OrderProcessor::REQUEUE);
+        $heartbeats = 0;
+
+        $this->assertSame(2, (new OrderQueueService($client))->consumeBatch(
+            $processor,
+            0,
+            static function () use (&$heartbeats): void {
+                $heartbeats++;
+            },
+        ));
+        $this->assertSame(4, $heartbeats);
+    }
+
     /**
      * @param string $outcome Processor outcome.
      */
