@@ -407,23 +407,25 @@ td, th {
 }
 
 .account-view-heading,
-.account-section-heading {
+.account-section-heading,
+.user-view-heading,
+.user-section-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 2rem;
 }
 
-.account-view-heading h3, .account-section-heading h4 {
+.account-view-heading h3, .account-section-heading h4, .user-view-heading h3, .user-section-heading h4 {
   margin-bottom: 0.4rem;
 }
 
-.account-view-heading p {
+.account-view-heading p, .user-view-heading p {
   margin-bottom: 0;
   color: var(--district-muted);
 }
 
-.account-view-eyebrow {
+.account-view-eyebrow, .user-view-eyebrow {
   font-size: 1.1rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -467,11 +469,16 @@ td, th {
   border-top: 1px solid var(--district-border);
 }
 
-.account-section-heading {
+.user-view-section {
+  padding-top: 2rem;
+  border-top: 1px solid var(--district-border);
+}
+
+.account-section-heading, .user-section-heading {
   align-items: baseline;
 }
 
-.account-section-heading span {
+.account-section-heading span, .user-section-heading span {
   color: var(--district-muted);
   font-size: 1.3rem;
 }
@@ -484,6 +491,32 @@ td, th {
   color: var(--district-muted);
 }
 
+.user-empty-state {
+  margin: 1.2rem 0 0;
+  padding: 1.6rem;
+  border-radius: 0.8rem;
+  background: var(--district-surface-alt);
+  color: var(--district-muted);
+}
+
+.user-address {
+  margin: 1.2rem 0 0;
+  font-style: normal;
+}
+
+.user-email-warning {
+  align-items: center;
+  background: var(--color-message-error-bg);
+  border: 1px solid var(--color-message-error-border);
+  border-radius: 999px;
+  color: var(--color-message-error-text);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 0.45rem;
+  padding: 0.3rem 0.75rem;
+  white-space: nowrap;
+}
+
 @media screen and (max-width: 640px) {
   .account-summary {
     grid-template-columns: repeat(2, 1fr);
@@ -494,10 +527,10 @@ td, th {
   .account-summary div:nth-child(-n+2) {
     border-bottom: 1px solid var(--district-border);
   }
-  .account-view-heading {
+  .account-view-heading, .user-view-heading {
     display: block;
   }
-  .account-view-heading .button {
+  .account-view-heading .button, .user-view-heading .button {
     margin-top: 1.5rem;
   }
 }
@@ -534,6 +567,27 @@ td, th {
   background: var(--color-message-error-bg);
   color: var(--color-message-error-text);
   border-color: var(--color-message-error-border);
+}
+
+.non-district-email-alert {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  font-size: 1.6rem;
+}
+
+.non-district-email-alert__icon {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.non-district-email-alert h4 {
+  color: inherit;
+  margin: 0 0 0.5rem;
+}
+
+.non-district-email-alert p {
+  margin: 0;
 }
 
 /* Forms */
@@ -757,6 +811,22 @@ input[type=color] {
   height: 3.6rem;
 }
 
+.stock-transaction-lines .select2-container .select2-selection--single .select2-selection__clear {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #444;
+  display: flex;
+  float: right;
+  height: 3.6rem;
+  justify-content: center;
+  line-height: 1;
+  margin: 0 2rem 0 0;
+  padding: 0;
+  width: 2rem;
+}
+
 .stock-line-bulk-loader {
   display: grid;
   width: 100%;
@@ -789,6 +859,77 @@ input[type=color] {
 .stock-line-alerts .message {
   cursor: default;
   padding: 1rem 1.25rem;
+}
+
+.stock-line-order-group {
+  border-top: 0.1rem solid #d1d1d1;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+}
+
+.stock-line-order-group h2 {
+  font-size: 1.8rem;
+  margin: 0 0 0.8rem;
+}
+
+.stock-line-order-group dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 3rem;
+  margin: 0 0 1.5rem;
+}
+
+.stock-line-order-group dl div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stock-line-order-group dt {
+  color: #606c76;
+  font-weight: 700;
+}
+
+.stock-line-order-group dd {
+  margin: 0;
+}
+
+.fulfilment-overview {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fulfilment-overview > section {
+  background: #f8fafb;
+  border: 0.1rem solid #e5eaed;
+  border-radius: 0.8rem;
+  padding: 1.6rem;
+}
+
+.fulfilment-overview h4 {
+  margin: 0 0 1.2rem;
+}
+
+.fulfilment-overview dl {
+  margin: 0;
+}
+
+.fulfilment-overview dl > div + div {
+  border-top: 0.1rem solid #e5eaed;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.fulfilment-overview dt {
+  color: #606c76;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fulfilment-overview dd {
+  margin: 0.4rem 0 0;
 }
 
 @media (min-width: 40rem) {
@@ -1034,14 +1175,20 @@ input[type=color] {
   color: #4a148c;
 }
 
-.badge-detail-grid {
+.badge-detail-grid,
+.user-detail-grid {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
 }
 
-.badge-detail-item {
+.user-detail-grid--single {
+  grid-template-columns: minmax(0, 32rem);
+}
+
+.badge-detail-item,
+.user-detail-item {
   background: #f8fafb;
   border: 0.1rem solid #e5eaed;
   border-radius: 0.8rem;
@@ -1049,7 +1196,8 @@ input[type=color] {
   padding: 1.4rem 1.6rem;
 }
 
-.badge-detail-item dt {
+.badge-detail-item dt,
+.user-detail-item dt {
   color: #606c76;
   font-size: 1.2rem;
   font-weight: 600;
@@ -1058,7 +1206,8 @@ input[type=color] {
   text-transform: uppercase;
 }
 
-.badge-detail-item dd {
+.badge-detail-item dd,
+.user-detail-item dd {
   font-size: 1.8rem;
   font-weight: 600;
   margin: 0;
@@ -1526,7 +1675,8 @@ input[type=color] {
   .badge-index-controls .index-filters__row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .badge-detail-grid {
+  .badge-detail-grid,
+  .user-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .badge-stock-groups {
@@ -1534,6 +1684,9 @@ input[type=color] {
   }
 }
 @media screen and (max-width: 640px) {
+  .fulfilment-overview {
+    grid-template-columns: 1fr;
+  }
   .stock-line-bulk-loader {
     grid-template-columns: 1fr;
     gap: 1.2rem;
@@ -1554,7 +1707,8 @@ input[type=color] {
   .badge-stock-cards {
     grid-template-columns: 1fr;
   }
-  .badge-detail-grid {
+  .badge-detail-grid,
+  .user-detail-grid {
     grid-template-columns: 1fr;
   }
   /* Fix milligram not having a responsive column system */
@@ -1666,7 +1820,7 @@ body[data-entity-category]:not([data-entity-category=default]) .main a:not(.butt
 }
 
 body[data-entity-category]:not([data-entity-category=default]) .main .button:not(.button-outline):not(.button-clear):not(.audit-sort),
-body[data-entity-category]:not([data-entity-category=default]) .main button:not(.button-outline):not(.button-clear):not(.audit-sort),
+body[data-entity-category]:not([data-entity-category=default]) .main button:not(.button-outline):not(.button-clear):not(.audit-sort):not(.select2-selection__clear),
 body[data-entity-category]:not([data-entity-category=default]) .main input[type=button],
 body[data-entity-category]:not([data-entity-category=default]) .main input[type=submit] {
   border-color: var(--entity-accent);
@@ -1680,20 +1834,20 @@ body[data-entity-category]:not([data-entity-category=default]) .main .button.but
 }
 
 body[data-entity-category=badges] .main .button:not(.button-outline):not(.button-clear),
-body[data-entity-category=badges] .main button:not(.button-outline):not(.button-clear),
+body[data-entity-category=badges] .main button:not(.button-outline):not(.button-clear):not(.select2-selection__clear),
 body[data-entity-category=badges] .main input[type=button],
 body[data-entity-category=badges] .main input[type=submit] {
   color: var(--entity-accent-dark);
 }
 
 body[data-entity-category]:not([data-entity-category=default]) .main .button:not(.button-outline):not(.button-clear):not(.audit-sort):hover,
-body[data-entity-category]:not([data-entity-category=default]) .main button:not(.button-outline):not(.button-clear):not(.audit-sort):hover {
+body[data-entity-category]:not([data-entity-category=default]) .main button:not(.button-outline):not(.button-clear):not(.audit-sort):not(.select2-selection__clear):hover {
   border-color: var(--entity-accent-dark);
   background-color: var(--entity-accent-dark);
 }
 
 body[data-entity-category=badges] .main .button:not(.button-outline):not(.button-clear):hover,
-body[data-entity-category=badges] .main button:not(.button-outline):not(.button-clear):hover {
+body[data-entity-category=badges] .main button:not(.button-outline):not(.button-clear):not(.select2-selection__clear):hover {
   color: #fff;
 }
 

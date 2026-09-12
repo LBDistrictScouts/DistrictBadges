@@ -43,6 +43,7 @@ class AccountsController extends AppController
             'Orders' => fn($query) => $query
                 ->contain(['Users', 'Sections'])
                 ->orderByDesc('placed_date'),
+            'Fulfilments' => fn($query) => $query->orderByDesc('fulfilment_date'),
         ]);
         $this->set(compact('account'));
     }
@@ -99,13 +100,23 @@ class AccountsController extends AppController
                 $account->setError('section_ids', __('Select only sections belonging to the selected group.'));
             }
             $saved = false;
+            $groupChanged = $account->isDirty('group_id');
             if (!$account->hasErrors()) {
                 $saved = $this->Accounts->getConnection()->transactional(function () use (
                     $account,
                     $selectedSectionIds,
+                    $groupChanged,
                 ): bool {
                     if (!$this->Accounts->save($account)) {
                         return false;
+                    }
+                    if ($groupChanged) {
+                        $users = $this->Accounts->Users->find()
+                            ->where(['Users.account_id' => $account->id])
+                            ->all();
+                        foreach ($users as $user) {
+                            $this->Accounts->Users->refreshNonDistrictEmail($user);
+                        }
                     }
                     $this->Accounts->Sections->updateAll(
                         ['account_id' => null],

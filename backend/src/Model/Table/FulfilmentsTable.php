@@ -10,12 +10,15 @@ use Cake\Core\Configure;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
+use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
 /**
  * Fulfilments Model
  *
+ * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
+ * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
  * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
  * @property \App\Model\Table\FulfilmentLinesTable&\Cake\ORM\Association\HasMany $FulfilmentLines
  * @method \App\Model\Entity\Fulfilment newEmptyEntity()
@@ -68,6 +71,8 @@ class FulfilmentsTable extends Table
             'prefix' => Configure::read('EntityNumbers.fulfilmentPrefix', 'FUL'),
         ]);
 
+        $this->belongsTo('Users', ['foreignKey' => 'user_id', 'joinType' => 'LEFT']);
+        $this->belongsTo('Accounts', ['foreignKey' => 'account_id', 'joinType' => 'LEFT']);
         $this->hasMany('StockTransactions', [
             'foreignKey' => 'fulfilment_id',
         ]);
@@ -93,6 +98,9 @@ class FulfilmentsTable extends Table
             ->integer('status')
             ->inList('status', array_column(FulfilmentStatus::cases(), 'value'))
             ->allowEmptyString('status');
+
+        $validator->uuid('user_id')->allowEmptyString('user_id');
+        $validator->uuid('account_id')->allowEmptyString('account_id');
 
         $validator
             ->decimal('postage_charge')
@@ -120,6 +128,24 @@ class FulfilmentsTable extends Table
         }
 
         return $validator;
+    }
+
+    /**
+     * @param \Cake\ORM\RulesChecker $rules Rules checker.
+     * @return \Cake\ORM\RulesChecker
+     */
+    public function buildRules(RulesChecker $rules): RulesChecker
+    {
+        $rules->add($rules->existsIn(['user_id'], 'Users'), [
+            'errorField' => 'user_id',
+            'allowNullableNulls' => true,
+        ]);
+        $rules->add($rules->existsIn(['account_id'], 'Accounts'), [
+            'errorField' => 'account_id',
+            'allowNullableNulls' => true,
+        ]);
+
+        return $rules;
     }
 
     /**

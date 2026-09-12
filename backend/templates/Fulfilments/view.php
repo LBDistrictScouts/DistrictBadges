@@ -2,6 +2,9 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Fulfilment $fulfilment
+ * @var \App\Model\Entity\User|null $user
+ * @var \App\Model\Entity\Account|null $account
+ * @var \App\Model\Entity\Group|null $group
  */
 $dispatchAddress = array_filter([
     $fulfilment->dispatch_address_line_1,
@@ -40,26 +43,104 @@ $dispatchAddress = array_filter([
     <div class="column column-80">
         <div class="fulfilments view content">
             <h3><?= h($fulfilment->fulfilment_number) ?></h3>
-            <table>
-                <tr>
-                    <th><?= __('Status') ?></th>
-                    <td><?= h($fulfilment->status->label()) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Created') ?></th>
-                    <td><?= h($fulfilment->fulfilment_date?->i18nFormat('dd MMM yyyy HH:mm')) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Dispatched') ?></th>
-                    <td>
+            <div class="fulfilment-overview">
+                <section>
+                    <h4><?= __('Fulfilment') ?></h4>
+                    <dl>
+                        <div>
+                            <dt><?= __('Status') ?></dt>
+                            <dd><?= h($fulfilment->status->label()) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Total Quantity') ?></dt>
+                            <dd><?= $this->Number->format($fulfilment->total_quantity) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Total Amount') ?></dt>
+                            <dd><?= $this->Number->currency($fulfilment->total_amount) ?></dd>
+                        </div>
+                    </dl>
+                </section>
+                <section>
+                    <h4><?= __('Customer') ?></h4>
+                    <dl>
+                        <div>
+                            <dt><?= __('User') ?></dt>
+                            <dd>
+                        <?= $user === null
+                            ? __('Unknown user')
+                            : $this->Html->link(
+                                $user->full_name,
+                                ['controller' => 'Users', 'action' => 'view', $user->id],
+                            ) ?>
+                        <?php if ($user?->email) : ?>
+                            <br><?= h($user->email) ?>
+                        <?php endif; ?>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Group') ?></dt>
+                            <dd>
+                        <?= $group === null
+                            ? __('Unknown group')
+                            : $this->Html->link(
+                                $group->group_name,
+                                ['controller' => 'Groups', 'action' => 'view', $group->id],
+                            ) ?>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Account') ?></dt>
+                            <dd>
+                        <?= $account === null
+                            ? __('Unknown account')
+                            : $this->Html->link(
+                                $account->account_name,
+                                ['controller' => 'Accounts', 'action' => 'view', $account->id],
+                            ) ?>
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+                <section>
+                    <h4><?= __('Dispatch') ?></h4>
+                    <dl>
+                        <div>
+                            <dt><?= __('Dispatch Type') ?></dt>
+                            <dd><?= h($fulfilment->dispatch_type->label()) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Postage Charge') ?></dt>
+                            <dd><?= $this->Number->currency($fulfilment->postage_charge) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Dispatch Address') ?></dt>
+                            <dd>
+                                <?= $dispatchAddress === []
+                                    ? __('Collection')
+                                    : implode('<br>', array_map('h', $dispatchAddress)) ?>
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+                <section>
+                    <h4><?= __('Activity') ?></h4>
+                    <dl>
+                        <div>
+                            <dt><?= __('Created') ?></dt>
+                            <dd><?= h($fulfilment->fulfilment_date?->i18nFormat('dd MMM yyyy HH:mm')) ?></dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Dispatched') ?></dt>
+                            <dd>
                         <?= $fulfilment->dispatched_date
                             ? h($fulfilment->dispatched_date->i18nFormat('dd MMM yyyy HH:mm'))
                             : __('Not dispatched') ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th><?= __('Last Dispatch Email Sent') ?></th>
-                    <td>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt><?= __('Last Dispatch Email Sent') ?></dt>
+                            <dd>
                         <?= $fulfilment->last_notification_sent_at
                             ? h($fulfilment->last_notification_sent_at->i18nFormat('dd MMM yyyy HH:mm'))
                             : __('Not sent') ?>
@@ -73,33 +154,11 @@ $dispatchAddress = array_filter([
                             ],
                         ) ?>
                         <?php endif; ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th><?= __('Total Quantity') ?></th>
-                    <td><?= $this->Number->format($fulfilment->total_quantity) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Total Amount') ?></th>
-                    <td><?= $this->Number->currency($fulfilment->total_amount) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Dispatch Type') ?></th>
-                    <td><?= h($fulfilment->dispatch_type->label()) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Postage Charge') ?></th>
-                    <td><?= $this->Number->currency($fulfilment->postage_charge) ?></td>
-                </tr>
-                <tr>
-                    <th><?= __('Dispatch Address') ?></th>
-                    <td>
-                        <?= $dispatchAddress === []
-                            ? __('Collection')
-                            : implode('<br>', array_map('h', $dispatchAddress)) ?>
-                    </td>
-                </tr>
-            </table>
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+            </div>
 
             <div class="related">
                 <h4><?= __('Fulfilment Lines') ?></h4>

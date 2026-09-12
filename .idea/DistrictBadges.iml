@@ -87,7 +87,6 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig/twig" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/psr7" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ralouphie/getallheaders" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/aws/aws-crt-php" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/aws/aws-sdk-php" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/guzzlehttp/guzzle" />
@@ -129,7 +128,6 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/queue-interop" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/queue-interop/amqp-interop" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/queue-interop/queue-interop" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ralouphie" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ramsey" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ramsey/collection" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/ramsey/uuid" />
@@ -143,6 +141,7 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/config" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/theseer" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/dereuromark/cakephp-ide-helper" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -33,6 +33,7 @@ class FulfilmentsControllerTest extends TestCase
         'app.Fulfilments',
         'app.Replenishments',
         'app.Orders',
+        'app.Sections',
         'app.OrderLines',
         'app.StockTransactions',
     ];
@@ -133,6 +134,12 @@ class FulfilmentsControllerTest extends TestCase
      */
     public function testView(): void
     {
+        $this->getTableLocator()->get('Users')->updateAll([
+            'email' => 'scout.leader@example.test',
+        ], ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1']);
+        $this->getTableLocator()->get('StockTransactions')->updateAll([
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+        ], ['id' => 'bad57a31-305f-4398-87d6-8fcfe4600793']);
         $this->getTableLocator()->get('Fulfilments')->updateAll([
             'postage_charge' => '4.50',
             'dispatch_address_line_1' => '1 Scout Way',
@@ -143,6 +150,14 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Fulfilment Lines');
+        $this->assertResponseContains('<dt>User</dt>');
+        $this->assertResponseContains('/users/view/30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
+        $this->assertResponseContains('scout.leader@example.test');
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('<dt>Group</dt>');
+        $this->assertResponseContains('/groups/view/4d5149f3-6214-4457-a04d-e428dc1200d7');
+        $this->assertResponseContains('<dt>Account</dt>');
+        $this->assertResponseContains('/accounts/view/ae471706-04cc-4c9c-8916-e4be1f913edf');
         $this->assertResponseContains('Processed');
         $this->assertResponseContains('Postage Charge');
         $this->assertResponseContains('Postal Dispatch');
@@ -209,6 +224,8 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertNotSame('2025-04-01 08:00:00', $saved->fulfilment_date->format('Y-m-d H:i:s'));
         $this->assertSame((float)Configure::read('Postage.price'), (float)$saved->postage_charge);
         $this->assertSame(DispatchType::PostalDispatch, $saved->dispatch_type);
+        $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
+        $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
         $this->assertSame('1 Scout Way', $saved->dispatch_address_line_1);
         $this->assertSame('E4 7QW', $saved->dispatch_postcode);
 
@@ -463,6 +480,9 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseContains('Select an order');
         $this->assertResponseContains('data-stock-line-bulk-source');
+        $this->assertResponseContains('bulkOptionUserIds');
+        $this->assertResponseContains('bulkOptionAccountIds');
+        $this->assertResponseContains('updateBulkOptions');
         $this->assertResponseContains('data-dispatch-type');
         $this->assertResponseContains('Local Drop Off');
         $this->assertResponseRegExp(
@@ -521,6 +541,51 @@ class FulfilmentsControllerTest extends TestCase
         $this->assertStringContainsString('not enough stock', $payload['alerts'][0]['message']);
         $this->assertSame(DispatchType::ShopCollection->value, $payload['dispatch_type']);
         $this->assertSame(['1 Scout Way', 'Chingford', 'E4 7QW'], $payload['dispatch_address']);
+    }
+
+    public function testOrderLinesAreGroupedWithOrderDetails(): void
+    {
+        $this->getTableLocator()->get('Orders')->updateAll(
+            ['section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563'],
+            ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644'],
+        );
+
+        $this->get(
+            '/fulfilments/order-lines'
+            . '?order_id=dd7b14cc-abe6-4e58-b63d-070678d78644&index=0',
+        );
+
+        $this->assertResponseOk();
+        $payload = json_decode((string)$this->_response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('data-stock-line-order=', $payload['html']);
+        $this->assertStringContainsString('Order Lorem ipsum dolor sit amet', $payload['html']);
+        $this->assertStringContainsString('Example Beavers', $payload['html']);
+        $this->assertStringContainsString('Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet', $payload['html']);
+        $this->assertStringContainsString('Section', $payload['html']);
+        $this->assertStringContainsString('User', $payload['html']);
+        $this->assertStringContainsString('Group', $payload['html']);
+    }
+
+    public function testOrderLinesWarnAboutANonDistrictEmail(): void
+    {
+        $this->getTableLocator()->get('Orders')->updateAll(
+            ['contact_email' => 'customer@outside.example'],
+            ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644'],
+        );
+
+        $this->get('/fulfilments/add');
+        $this->assertResponseOk();
+        $this->assertResponseContains('Danger: Non-District Email');
+
+        $this->get(
+            '/fulfilments/order-lines'
+            . '?order_id=dd7b14cc-abe6-4e58-b63d-070678d78644&index=0',
+        );
+
+        $this->assertResponseOk();
+        $payload = json_decode((string)$this->_response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('Danger: Non-District Email', $payload['alerts'][0]['html']);
+        $this->assertStringContainsString('⚠', $payload['alerts'][0]['html']);
     }
 
     public function testOrderLinesUsesRemainingQuantityAfterPartialFulfilment(): void
@@ -643,8 +708,6 @@ class FulfilmentsControllerTest extends TestCase
             'last_name' => 'User',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'email' => 'second@example.com',
-            'admin_role' => 0,
-            'can_login' => true,
         ]);
         $users->saveOrFail($user);
         $orderLine = $this->createOrderLine((string)$user->id);
@@ -658,6 +721,37 @@ class FulfilmentsControllerTest extends TestCase
 
         $this->assertResponseCode(422);
         $this->assertResponseContains('must belong to the same user');
+    }
+
+    public function testOrderLinesRejectsOrderForDifferentAccount(): void
+    {
+        $groups = $this->getTableLocator()->get('Groups');
+        $group = $groups->newEntity([
+            'group_name' => 'Second Group',
+            'group_osm_id' => 2,
+            'domains' => ['second.example.org'],
+            'type' => 'group',
+        ]);
+        $groups->saveOrFail($group);
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $account = $accounts->newEntity([
+            'account_name' => 'Second Account',
+            'group_id' => $group->id,
+        ]);
+        $accounts->saveOrFail($account);
+        $orderLine = $this->createOrderLine(
+            '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            (string)$account->id,
+        );
+
+        $this->get(
+            '/fulfilments/order-lines?order_id=' . $orderLine->order_id
+            . '&index=1'
+            . '&existing_order_line_ids[]=be20de8c-eea8-4114-a98e-1d55e483e8db',
+        );
+
+        $this->assertResponseCode(422);
+        $this->assertResponseContains('must belong to the same user and account');
     }
 
     public function testOrderLinesRejectsCancelledOrder(): void
@@ -780,8 +874,6 @@ class FulfilmentsControllerTest extends TestCase
             'last_name' => 'User',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'email' => 'different@example.com',
-            'admin_role' => 0,
-            'can_login' => true,
         ]);
         $users->saveOrFail($user);
         $orderLine = $this->createOrderLine((string)$user->id);
@@ -900,11 +992,13 @@ class FulfilmentsControllerTest extends TestCase
      * @param string $userId User id.
      * @return \App\Model\Entity\OrderLine
      */
-    private function createOrderLine(string $userId)
-    {
+    private function createOrderLine(
+        string $userId,
+        string $accountId = 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+    ) {
         $orders = $this->getTableLocator()->get('Orders');
         $order = $orders->newEntity([
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'account_id' => $accountId,
             'user_id' => $userId,
         ]);
         $orders->saveOrFail($order);

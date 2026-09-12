@@ -37,6 +37,7 @@
                 <div><dt><?= __('Sections') ?></dt><dd><?= count($account->sections) ?></dd></div>
                 <div><dt><?= __('Users') ?></dt><dd><?= count($account->users) ?></dd></div>
                 <div><dt><?= __('Orders') ?></dt><dd><?= count($account->orders) ?></dd></div>
+                <div><dt><?= __('Fulfilments') ?></dt><dd><?= count($account->fulfilments) ?></dd></div>
                 <div><dt><?= __('Invoices') ?></dt><dd><?= count($account->invoices) ?></dd></div>
             </dl>
 
@@ -62,11 +63,10 @@
                     <p class="account-empty-state"><?= __('No users belong to this account.') ?></p>
                 <?php else : ?>
                     <div class="table-responsive"><table>
-                        <thead><tr><th><?= __('Name') ?></th><th><?= __('Email') ?></th><th><?= __('Access') ?></th></tr></thead>
+                        <thead><tr><th><?= __('Name') ?></th><th><?= __('Email') ?></th></tr></thead>
                         <tbody><?php foreach ($account->users as $user) : ?><tr>
                             <td><?= $this->Html->link($user->full_name, ['controller' => 'Users', 'action' => 'view', $user->id]) ?></td>
                             <td><?= $this->Text->autoLinkEmails(h($user->email)) ?></td>
-                            <td><?= $user->can_login ? __('Enabled') : __('Disabled') ?></td>
                         </tr><?php endforeach; ?></tbody>
                     </table></div>
                 <?php endif; ?>
@@ -106,6 +106,24 @@
                             <td><?= h($order->status->label()) ?></td>
                             <td><?= $this->Number->format($order->total_ordered_quantity) ?> · <?= $this->Number->currency($order->total_ordered_amount) ?></td>
                             <td><?= $this->Number->format($order->total_fulfilled_quantity) ?> · <?= $this->Number->currency($order->total_fulfilled_amount) ?></td>
+                        </tr><?php endforeach; ?></tbody>
+                    </table></div>
+                <?php endif; ?>
+            </section>
+
+            <section class="related account-view-section">
+                <div class="account-section-heading"><h4><?= __('Fulfilments') ?></h4><span><?= __('{0} total', count($account->fulfilments)) ?></span></div>
+                <?php if (empty($account->fulfilments)) : ?>
+                    <p class="account-empty-state"><?= __('No fulfilments have been created for this account.') ?></p>
+                <?php else : ?>
+                    <div class="table-responsive"><table>
+                        <thead><tr><th><?= __('Fulfilment') ?></th><th><?= __('Created') ?></th><th><?= __('Status') ?></th><th><?= __('Quantity') ?></th><th><?= __('Amount') ?></th></tr></thead>
+                        <tbody><?php foreach ($account->fulfilments as $fulfilment) : ?><tr>
+                            <td><?= $this->Html->link($fulfilment->fulfilment_number, ['controller' => 'Fulfilments', 'action' => 'view', $fulfilment->id]) ?></td>
+                            <td><?= h($fulfilment->fulfilment_date?->i18nFormat('dd MMM yyyy')) ?></td>
+                            <td><?= h($fulfilment->status->label()) ?></td>
+                            <td><?= $this->Number->format($fulfilment->total_quantity) ?></td>
+                            <td><?= $this->Number->currency($fulfilment->total_amount) ?></td>
                         </tr><?php endforeach; ?></tbody>
                     </table></div>
                 <?php endif; ?>

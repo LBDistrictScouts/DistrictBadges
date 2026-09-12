@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
+use App\Model\Enum\GroupType;
 use App\Model\Table\GroupsTable;
 use Cake\TestSuite\TestCase;
 
@@ -72,8 +73,10 @@ class GroupsTableTest extends TestCase
         $valid = $this->Groups->newEntity([
             'group_name' => 'Test Group',
             'group_osm_id' => 123,
+            'type' => 'group',
         ]);
         $this->assertSame([], $valid->getErrors());
+        $this->assertSame(GroupType::Group, $valid->type);
     }
 
     /**

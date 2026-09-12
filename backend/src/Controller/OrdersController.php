@@ -114,7 +114,9 @@ class OrdersController extends AppController
             'Users',
             'OrderLines.Badges',
         ]);
-        $this->set(compact('order'));
+        $contactEmail = trim((string)$order->contact_email) ?: (string)$order->user->email;
+        $isNonDistrictEmail = $this->Orders->Users->isNonDistrictEmail($contactEmail, $order->account);
+        $this->set(compact('order', 'contactEmail', 'isNonDistrictEmail'));
     }
 
     /**
@@ -245,26 +247,6 @@ class OrdersController extends AppController
             limit: 200,
         )->all();
         $this->set(compact('order', 'accounts', 'users'));
-    }
-
-    /**
-     * Delete method
-     *
-     * @param string|null $id Order id.
-     * @return \Cake\Http\Response|null Redirects to index.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
-    public function delete(?string $id = null)
-    {
-        $this->request->allowMethod(['post', 'delete']);
-        $order = $this->Orders->get($id);
-        if ($this->Orders->delete($order)) {
-            $this->Flash->success(__('The order has been deleted.'));
-        } else {
-            $this->Flash->error(__('The order could not be deleted. Please, try again.'));
-        }
-
-        return $this->redirect(['action' => 'index']);
     }
 
     /**

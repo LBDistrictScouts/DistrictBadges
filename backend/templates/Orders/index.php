@@ -116,14 +116,6 @@
                     <td><?= $this->Number->currency($order->total_fulfilled_amount) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $order->id]) ?>
-                        <?= $this->Form->postLink(
-                            __('Delete'),
-                            ['action' => 'delete', $order->id],
-                            [
-                                'method' => 'delete',
-                                'confirm' => __('Are you sure you want to delete this order?'),
-                            ],
-                        ) ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

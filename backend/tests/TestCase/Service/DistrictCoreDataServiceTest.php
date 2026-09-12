@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Service;
 
+use App\Model\Enum\GroupType;
 use App\Service\DistrictCoreDataService;
 use Cake\TestSuite\TestCase;
 use ReflectionProperty;
@@ -16,6 +17,7 @@ class DistrictCoreDataServiceTest extends TestCase
         'app.Groups',
         'app.Sections',
         'app.Accounts',
+        'app.Users',
     ];
 
     /**
@@ -51,6 +53,8 @@ class DistrictCoreDataServiceTest extends TestCase
                 'id' => $groupId,
                 'group_name' => 'Lorem ipsum dolor sit amet',
                 'sort_order' => 1,
+                'domains' => ['example.org'],
+                'type' => 'group',
             ],
         ], [
             [
@@ -65,6 +69,9 @@ class DistrictCoreDataServiceTest extends TestCase
 
         $this->assertSame(['groups' => 1, 'sections' => 1], $counts);
         $this->assertSame($groupId, $this->getTableLocator()->get('Groups')->find()->firstOrFail()->id);
+        $group = $this->getTableLocator()->get('Groups')->get($groupId);
+        $this->assertSame(['example.org'], $group->domains);
+        $this->assertSame(GroupType::Group, $group->type);
         $section = $this->getTableLocator()->get('Sections')->find()->firstOrFail();
         $account = $this->getTableLocator()->get('Accounts')->find()->firstOrFail();
         $this->assertSame($sectionId, $section->id);
@@ -85,6 +92,8 @@ class DistrictCoreDataServiceTest extends TestCase
             'id' => $groupId,
             'group_name' => 'Renamed Scout Group',
             'sort_order' => 1,
+            'domains' => ['renamed.example.org'],
+            'type' => 'district',
         ]], [[
             'id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
             'group_id' => $groupId,
@@ -96,7 +105,56 @@ class DistrictCoreDataServiceTest extends TestCase
 
         $groups = $this->getTableLocator()->get('Groups');
         $this->assertSame('Renamed Scout Group', $groups->get($groupId)->group_name);
+        $this->assertSame(['renamed.example.org'], $groups->get($groupId)->domains);
+        $this->assertSame(GroupType::District, $groups->get($groupId)->type);
         $this->assertSame(1, $groups->find()->where(['id' => $groupId])->count());
+    }
+
+    public function testSyncRefreshesUsersNonDistrictEmailFlag(): void
+    {
+        $this->getTableLocator()->get('Users')->updateAll(
+            ['email' => 'member@example.org'],
+            ['id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1'],
+        );
+        $service = new DistrictCoreDataService([
+            'url' => 'https://example.org/index.html',
+            'username' => 'test',
+            'password' => 'test',
+        ]);
+
+        $service->sync([[
+            'id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'group_name' => 'Lorem ipsum dolor sit amet',
+            'sort_order' => 1,
+            'domains' => ['renamed.example.org'],
+            'type' => 'group',
+        ]], [[
+            'id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_id' => 14450,
+            'section_name' => 'Example Beavers',
+            'section_type' => 'beavers',
+        ]]);
+
+        $user = $this->getTableLocator()->get('Users')->get('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
+        $this->assertTrue($user->non_district_email);
+
+        $service->sync([[
+            'id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'group_name' => 'Lorem ipsum dolor sit amet',
+            'sort_order' => 1,
+            'domains' => ['example.org'],
+            'type' => 'group',
+        ]], [[
+            'id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_id' => 14450,
+            'section_name' => 'Example Beavers',
+            'section_type' => 'beavers',
+        ]]);
+
+        $user = $this->getTableLocator()->get('Users')->get('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
+        $this->assertFalse($user->non_district_email);
     }
 
     public function testSyncUpdatesSectionWhenLegacyIdChanges(): void
@@ -113,6 +171,8 @@ class DistrictCoreDataServiceTest extends TestCase
             'id' => $groupId,
             'group_name' => 'Lorem ipsum dolor sit amet',
             'sort_order' => 1,
+            'domains' => ['example.org'],
+            'type' => 'group',
         ]], [[
             'id' => $sectionId,
             'group_id' => $groupId,
@@ -140,6 +200,8 @@ class DistrictCoreDataServiceTest extends TestCase
             'id' => $groupId,
             'group_name' => 'New Scout Group',
             'sort_order' => 2,
+            'domains' => ['new.example.org'],
+            'type' => 'group',
         ]];
         $sections = [[
             'id' => '158254fa-d205-51ed-8314-96de20a3fa95',
@@ -184,6 +246,8 @@ class DistrictCoreDataServiceTest extends TestCase
             'id' => $groupId,
             'group_name' => 'Lorem ipsum dolor sit amet',
             'sort_order' => 1,
+            'domains' => ['example.org'],
+            'type' => 'group',
         ]], [[
             'id' => $sectionId,
             'group_id' => $groupId,

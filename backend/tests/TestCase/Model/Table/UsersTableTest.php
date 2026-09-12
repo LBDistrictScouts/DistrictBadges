@@ -67,8 +67,6 @@ class UsersTableTest extends TestCase
             'last_name' => '',
             'account_id' => 'not-a-uuid',
             'email' => 'not-an-email',
-            'admin_role' => null,
-            'can_login' => 'not-bool',
         ]);
 
         $errors = $entity->getErrors();
@@ -76,21 +74,34 @@ class UsersTableTest extends TestCase
         $this->assertArrayHasKey('last_name', $errors);
         $this->assertArrayHasKey('account_id', $errors);
         $this->assertArrayHasKey('email', $errors);
-        $this->assertArrayHasKey('admin_role', $errors);
-        $this->assertArrayHasKey('can_login', $errors);
 
         $valid = $this->Users->newEntity([
             'first_name' => 'Test',
             'last_name' => 'User',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'email' => 'test.user@example.com',
-            'login' => 'test.user',
-            'admin_role' => 0,
-            'can_login' => true,
         ]);
         $this->assertSame([], $valid->getErrors());
         $this->assertSame('Test User', $valid->full_name);
         $this->assertSame('email', $this->Users->getDisplayField());
+    }
+
+    /**
+     * Test that the stored flag follows changes to a user's email address.
+     *
+     * @return void
+     */
+    public function testNonDistrictEmail(): void
+    {
+        $user = $this->Users->get('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
+        $user->email = 'member@EXAMPLE.ORG';
+        $this->Users->saveOrFail($user);
+
+        $this->assertFalse($user->non_district_email);
+
+        $user->email = 'member@example.net';
+        $this->Users->saveOrFail($user);
+        $this->assertTrue($user->non_district_email);
     }
 
     /**
@@ -106,9 +117,6 @@ class UsersTableTest extends TestCase
             'last_name' => 'User',
             'account_id' => '11111111-1111-1111-1111-111111111111',
             'email' => 'Lorem ipsum dolor sit amet',
-            'login' => 'Lorem ipsum dolor sit amet',
-            'admin_role' => 0,
-            'can_login' => true,
         ]);
 
         $result = $this->Users->save($entity, ['validate' => false]);
@@ -129,9 +137,6 @@ class UsersTableTest extends TestCase
             'last_name' => 'User',
             'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
             'email' => 'new.user@example.com',
-            'login' => 'new.user',
-            'admin_role' => 1,
-            'can_login' => true,
         ]);
 
         $result = $this->Users->save($entity);
@@ -144,8 +149,5 @@ class UsersTableTest extends TestCase
         $this->assertSame('New User', $saved->full_name);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
         $this->assertSame('new.user@example.com', $saved->email);
-        $this->assertSame('new.user', $saved->login);
-        $this->assertSame(1, (int)$saved->admin_role);
-        $this->assertTrue((bool)$saved->can_login);
     }
 }

@@ -25,6 +25,7 @@ class StockTransactionLinesHelper extends Helper
         $property = (string)($config['property'] ?? $inputKey);
         $lines = $entity->get($property) ?? [];
         $rows = '';
+        $groupedRows = [];
 
         foreach ($lines as $index => $line) {
             $values = [];
@@ -40,7 +41,7 @@ class StockTransactionLinesHelper extends Helper
                 ];
             }
             $badgeId = (string)$line->get('badge_id');
-            $rows .= $this->row([
+            $row = $this->row([
                 'inputKey' => $inputKey,
                 'badgeId' => $badgeId,
                 'badgeName' => $badges[$badgeId] ?? $badgeId,
@@ -49,6 +50,16 @@ class StockTransactionLinesHelper extends Helper
                 'selectors' => $selectors,
                 'index' => $index,
             ]);
+            $group = $config['rowGroups'][$selectors['order_line_id']['value'] ?? ''] ?? null;
+            if (is_array($group)) {
+                $groupId = (string)$group['id'];
+                if (!isset($groupedRows[$groupId])) {
+                    $groupedRows[$groupId] = ['details' => $group, 'rows' => ''];
+                }
+                $groupedRows[$groupId]['rows'] .= $row;
+            } else {
+                $rows .= $row;
+            }
         }
 
         $selectorControls = '';
@@ -122,11 +133,17 @@ class StockTransactionLinesHelper extends Helper
         $bulkLoader = $config['bulkLoader'] ?? null;
         $bulkLoaderHtml = '';
         $bulkEndpoint = 'null';
+        $bulkAlerts = '[]';
+        $bulkOptionUserIds = '[]';
+        $bulkOptionAccountIds = '[]';
         if (is_array($bulkLoader)) {
             $bulkEndpoint = json_encode(
                 $this->Url->build($bulkLoader['url']),
                 JSON_THROW_ON_ERROR,
             );
+            $bulkAlerts = json_encode($bulkLoader['alerts'] ?? [], JSON_THROW_ON_ERROR);
+            $bulkOptionUserIds = json_encode($bulkLoader['optionUserIds'] ?? [], JSON_THROW_ON_ERROR);
+            $bulkOptionAccountIds = json_encode($bulkLoader['optionAccountIds'] ?? [], JSON_THROW_ON_ERROR);
             $bulkLoaderHtml = '<div class="row stock-line-bulk-loader"><div class="column stock-line-bulk-source">'
                 . $this->Form->control((string)$bulkLoader['field'], [
                     'label' => $bulkLoader['label'],
@@ -158,16 +175,15 @@ class StockTransactionLinesHelper extends Helper
             . h($config['addLabel'] ?? __('Add Line')) . '</button>' : '')
             . '<div class="stock-line-alerts" data-stock-line-alerts hidden></div>'
             . '<p class="error-message" data-stock-line-error hidden></p>'
-            . '<div class="table-responsive"><table class="stock-transaction-grid">'
-            . '<thead><tr><th>' . __('Badge') . '</th>'
-            . $selectorHeaders . $headers
-            . '<th class="actions">' . __('Actions') . '</th></tr></thead>'
-            . '<tbody data-stock-line-grid>' . $rows . '</tbody></table></div>'
+            . $this->gridTables($config, $selectorHeaders, $headers, $rows, $groupedRows)
             . $errorHtml . '</fieldset>'
             . $this->script(
                 $endpoint,
                 $priceEndpoint,
                 $bulkEndpoint,
+                $bulkAlerts,
+                $bulkOptionUserIds,
+                $bulkOptionAccountIds,
                 $fallbackError,
                 $fields,
                 $selectors,
@@ -333,6 +349,77 @@ class StockTransactionLinesHelper extends Helper
     }
 
     /**
+     * Render a separately labelled table for one source order.
+     *
+     * @param array<string, string> $details Order details.
+     * @param array<string, mixed> $config Grid configuration.
+     * @param string $rows Table rows.
+     * @return string
+     */
+    public function orderGroup(array $details, array $config, string $rows): string
+    {
+        $selectorHeaders = '';
+        foreach ($config['selectors'] ?? [] as $selectorConfig) {
+            $selectorHeaders .= '<th>' . h($selectorConfig['label']) . '</th>';
+        }
+        $headers = '';
+        foreach ($config['fields'] as $fieldConfig) {
+            $headers .= '<th>' . h($fieldConfig['label']) . '</th>';
+        }
+
+        return $this->orderGroupTable($details, $selectorHeaders, $headers, $rows);
+    }
+
+    /**
+     * @param array<string, mixed> $config Grid configuration.
+     * @param array<string, array{details: array<string, string>, rows: string}> $groupedRows Grouped rows.
+     * @return string
+     */
+    private function gridTables(
+        array $config,
+        string $selectorHeaders,
+        string $headers,
+        string $rows,
+        array $groupedRows,
+    ): string {
+        if (!isset($config['rowGroups'])) {
+            return '<div class="table-responsive"><table class="stock-transaction-grid">'
+                . '<thead><tr><th>' . __('Badge') . '</th>' . $selectorHeaders . $headers
+                . '<th class="actions">' . __('Actions') . '</th></tr></thead>'
+                . '<tbody data-stock-line-grid>' . $rows . '</tbody></table></div>';
+        }
+
+        $tables = '';
+        foreach ($groupedRows as $group) {
+            $tables .= $this->orderGroupTable(
+                $group['details'],
+                $selectorHeaders,
+                $headers,
+                $group['rows'],
+            );
+        }
+
+        return '<div class="stock-line-order-groups" data-stock-line-grid>' . $tables . '</div>';
+    }
+
+    /**
+     * @param array<string, string> $details Order details.
+     * @return string
+     */
+    private function orderGroupTable(array $details, string $selectorHeaders, string $headers, string $rows): string
+    {
+        return '<section class="stock-line-order-group" data-stock-line-order="'
+            . h($details['id']) . '"><header><h2>' . h(__('Order {0}', $details['order_number']))
+            . '</h2><dl><div><dt>' . __('Section') . '</dt><dd>' . h($details['section'])
+            . '</dd></div><div><dt>' . __('User') . '</dt><dd>' . h($details['user'])
+            . '</dd></div><div><dt>' . __('Group') . '</dt><dd>' . h($details['group'])
+            . '</dd></div></dl></header><div class="table-responsive"><table class="stock-transaction-grid">'
+            . '<thead><tr><th>' . __('Badge') . '</th>' . $selectorHeaders . $headers
+            . '<th class="actions">' . __('Actions') . '</th></tr></thead><tbody>'
+            . $rows . '</tbody></table></div></section>';
+    }
+
+    /**
      * @param string $currency ISO 4217 currency code.
      * @return string
      */
@@ -370,6 +457,9 @@ class StockTransactionLinesHelper extends Helper
      * @param string $endpoint JSON-encoded endpoint.
      * @param string $priceEndpoint JSON-encoded price endpoint.
      * @param string $bulkEndpoint JSON-encoded bulk loader endpoint.
+     * @param string $bulkAlerts JSON-encoded alerts keyed by bulk-source option.
+     * @param string $bulkOptionUserIds JSON-encoded user IDs keyed by bulk-source option.
+     * @param string $bulkOptionAccountIds JSON-encoded account IDs keyed by bulk-source option.
      * @param string $fallbackError JSON-encoded fallback error.
      * @param string $fields JSON-encoded field names.
      * @param string $selectors JSON-encoded selector field names.
@@ -379,6 +469,9 @@ class StockTransactionLinesHelper extends Helper
         string $endpoint,
         string $priceEndpoint,
         string $bulkEndpoint,
+        string $bulkAlerts,
+        string $bulkOptionUserIds,
+        string $bulkOptionAccountIds,
         string $fallbackError,
         string $fields,
         string $selectors,
@@ -400,6 +493,9 @@ class StockTransactionLinesHelper extends Helper
     var csrfInput = document.querySelector('input[name="_csrfToken"]');
     var priceEndpoint = {$priceEndpoint};
     var bulkEndpoint = {$bulkEndpoint};
+    var bulkAlerts = {$bulkAlerts};
+    var bulkOptionUserIds = {$bulkOptionUserIds};
+    var bulkOptionAccountIds = {$bulkOptionAccountIds};
     var fields = {$fields};
     var fieldNames = Object.keys(fields);
     var selectorNames = {$selectors};
@@ -425,10 +521,18 @@ class StockTransactionLinesHelper extends Helper
         error.hidden = !message;
     };
     var showAlerts = function (items) {
-        alerts.replaceChildren();
-        (Array.isArray(items) ? items : []).forEach(function (item) {
-            var alert = document.createElement('div');
-            alert.className = 'message ' + (item.level === 'warning' ? 'warning' : 'info');
+            alerts.replaceChildren();
+            (Array.isArray(items) ? items : []).forEach(function (item) {
+                if (item.html) {
+                    var template = document.createElement('template');
+                    template.innerHTML = item.html;
+                    alerts.appendChild(template.content.cloneNode(true));
+                    return;
+                }
+                var alert = document.createElement('div');
+                alert.className = 'message ' + (item.level === 'danger'
+                ? 'error non-district-email-alert'
+                : (item.level === 'warning' ? 'warning' : 'info'));
             var title = document.createElement('strong');
             title.textContent = item.title;
             alert.appendChild(title);
@@ -437,6 +541,45 @@ class StockTransactionLinesHelper extends Helper
             alerts.appendChild(alert);
         });
         alerts.hidden = alerts.childElementCount === 0;
+    };
+    var activeBulkUserId = null;
+    var activeBulkAccountId = null;
+    var selectedBulkOrderIds = function () {
+        return Array.from(grid.querySelectorAll('[data-stock-line-order]')).map(function (order) {
+            return order.getAttribute('data-stock-line-order');
+        });
+    };
+    var showBulkAlerts = function (extraAlerts, previewOrderId) {
+        var alerts = [];
+        var orderIds = selectedBulkOrderIds();
+        if (previewOrderId && !orderIds.includes(previewOrderId)) {
+            orderIds.push(previewOrderId);
+        }
+        orderIds.forEach(function (orderId) {
+            if (bulkAlerts[orderId]) alerts.push(bulkAlerts[orderId]);
+        });
+        (Array.isArray(extraAlerts) ? extraAlerts : []).forEach(function (alert) {
+            if (!alert.html || !bulkAlerts[previewOrderId] || alert.html !== bulkAlerts[previewOrderId].html) {
+                alerts.push(alert);
+            }
+        });
+        showAlerts(alerts);
+    };
+    var updateBulkOptions = function () {
+        if (!bulkSource) return;
+        bulkSource.querySelectorAll('option').forEach(function (option) {
+            if (!option.value) return;
+            var eligible = !activeBulkUserId
+                || (bulkOptionUserIds[option.value] === activeBulkUserId
+                    && bulkOptionAccountIds[option.value] === activeBulkAccountId);
+            option.hidden = !eligible;
+            option.disabled = !eligible;
+        });
+        bulkSource.querySelectorAll('optgroup').forEach(function (group) {
+            group.hidden = !Array.from(group.querySelectorAll('option')).some(function (option) {
+                return !option.hidden;
+            });
+        });
     };
     var resetFields = function () {
         if (badgeInput) {
@@ -514,7 +657,20 @@ class StockTransactionLinesHelper extends Helper
     }
     container.addEventListener('click', function (event) {
         var button = event.target.closest('[data-stock-line-remove]');
-        if (button) button.closest('[data-stock-transaction-line]').remove();
+        if (button) {
+            var row = button.closest('[data-stock-transaction-line]');
+            var orderGroup = row.closest('[data-stock-line-order]');
+            row.remove();
+            if (orderGroup && !orderGroup.querySelector('[data-stock-transaction-line]')) {
+                orderGroup.remove();
+            }
+            if (!grid.querySelector('[data-stock-line-order]')) {
+                activeBulkUserId = null;
+                activeBulkAccountId = null;
+            }
+            updateBulkOptions();
+            showBulkAlerts();
+        }
     });
     if (addButton) addButton.addEventListener('click', async function () {
         showError('');
@@ -552,7 +708,7 @@ class StockTransactionLinesHelper extends Helper
     });
     if (bulkAddButton) bulkAddButton.addEventListener('click', async function () {
         showError('');
-        showAlerts([]);
+        showBulkAlerts();
         if (!bulkSource.value) return;
         var existingOrderLineIds = Array.from(
             grid.querySelectorAll('input[name$="[order_line_id]"]')
@@ -590,7 +746,10 @@ class StockTransactionLinesHelper extends Helper
                 calculate(row, 'data-stock-row-field');
             });
             nextIndex = payload.next_index;
-            showAlerts(payload.alerts);
+            activeBulkUserId = payload.html ? payload.user_id : activeBulkUserId;
+            activeBulkAccountId = payload.html ? payload.account_id : activeBulkAccountId;
+            updateBulkOptions();
+            showBulkAlerts(payload.alerts, bulkSource.value);
             container.dispatchEvent(new CustomEvent('stock-lines:bulk-loaded', {detail: payload}));
             bulkSource.value = '';
         } catch (exception) {
@@ -599,6 +758,9 @@ class StockTransactionLinesHelper extends Helper
             bulkSource.disabled = false;
             bulkAddButton.disabled = false;
         }
+    });
+    if (bulkSource) bulkSource.addEventListener('change', function () {
+        showBulkAlerts([], bulkSource.value);
     });
 })();
 </script>

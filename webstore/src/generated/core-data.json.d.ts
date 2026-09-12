@@ -3,6 +3,8 @@ declare const coreData: {
     id: string
     group_name: string
     sort_order: number
+    domains: string[]
+    type: 'group' | 'district'
   }>
   sections: Array<{
     id: string

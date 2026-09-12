@@ -13,27 +13,24 @@ use Cake\ORM\Entity;
  * @property string $last_name
  * @property string $account_id
  * @property string $email
- * @property string|null $login
- * @property int $admin_role
- * @property bool $can_login
  * @property string|null $address_line_1
  * @property string|null $address_line_2
  * @property string|null $town
  * @property string|null $county
  * @property string|null $postcode
  * @property string $full_name
+ * @property bool $non_district_email
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\Order[] $orders
+ * @property \App\Model\Entity\Fulfilment[] $fulfilments
  */
 class User extends Entity
 {
     /**
      * @var array<string>
      */
-    protected array $_virtual = [
-        'full_name',
-    ];
+    protected array $_virtual = ['full_name'];
 
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
@@ -49,9 +46,6 @@ class User extends Entity
         'last_name' => true,
         'account_id' => true,
         'email' => true,
-        'login' => true,
-        'admin_role' => true,
-        'can_login' => true,
         'address_line_1' => true,
         'address_line_2' => true,
         'town' => true,
@@ -59,6 +53,7 @@ class User extends Entity
         'postcode' => true,
         'account' => true,
         'orders' => true,
+        'fulfilments' => true,
     ];
 
     /**

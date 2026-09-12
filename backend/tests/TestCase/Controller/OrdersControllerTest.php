@@ -167,6 +167,50 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains('prepared for collection from the district badge shop');
     }
 
+    public function testViewWarnsAboutANonDistrictEmail(): void
+    {
+        $this->getTableLocator()->get('Orders')->updateAll(
+            ['contact_email' => 'customer@outside.example'],
+            ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644'],
+        );
+
+        $this->get('/orders/view/dd7b14cc-abe6-4e58-b63d-070678d78644');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Danger: Non-District Email');
+        $this->assertResponseContains('⚠');
+        $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Verify the customer before fulfilling the order.');
+    }
+
+    public function testViewChecksTheOrderEmailAgainstTheOrderAccount(): void
+    {
+        $groups = $this->getTableLocator()->get('Groups');
+        $group = $groups->newEntity([
+            'group_name' => 'Second Group',
+            'group_osm_id' => 2,
+            'domains' => ['second.example.org'],
+            'type' => 'group',
+        ]);
+        $groups->saveOrFail($group);
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $account = $accounts->newEntity([
+            'account_name' => 'Second Account',
+            'group_id' => $group->id,
+        ]);
+        $accounts->saveOrFail($account);
+        $this->getTableLocator()->get('Orders')->updateAll([
+            'account_id' => $account->id,
+            'contact_email' => 'orderer@outside.example',
+        ], ['id' => 'dd7b14cc-abe6-4e58-b63d-070678d78644']);
+
+        $this->get('/orders/view/dd7b14cc-abe6-4e58-b63d-070678d78644');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('Danger: Non-District Email');
+        $this->assertResponseContains('orderer@outside.example');
+    }
+
     public function testViewDisplaysPostageAddressAndTerms(): void
     {
         $id = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
@@ -413,33 +457,5 @@ class OrdersControllerTest extends TestCase
             (int)$original->total_fulfilled_quantity,
             (int)$updated->total_fulfilled_quantity,
         );
-    }
-
-    /**
-     * Test delete method
-     *
-     * @return void
-     * @link \App\Controller\OrdersController::delete()
-     */
-    public function testDelete(): void
-    {
-        $orders = $this->getTableLocator()->get('Orders');
-        $entity = $orders->newEntity([
-            'order_number' => 'ORD-DELETE',
-            'fulfilled' => true,
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
-            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
-        ]);
-        $orders->saveOrFail($entity);
-        $id = $entity->id;
-        $before = $orders->find()->count();
-
-        $this->enableCsrfToken();
-        $this->post("/orders/delete/{$id}");
-
-        $this->assertRedirect(['controller' => 'Orders', 'action' => 'index']);
-        $this->assertFlashMessage('The order has been deleted.');
-        $this->assertSame($before - 1, $orders->find()->count());
-        $this->assertFalse($orders->exists(['id' => $id]));
     }
 }
