@@ -604,6 +604,22 @@ input[type='color'] {
     height: 3.6rem;
 }
 
+.stock-transaction-lines .select2-container .select2-selection--single .select2-selection__clear {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: #444;
+    display: flex;
+    float: right;
+    height: 3.6rem;
+    justify-content: center;
+    line-height: 1;
+    margin: 0 2rem 0 0;
+    padding: 0;
+    width: 2rem;
+}
+
 .stock-line-bulk-loader {
     display: grid;
     width: 100%;
@@ -1565,7 +1581,7 @@ body[data-entity-category]:not([data-entity-category='default']) .main a:not(.bu
 }
 
 body[data-entity-category]:not([data-entity-category='default']) .main .button:not(.button-outline):not(.button-clear):not(.audit-sort),
-body[data-entity-category]:not([data-entity-category='default']) .main button:not(.button-outline):not(.button-clear):not(.audit-sort),
+body[data-entity-category]:not([data-entity-category='default']) .main button:not(.button-outline):not(.button-clear):not(.audit-sort):not(.select2-selection__clear),
 body[data-entity-category]:not([data-entity-category='default']) .main input[type='button'],
 body[data-entity-category]:not([data-entity-category='default']) .main input[type='submit'] {
     border-color: var(--entity-accent);
@@ -1579,20 +1595,20 @@ body[data-entity-category]:not([data-entity-category='default']) .main .button.b
 }
 
 body[data-entity-category='badges'] .main .button:not(.button-outline):not(.button-clear),
-body[data-entity-category='badges'] .main button:not(.button-outline):not(.button-clear),
+body[data-entity-category='badges'] .main button:not(.button-outline):not(.button-clear):not(.select2-selection__clear),
 body[data-entity-category='badges'] .main input[type='button'],
 body[data-entity-category='badges'] .main input[type='submit'] {
     color: var(--entity-accent-dark);
 }
 
 body[data-entity-category]:not([data-entity-category='default']) .main .button:not(.button-outline):not(.button-clear):not(.audit-sort):hover,
-body[data-entity-category]:not([data-entity-category='default']) .main button:not(.button-outline):not(.button-clear):not(.audit-sort):hover {
+body[data-entity-category]:not([data-entity-category='default']) .main button:not(.button-outline):not(.button-clear):not(.audit-sort):not(.select2-selection__clear):hover {
     border-color: var(--entity-accent-dark);
     background-color: var(--entity-accent-dark);
 }
 
 body[data-entity-category='badges'] .main .button:not(.button-outline):not(.button-clear):hover,
-body[data-entity-category='badges'] .main button:not(.button-outline):not(.button-clear):hover {
+body[data-entity-category='badges'] .main button:not(.button-outline):not(.button-clear):not(.select2-selection__clear):hover {
     color: #fff;
 }
 

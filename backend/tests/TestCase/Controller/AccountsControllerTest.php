@@ -134,6 +134,32 @@ class AccountsControllerTest extends TestCase
         $this->assertSame($id, $section->account_id);
     }
 
+    public function testEditRefreshesUserEmailFlagsAfterChangingGroup(): void
+    {
+        $groups = $this->getTableLocator()->get('Groups');
+        $group = $groups->newEntity([
+            'group_name' => 'Other Group',
+            'group_osm_id' => 999,
+            'domains' => ['other.example.org'],
+            'type' => 'group',
+        ]);
+        $groups->saveOrFail($group);
+        $users = $this->getTableLocator()->get('Users');
+        $user = $users->get('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1');
+        $user->email = 'member@example.org';
+        $users->saveOrFail($user);
+        $this->assertFalse($users->get($user->id)->non_district_email);
+
+        $this->enableCsrfToken();
+        $this->put('/accounts/edit/ae471706-04cc-4c9c-8916-e4be1f913edf', [
+            'account_name' => 'Updated Account',
+            'group_id' => $group->id,
+        ]);
+
+        $this->assertRedirect(['controller' => 'Accounts', 'action' => 'index']);
+        $this->assertTrue($users->get($user->id)->non_district_email);
+    }
+
     public function testEditRejectsSectionFromAnotherGroup(): void
     {
         $groups = $this->getTableLocator()->get('Groups');

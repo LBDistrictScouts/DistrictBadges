@@ -544,19 +544,34 @@ class StockTransactionLinesHelper extends Helper
     };
     var activeBulkUserId = null;
     var activeBulkAccountId = null;
-    var updateBulkOptions = function () {
-        if (!bulkSource) return;
-        var selectedOrderIds = Array.from(
-            grid.querySelectorAll('[data-stock-line-order]')
-        ).map(function (order) {
+    var selectedBulkOrderIds = function () {
+        return Array.from(grid.querySelectorAll('[data-stock-line-order]')).map(function (order) {
             return order.getAttribute('data-stock-line-order');
         });
+    };
+    var showBulkAlerts = function (extraAlerts, previewOrderId) {
+        var alerts = [];
+        var orderIds = selectedBulkOrderIds();
+        if (previewOrderId && !orderIds.includes(previewOrderId)) {
+            orderIds.push(previewOrderId);
+        }
+        orderIds.forEach(function (orderId) {
+            if (bulkAlerts[orderId]) alerts.push(bulkAlerts[orderId]);
+        });
+        (Array.isArray(extraAlerts) ? extraAlerts : []).forEach(function (alert) {
+            if (!alert.html || !bulkAlerts[previewOrderId] || alert.html !== bulkAlerts[previewOrderId].html) {
+                alerts.push(alert);
+            }
+        });
+        showAlerts(alerts);
+    };
+    var updateBulkOptions = function () {
+        if (!bulkSource) return;
         bulkSource.querySelectorAll('option').forEach(function (option) {
             if (!option.value) return;
             var eligible = !activeBulkUserId
                 || (bulkOptionUserIds[option.value] === activeBulkUserId
-                    && bulkOptionAccountIds[option.value] === activeBulkAccountId
-                    && !selectedOrderIds.includes(option.value));
+                    && bulkOptionAccountIds[option.value] === activeBulkAccountId);
             option.hidden = !eligible;
             option.disabled = !eligible;
         });
@@ -654,6 +669,7 @@ class StockTransactionLinesHelper extends Helper
                 activeBulkAccountId = null;
             }
             updateBulkOptions();
+            showBulkAlerts();
         }
     });
     if (addButton) addButton.addEventListener('click', async function () {
@@ -692,7 +708,7 @@ class StockTransactionLinesHelper extends Helper
     });
     if (bulkAddButton) bulkAddButton.addEventListener('click', async function () {
         showError('');
-        showAlerts([]);
+        showBulkAlerts();
         if (!bulkSource.value) return;
         var existingOrderLineIds = Array.from(
             grid.querySelectorAll('input[name$="[order_line_id]"]')
@@ -730,10 +746,10 @@ class StockTransactionLinesHelper extends Helper
                 calculate(row, 'data-stock-row-field');
             });
             nextIndex = payload.next_index;
-            showAlerts(payload.alerts);
             activeBulkUserId = payload.html ? payload.user_id : activeBulkUserId;
             activeBulkAccountId = payload.html ? payload.account_id : activeBulkAccountId;
             updateBulkOptions();
+            showBulkAlerts(payload.alerts, bulkSource.value);
             container.dispatchEvent(new CustomEvent('stock-lines:bulk-loaded', {detail: payload}));
             bulkSource.value = '';
         } catch (exception) {
@@ -744,7 +760,7 @@ class StockTransactionLinesHelper extends Helper
         }
     });
     if (bulkSource) bulkSource.addEventListener('change', function () {
-        showAlerts(bulkAlerts[bulkSource.value] ? [bulkAlerts[bulkSource.value]] : []);
+        showBulkAlerts([], bulkSource.value);
     });
 })();
 </script>
