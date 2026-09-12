@@ -22,6 +22,8 @@ RUN docker-php-ext-configure intl || true && \
     docker-php-ext-configure pgsql && \
     docker-php-ext-install intl pgsql pdo pdo_pgsql
 
+COPY docker/php-fpm-container-logging.conf /usr/local/etc/php-fpm.d/zz-container-logging.conf
+
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 RUN mkdir -p /home/$user/.composer \
@@ -56,4 +58,6 @@ RUN test ! -f config/app_local.php && \
     ln -sf /dev/stderr logs/error.log && \
     ln -sf /dev/stdout logs/cli-debug.log && \
     ln -sf /dev/stderr logs/cli-error.log && \
+    ln -sf /dev/stdout logs/badge-import.log && \
+    ln -sf /dev/stdout logs/queries.log && \
     test ! -f config/app_local.php

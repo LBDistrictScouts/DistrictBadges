@@ -27,6 +27,16 @@ spec:
                 name: district-badges-config
             - secretRef:
                 name: district-badges-secrets
+          livenessProbe:
+            exec:
+              command:
+                - php
+                - -r
+                - 'exit(is_file("/tmp/district-badges-worker/heartbeat") && filemtime("/tmp/district-badges-worker/heartbeat") >= time() - 300 ? 0 : 1);'
+            initialDelaySeconds: 180
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -57,3 +67,13 @@ spec:
                 name: district-badges-config
             - secretRef:
                 name: district-badges-secrets
+          livenessProbe:
+            exec:
+              command:
+                - php
+                - -r
+                - 'exit(is_file("/tmp/district-badges-worker/heartbeat") && filemtime("/tmp/district-badges-worker/heartbeat") >= time() - 120 ? 0 : 1);'
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
