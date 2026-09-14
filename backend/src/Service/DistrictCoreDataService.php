@@ -150,7 +150,7 @@ class DistrictCoreDataService
                 $sections->saveOrFail($entity);
             }
 
-            foreach ($users->find()->contain(['Accounts.Groups']) as $user) {
+            foreach ($users->find()->contain(['Groups']) as $user) {
                 $users->refreshNonDistrictEmail($user);
             }
 

@@ -13,7 +13,7 @@
                 <tr>
                     <th><?= $this->Paginator->sort('first_name') ?></th>
                     <th><?= $this->Paginator->sort('last_name') ?></th>
-                    <th><?= $this->Paginator->sort('account_id', __('Account')) ?></th>
+                    <th><?= $this->Paginator->sort('group_id', __('Group')) ?></th>
                     <th><?= $this->Paginator->sort('email') ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
@@ -23,7 +23,7 @@
                 <tr>
                     <td><?= h($user->first_name) ?></td>
                     <td><?= h($user->last_name) ?></td>
-                    <td><?= $user->hasValue('account') ? $this->Html->link($user->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $user->account->id]) : '' ?></td>
+                    <td><?= $user->hasValue('group') ? $this->Html->link($user->group->group_name, ['controller' => 'Groups', 'action' => 'view', $user->group->id]) : '' ?></td>
                     <td><?php if ($user->non_district_email) : ?>
                         <span class="user-email-warning" title="<?= __('Non-District Email') ?>">
                             <span aria-hidden="true">⚠</span><?= h($user->email) ?>

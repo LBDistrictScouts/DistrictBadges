@@ -134,7 +134,7 @@ class AccountsControllerTest extends TestCase
         $this->assertSame($id, $section->account_id);
     }
 
-    public function testEditRefreshesUserEmailFlagsAfterChangingGroup(): void
+    public function testEditDoesNotChangeUsersGroup(): void
     {
         $groups = $this->getTableLocator()->get('Groups');
         $group = $groups->newEntity([
@@ -157,7 +157,9 @@ class AccountsControllerTest extends TestCase
         ]);
 
         $this->assertRedirect(['controller' => 'Accounts', 'action' => 'index']);
-        $this->assertTrue($users->get($user->id)->non_district_email);
+        $updatedUser = $users->get($user->id);
+        $this->assertFalse($updatedUser->non_district_email);
+        $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $updatedUser->group_id);
     }
 
     public function testEditRejectsSectionFromAnotherGroup(): void

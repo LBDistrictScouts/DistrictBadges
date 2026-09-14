@@ -12,7 +12,8 @@
             <thead>
                 <tr>
                     <th><?= $this->Paginator->sort('group_name') ?></th>
-                    <th><?= $this->Paginator->sort('group_osm_id') ?></th>
+                    <th><?= $this->Paginator->sort('accounts_count', __('Accounts')) ?></th>
+                    <th><?= $this->Paginator->sort('users_count', __('Users')) ?></th>
                     <th class="actions"><?= __('Actions') ?></th>
                 </tr>
             </thead>
@@ -20,7 +21,8 @@
                 <?php foreach ($groups as $group): ?>
                 <tr>
                     <td><?= h($group->group_name) ?></td>
-                    <td><?= h('#' . (string)$group->group_osm_id) ?></td>
+                    <td><?= $this->Number->format($group->accounts_count) ?></td>
+                    <td><?= $this->Number->format($group->users_count) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $group->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $group->id]) ?>

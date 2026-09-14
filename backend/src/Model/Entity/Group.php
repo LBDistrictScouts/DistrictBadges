@@ -12,6 +12,8 @@ use Cake\ORM\Entity;
  * @property string $group_name
  * @property int $group_osm_id
  * @property int|null $sort_order
+ * @property int $accounts_count
+ * @property int $users_count
  * @property string[]|null $domains
  * @property \App\Model\Enum\GroupType|null $type
  *
