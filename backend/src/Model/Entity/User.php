@@ -11,7 +11,7 @@ use Cake\ORM\Entity;
  * @property string $id
  * @property string $first_name
  * @property string $last_name
- * @property string $account_id
+ * @property string $group_id
  * @property string $email
  * @property string|null $address_line_1
  * @property string|null $address_line_2
@@ -21,7 +21,7 @@ use Cake\ORM\Entity;
  * @property string $full_name
  * @property bool $non_district_email
  *
- * @property \App\Model\Entity\Account $account
+ * @property \App\Model\Entity\Group $group
  * @property \App\Model\Entity\Order[] $orders
  * @property \App\Model\Entity\Fulfilment[] $fulfilments
  */
@@ -44,14 +44,14 @@ class User extends Entity
     protected array $_accessible = [
         'first_name' => true,
         'last_name' => true,
-        'account_id' => true,
+        'group_id' => true,
         'email' => true,
         'address_line_1' => true,
         'address_line_2' => true,
         'town' => true,
         'county' => true,
         'postcode' => true,
-        'account' => true,
+        'group' => true,
         'orders' => true,
         'fulfilments' => true,
     ];

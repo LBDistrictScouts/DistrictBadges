@@ -36,7 +36,6 @@ class AccountsController extends AppController
         $account = $this->Accounts->get($id, contain: [
             'Groups',
             'Sections' => fn($query) => $query->orderByAsc('section_name'),
-            'Users' => fn($query) => $query->orderByAsc('last_name')->orderByAsc('first_name'),
             'Invoices' => fn($query) => $query
                 ->contain(['InvoiceSummaries'])
                 ->orderByDesc('invoice_date'),
@@ -100,23 +99,13 @@ class AccountsController extends AppController
                 $account->setError('section_ids', __('Select only sections belonging to the selected group.'));
             }
             $saved = false;
-            $groupChanged = $account->isDirty('group_id');
             if (!$account->hasErrors()) {
                 $saved = $this->Accounts->getConnection()->transactional(function () use (
                     $account,
                     $selectedSectionIds,
-                    $groupChanged,
                 ): bool {
                     if (!$this->Accounts->save($account)) {
                         return false;
-                    }
-                    if ($groupChanged) {
-                        $users = $this->Accounts->Users->find()
-                            ->where(['Users.account_id' => $account->id])
-                            ->all();
-                        foreach ($users as $user) {
-                            $this->Accounts->Users->refreshNonDistrictEmail($user);
-                        }
                     }
                     $this->Accounts->Sections->updateAll(
                         ['account_id' => null],

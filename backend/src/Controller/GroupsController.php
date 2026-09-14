@@ -18,7 +18,12 @@ class GroupsController extends AppController
     public function index()
     {
         $query = $this->Groups->find();
-        $groups = $this->paginate($query);
+        $groups = $this->paginate($query, [
+            'order' => [
+                'Groups.sort_order' => 'ASC',
+                'Groups.group_name' => 'ASC',
+            ],
+        ]);
 
         $this->set(compact('groups'));
     }

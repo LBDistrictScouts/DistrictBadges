@@ -116,5 +116,6 @@ class AccountsTableTest extends TestCase
         $saved = $this->Accounts->get($result->id);
         $this->assertSame('New Account', $saved->account_name);
         $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $saved->group_id);
+        $this->assertSame(2, $this->Accounts->Groups->get($saved->group_id)->accounts_count);
     }
 }
