@@ -4,6 +4,7 @@
  * @var \App\Model\Entity\Fulfilment $fulfilment
  * @var \App\Model\Entity\User $user
  * @var string|null $contactName
+ * @var array<string, array<array<string, int|string>>> $backorderLinesByOrder
  */
 use App\Model\Enum\DispatchType;
 
@@ -94,4 +95,31 @@ $this->assign('preheader', $emailCopy['preheader']);
 <?php endforeach; ?>
     <tr><td style="padding:20px 12px 0 0; color:#66747b; font-size:14px; font-weight:800;">Total</td><td align="right" style="padding:20px 0 0; color:#172329; font-size:22px; font-weight:900; white-space:nowrap;"><?= (int)$fulfilment->total_quantity ?> <?= (int)$fulfilment->total_quantity === 1 ? 'badge' : 'badges' ?></td></tr>
 </table>
+<?php if ($backorderLinesByOrder !== []) : ?>
+<h2 style="margin:32px 0 8px; color:#172329; font-size:20px; font-weight:900; line-height:1.3;">On back order</h2>
+<p style="margin:0 0 14px; color:#66747b; font-size:14px; line-height:1.6;">This table shows what you ordered, what was sent before, what is being sent now, and what is still to come. We’ll send the back-ordered badges as soon as stock is available.</p>
+<table role="table" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; border-collapse:collapse;">
+    <tr>
+        <th align="left" style="padding:10px 6px 10px 0; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:left;">Badge</th>
+        <th align="right" style="padding:10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">Ordered</th>
+        <th align="right" style="padding:10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">Sent before</th>
+        <th align="right" style="padding:10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">Sending now</th>
+        <th align="right" style="padding:10px 0 10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">On back order</th>
+    </tr>
+<?php foreach ($backorderLinesByOrder as $orderNumber => $lines) : ?>
+<?php if (count($backorderLinesByOrder) > 1) : ?>
+    <tr><th colspan="5" align="left" style="padding:16px 0 7px; border-bottom:1px solid #e8eded; color:#8a969c; font-size:12px; font-weight:600; text-align:left;">Order <?= h($orderNumber) ?></th></tr>
+<?php endif; ?>
+<?php foreach ($lines as $line) : ?>
+    <tr>
+        <td style="padding:12px 6px 12px 0; border-bottom:1px solid #e8eded; color:#344249; font-size:12px; line-height:1.45;"><?= h($line['badge_name']) ?></td>
+        <td align="right" style="padding:12px 4px; border-bottom:1px solid #e8eded; color:#66747b; font-size:12px; white-space:nowrap;"><?= $line['ordered_quantity'] ?></td>
+        <td align="right" style="padding:12px 4px; border-bottom:1px solid #e8eded; color:#66747b; font-size:12px; white-space:nowrap;"><?= $line['sent_before_quantity'] ?></td>
+        <td align="right" style="padding:12px 4px; border-bottom:1px solid #e8eded; color:#66747b; font-size:12px; white-space:nowrap;"><?= $line['dispatch_quantity'] ?></td>
+        <td align="right" style="padding:12px 0 12px 4px; border-bottom:1px solid #e8eded; color:#7413dc; font-size:12px; font-weight:900; white-space:nowrap;"><?= $line['backorder_quantity'] ?></td>
+    </tr>
+<?php endforeach; ?>
+<?php endforeach; ?>
+</table>
+<?php endif; ?>
 <div style="margin-top:32px; padding:20px; border-left:4px solid #088486; border-radius:0 10px 10px 0; background:#e5f5f3; color:#05696c; font-size:14px; line-height:1.6;"><strong style="color:#0c3436;">What happens next?</strong><br><?= h($emailCopy['next']) ?></div>

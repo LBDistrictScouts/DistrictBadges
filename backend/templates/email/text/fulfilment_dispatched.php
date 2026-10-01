@@ -4,6 +4,7 @@
  * @var \App\Model\Entity\Fulfilment $fulfilment
  * @var \App\Model\Entity\User $user
  * @var string|null $contactName
+ * @var array<string, array<array<string, int|string>>> $backorderLinesByOrder
  */
 use App\Model\Enum\DispatchType;
 
@@ -84,6 +85,21 @@ ORDER <?= $orderNumber ?>
 
 Total: <?= (int)$fulfilment->total_quantity ?> <?= (int)$fulfilment->total_quantity === 1 ? 'badge' : 'badges' ?>
 
+<?php if ($backorderLinesByOrder !== []) : ?>
+ON BACK ORDER
+This table shows what you ordered, what was sent before, what is being sent now, and what is still to come. We’ll send the back-ordered badges as soon as stock is available.
+
+Badge | Ordered | Sent before | Sending now | On back order
+<?php foreach ($backorderLinesByOrder as $orderNumber => $lines) : ?>
+<?php if (count($backorderLinesByOrder) > 1) : ?>
+ORDER <?= $orderNumber ?>
+<?php endif; ?>
+<?php foreach ($lines as $line) : ?>
+<?= $line['badge_name'] ?> | <?= $line['ordered_quantity'] ?> | <?= $line['sent_before_quantity'] ?> | <?= $line['dispatch_quantity'] ?> | <?= $line['backorder_quantity'] ?>
+<?php endforeach; ?>
+<?php endforeach; ?>
+
+<?php endif; ?>
 WHAT HAPPENS NEXT?
 <?= $emailCopy['next'] ?>
 
