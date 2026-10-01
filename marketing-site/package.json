@@ -1,0 +1,26 @@
+{
+  "name": "district-badges-marketing-site",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "yarn@4.6.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-content.mjs && vite build",
+    "dev": "node scripts/build-content.mjs && vite",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.4",
+    "remark-gfm": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "vite": "^6.0.7"
+  }
+}

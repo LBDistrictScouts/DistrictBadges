@@ -1,0 +1,5 @@
+node_modules/
+dist/
+src/content.json
+public/docs/
+.yarn/install-state.gz
