@@ -19,6 +19,11 @@ $address = array_values(array_filter([
     $fulfilment->dispatch_postcode,
 ], static fn($line): bool => trim((string)$line) !== ''));
 $postageCharge = '£' . number_format((float)$fulfilment->postage_charge, 2);
+$remainingBackorderQuantity = 0;
+foreach ($backorderLinesByOrder as $lines) {
+    $remainingBackorderQuantity += array_sum(array_column($lines, 'backorder_quantity'));
+}
+$hasOutstandingBackorders = $remainingBackorderQuantity > 0;
 $emailCopy = match ($dispatchType) {
     DispatchType::PostalDispatch => [
         'eyebrow' => 'BADGES DISPATCHED BY POST',
@@ -86,10 +91,10 @@ ORDER <?= $orderNumber ?>
 Total: <?= (int)$fulfilment->total_quantity ?> <?= (int)$fulfilment->total_quantity === 1 ? 'badge' : 'badges' ?>
 
 <?php if ($backorderLinesByOrder !== []) : ?>
-ON BACK ORDER
-This table shows what you ordered, what was sent before, what is being sent now, and what is still to come. We’ll send the back-ordered badges as soon as stock is available.
+<?= $hasOutstandingBackorders ? 'ON BACK ORDER' : 'FULFILMENT SUMMARY' ?>
+<?= $hasOutstandingBackorders ? 'This table shows what you ordered, what was sent before, what is being sent now, and any quantity still to come. We’ll send any remaining back-ordered badges as soon as stock is available.' : 'This table shows what you ordered, what was sent before, and what is being sent now. Your order line is now complete.' ?>
 
-Badge | Ordered | Sent before | Sending now | On back order
+Badge | Ordered | Sent before | Sending now | <?= $hasOutstandingBackorders ? 'On back order' : 'Still to send' ?>
 <?php foreach ($backorderLinesByOrder as $orderNumber => $lines) : ?>
 <?php if (count($backorderLinesByOrder) > 1) : ?>
 ORDER <?= $orderNumber ?>

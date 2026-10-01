@@ -102,7 +102,8 @@ class AddGroupCounterCaches extends BaseMigration
         // Assign one account from their group so the previous schema can accept them.
         $this->execute(
             'UPDATE users SET account_id = ('
-            . 'SELECT MIN(accounts.id) FROM accounts WHERE accounts.group_id = users.group_id'
+            . 'SELECT accounts.id FROM accounts WHERE accounts.group_id = users.group_id '
+            . 'ORDER BY accounts.id LIMIT 1'
             . ') WHERE account_id IS NULL',
         );
 

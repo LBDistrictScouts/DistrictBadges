@@ -145,7 +145,7 @@ erDiagram
         uuid id PK
         string first_name
         string last_name
-        uuid account_id FK
+        uuid group_id FK
         string email
         string login
         integer admin_role

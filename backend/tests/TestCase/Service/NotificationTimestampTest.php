@@ -260,7 +260,11 @@ class NotificationTimestampTest extends TestCase
         $this->addPriorDispatch(10, 2);
         $this->sendFulfilmentNotification(DispatchType::PostalDispatch, [], 30, 10);
 
-        $this->assertBackorderRow('Lorem ipsum dolor sit amet | 30 | 20 | 10 | 0');
+        $this->assertBackorderRow('Lorem ipsum dolor sit amet | 30 | 20 | 10 | 0', false);
+        $this->assertMailContainsHtml('Fulfilment summary');
+        $this->assertMailContainsHtml('Your order line is now complete.');
+        $this->assertMailContainsText('FULFILMENT SUMMARY');
+        $this->assertMailContainsText('Your order line is now complete.');
     }
 
     public function testFullySentEarlierLineIsOmittedWhenAnotherLineIsBackordered(): void
@@ -375,10 +379,12 @@ class NotificationTimestampTest extends TestCase
         );
     }
 
-    private function assertBackorderRow(string $row): void
+    private function assertBackorderRow(string $row, bool $expectBackorderSection = true): void
     {
-        $this->assertMailContainsHtml('On back order');
-        $this->assertMailContainsText('ON BACK ORDER');
+        if ($expectBackorderSection) {
+            $this->assertMailContainsHtml('On back order');
+            $this->assertMailContainsText('ON BACK ORDER');
+        }
         $this->assertMailContainsText($row);
 
         $expectedCells = explode(' | ', $row);

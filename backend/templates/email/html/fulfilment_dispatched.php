@@ -19,6 +19,11 @@ $address = array_values(array_filter([
     $fulfilment->dispatch_postcode,
 ], static fn($line): bool => trim((string)$line) !== ''));
 $postageCharge = '£' . number_format((float)$fulfilment->postage_charge, 2);
+$remainingBackorderQuantity = 0;
+foreach ($backorderLinesByOrder as $lines) {
+    $remainingBackorderQuantity += array_sum(array_column($lines, 'backorder_quantity'));
+}
+$hasOutstandingBackorders = $remainingBackorderQuantity > 0;
 $emailCopy = match ($dispatchType) {
     DispatchType::PostalDispatch => [
         'title' => 'Your badges have been dispatched',
@@ -96,15 +101,15 @@ $this->assign('preheader', $emailCopy['preheader']);
     <tr><td style="padding:20px 12px 0 0; color:#66747b; font-size:14px; font-weight:800;">Total</td><td align="right" style="padding:20px 0 0; color:#172329; font-size:22px; font-weight:900; white-space:nowrap;"><?= (int)$fulfilment->total_quantity ?> <?= (int)$fulfilment->total_quantity === 1 ? 'badge' : 'badges' ?></td></tr>
 </table>
 <?php if ($backorderLinesByOrder !== []) : ?>
-<h2 style="margin:32px 0 8px; color:#172329; font-size:20px; font-weight:900; line-height:1.3;">On back order</h2>
-<p style="margin:0 0 14px; color:#66747b; font-size:14px; line-height:1.6;">This table shows what you ordered, what was sent before, what is being sent now, and what is still to come. We’ll send the back-ordered badges as soon as stock is available.</p>
+<h2 style="margin:32px 0 8px; color:#172329; font-size:20px; font-weight:900; line-height:1.3;"><?= $hasOutstandingBackorders ? 'On back order' : 'Fulfilment summary' ?></h2>
+<p style="margin:0 0 14px; color:#66747b; font-size:14px; line-height:1.6;"><?= $hasOutstandingBackorders ? 'This table shows what you ordered, what was sent before, what is being sent now, and any quantity still to come. We’ll send any remaining back-ordered badges as soon as stock is available.' : 'This table shows what you ordered, what was sent before, and what is being sent now. Your order line is now complete.' ?></p>
 <table role="table" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; border-collapse:collapse;">
     <tr>
         <th align="left" style="padding:10px 6px 10px 0; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:left;">Badge</th>
         <th align="right" style="padding:10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">Ordered</th>
         <th align="right" style="padding:10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">Sent before</th>
         <th align="right" style="padding:10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">Sending now</th>
-        <th align="right" style="padding:10px 0 10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;">On back order</th>
+        <th align="right" style="padding:10px 0 10px 4px; border-bottom:2px solid #dfe7e7; color:#66747b; font-size:11px; font-weight:800; text-align:right; white-space:nowrap;"><?= $hasOutstandingBackorders ? 'On back order' : 'Still to send' ?></th>
     </tr>
 <?php foreach ($backorderLinesByOrder as $orderNumber => $lines) : ?>
 <?php if (count($backorderLinesByOrder) > 1) : ?>
