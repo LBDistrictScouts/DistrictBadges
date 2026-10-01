@@ -73,8 +73,31 @@ class UsersController extends AppController
     {
         $user = $this->Users->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
+            $previousEmail = mb_strtolower(trim((string)$user->email));
             $user = $this->Users->patchEntity($user, $this->request->getData());
-            if ($this->Users->save($user)) {
+            $updatedEmail = mb_strtolower(trim((string)$user->email));
+            $emailChanged = $previousEmail !== $updatedEmail;
+            $saved = $this->Users->getConnection()->transactional(function () use (
+                $user,
+                $emailChanged,
+            ): bool {
+                if (!$this->Users->save($user)) {
+                    return false;
+                }
+
+                if ($emailChanged) {
+                    $this->Users->Orders->updateAll(
+                        ['contact_email' => $user->email],
+                        [
+                            'user_id' => $user->id,
+                            'fulfilled' => false,
+                        ],
+                    );
+                }
+
+                return true;
+            });
+            if ($saved) {
                 $this->Flash->success(__('The user has been saved.'));
 
                 return $this->redirect(['action' => 'index']);

@@ -24,6 +24,7 @@ class UsersControllerTest extends TestCase
         'app.Groups',
         'app.Accounts',
         'app.Users',
+        'app.Orders',
         'app.Fulfilments',
     ];
 
@@ -125,6 +126,66 @@ class UsersControllerTest extends TestCase
         $updated = $users->get($id);
         $this->assertSame('Updated', $updated->first_name);
         $this->assertSame('updated.user@example.com', $updated->email);
+    }
+
+    /**
+     * Test that editing a user's email updates their open orders.
+     *
+     * @return void
+     * @link \App\Controller\UsersController::edit()
+     */
+    public function testEditUpdatesEmailOnOpenOrders(): void
+    {
+        $users = $this->getTableLocator()->get('Users');
+        $orders = $this->getTableLocator()->get('Orders');
+        $userId = '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1';
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $orders->updateAll(
+            ['contact_email' => 'wrong.address@example.org', 'fulfilled' => false],
+            ['id' => $orderId],
+        );
+
+        $this->enableCsrfToken();
+        $this->put("/users/edit/{$userId}", [
+            'first_name' => 'Updated',
+            'last_name' => 'User',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'email' => 'correct.address@example.org',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Users', 'action' => 'index']);
+        $this->assertSame('correct.address@example.org', $orders->get($orderId)->contact_email);
+        $this->assertSame('correct.address@example.org', $users->get($userId)->email);
+    }
+
+    /**
+     * Test that editing a user's email leaves fulfilled orders unchanged.
+     *
+     * @return void
+     * @link \App\Controller\UsersController::edit()
+     */
+    public function testEditDoesNotUpdateEmailOnFulfilledOrders(): void
+    {
+        $users = $this->getTableLocator()->get('Users');
+        $orders = $this->getTableLocator()->get('Orders');
+        $userId = '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1';
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $orders->updateAll(
+            ['contact_email' => 'wrong.address@example.org', 'fulfilled' => true],
+            ['id' => $orderId],
+        );
+
+        $this->enableCsrfToken();
+        $this->put("/users/edit/{$userId}", [
+            'first_name' => 'Updated',
+            'last_name' => 'User',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'email' => 'correct.address@example.org',
+        ]);
+
+        $this->assertRedirect(['controller' => 'Users', 'action' => 'index']);
+        $this->assertSame('wrong.address@example.org', $orders->get($orderId)->contact_email);
+        $this->assertSame('correct.address@example.org', $users->get($userId)->email);
     }
 
     /**
