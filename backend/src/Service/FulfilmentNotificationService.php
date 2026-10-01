@@ -158,7 +158,10 @@ class FulfilmentNotificationService
                 $sentBeforeQuantities[$orderLineId] ?? 0,
             );
             $backorderQuantity = max(0, $orderedQuantity - $sentBeforeQuantity - $dispatchQuantity);
-            if ($backorderQuantity === 0) {
+            if (
+                $backorderQuantity === 0
+                && ($sentBeforeQuantity === 0 || $dispatchQuantity === 0)
+            ) {
                 continue;
             }
 
