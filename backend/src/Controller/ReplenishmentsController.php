@@ -225,47 +225,72 @@ class ReplenishmentsController extends AppController
      */
     public function receive(?string $id = null)
     {
-        $replenishment = $this->Replenishments->get($id, contain: [
-            'ReplenishmentOrderLines.Badges',
-            'ReplenishmentReceiptLines',
-        ]);
-        if (
-            in_array(
-                $replenishment->status,
-                [ReplenishmentStatus::Received, ReplenishmentStatus::Cancelled],
-                true,
-            )
-        ) {
-            $this->Flash->error(__('Received or cancelled replenishments cannot receive more items.'));
-
-            return $this->redirect(['action' => 'view', $replenishment->id]);
-        }
-
-        $receiptRows = $this->receiptRows($replenishment);
         if ($this->request->is(['post', 'put', 'patch'])) {
-            $data = $this->normaliseReceiptData(
-                $this->request->getData(),
-                (string)$replenishment->id,
-                $receiptRows,
-            );
-            $hasReceiptLines = !empty($data['replenishment_receipt_lines']);
-            $replenishment = $this->Replenishments->patchEntity(
-                $replenishment,
-                $data,
-                [
-                    'fields' => ['replenishment_receipt_lines'],
-                    'associated' => ['ReplenishmentReceiptLines'],
-                ],
-            );
-            if (
-                !$replenishment->hasErrors()
-                && $this->Replenishments->save(
+            $result = $this->Replenishments->getConnection()->transactional(function () use ($id): array {
+                $replenishment = $this->Replenishments->find()
+                    ->contain([
+                        'ReplenishmentOrderLines.Badges',
+                        'ReplenishmentReceiptLines',
+                    ])
+                    ->where(['id' => $id])
+                    ->epilog('FOR UPDATE')
+                    ->firstOrFail();
+
+                if (
+                    in_array(
+                        $replenishment->status,
+                        [ReplenishmentStatus::Received, ReplenishmentStatus::Cancelled],
+                        true,
+                    )
+                ) {
+                    return ['status' => 'closed', 'replenishment' => $replenishment];
+                }
+
+                $receiptRows = $this->receiptRows($replenishment);
+                $data = $this->normaliseReceiptData(
+                    $this->request->getData(),
+                    (string)$replenishment->id,
+                    $receiptRows,
+                );
+                $hasReceiptLines = !empty($data['replenishment_receipt_lines']);
+                $replenishment = $this->Replenishments->patchEntity(
                     $replenishment,
-                    ['associated' => ['ReplenishmentReceiptLines']],
-                )
-            ) {
-                if ($hasReceiptLines) {
-                    $replenishment = $this->Replenishments->get($replenishment->id);
+                    $data,
+                    [
+                        'fields' => ['replenishment_receipt_lines'],
+                        'associated' => ['ReplenishmentReceiptLines'],
+                    ],
+                );
+                if (
+                    !$replenishment->hasErrors()
+                    && $this->Replenishments->save(
+                        $replenishment,
+                        ['associated' => ['ReplenishmentReceiptLines']],
+                    )
+                ) {
+                    return [
+                        'status' => 'saved',
+                        'replenishment' => $replenishment,
+                        'receipt_rows' => $receiptRows,
+                        'has_receipt_lines' => $hasReceiptLines,
+                    ];
+                }
+
+                return [
+                    'status' => 'invalid',
+                    'replenishment' => $replenishment,
+                    'receipt_rows' => $receiptRows,
+                ];
+            });
+
+            $replenishment = $result['replenishment'];
+            if ($result['status'] === 'closed') {
+                $this->Flash->error(__('Received or cancelled replenishments cannot receive more items.'));
+
+                return $this->redirect(['action' => 'view', $replenishment->id]);
+            }
+            if ($result['status'] === 'saved') {
+                if ($result['has_receipt_lines']) {
                     $this->Replenishments->dispatchEvent(
                         'Replenishment.afterReceive',
                         [],
@@ -276,7 +301,27 @@ class ReplenishmentsController extends AppController
 
                 return $this->redirect(['action' => 'view', $replenishment->id]);
             }
+
+            $receiptRows = $result['receipt_rows'];
             $this->Flash->error(__('The replenishment receipt could not be recorded. Please, try again.'));
+        } else {
+            $replenishment = $this->Replenishments->get($id, contain: [
+                'ReplenishmentOrderLines.Badges',
+                'ReplenishmentReceiptLines',
+            ]);
+            if (
+                in_array(
+                    $replenishment->status,
+                    [ReplenishmentStatus::Received, ReplenishmentStatus::Cancelled],
+                    true,
+                )
+            ) {
+                $this->Flash->error(__('Received or cancelled replenishments cannot receive more items.'));
+
+                return $this->redirect(['action' => 'view', $replenishment->id]);
+            }
+
+            $receiptRows = $this->receiptRows($replenishment);
         }
         $this->set(compact('replenishment', 'receiptRows'));
     }
@@ -290,37 +335,37 @@ class ReplenishmentsController extends AppController
     public function acceptIncomplete(?string $id = null)
     {
         $this->request->allowMethod(['post']);
-        $replenishment = $this->Replenishments->get($id);
-        if ($replenishment->status !== ReplenishmentStatus::PartiallyReceived) {
-            $this->Flash->error(__('Only partially received replenishments can be closed this way.'));
-
-            return $this->redirect(['action' => 'view', $replenishment->id]);
-        }
-
         $stockTransactions = $this->fetchTable('StockTransactions');
-        $query = $stockTransactions->find();
-        $remainingByBadge = $query
-            ->select([
-                'badge_id',
-                'unit_price',
-                'remaining_quantity' => $query->func()->sum('pending_quantity_change'),
-            ])
-            ->where([
-                'replenishment_id' => $replenishment->id,
-                'transaction_type IN' => [
-                    TransactionType::ReplenishmentOrder->value,
-                    TransactionType::ReplenishmentReceipt->value,
-                ],
-            ])
-            ->groupBy(['badge_id', 'unit_price'])
-            ->enableHydration(false)
-            ->all();
-
-        $this->Replenishments->getConnection()->transactional(function () use (
+        $closed = $this->Replenishments->getConnection()->transactional(function () use (
+            $id,
             $stockTransactions,
-            $remainingByBadge,
-            $replenishment,
-        ): void {
+        ): bool {
+            $replenishment = $this->Replenishments->find()
+                ->where(['id' => $id])
+                ->epilog('FOR UPDATE')
+                ->firstOrFail();
+            if ($replenishment->status !== ReplenishmentStatus::PartiallyReceived) {
+                return false;
+            }
+
+            $query = $stockTransactions->find();
+            $remainingByBadge = $query
+                ->select([
+                    'badge_id',
+                    'unit_price',
+                    'remaining_quantity' => $query->func()->sum('pending_quantity_change'),
+                ])
+                ->where([
+                    'replenishment_id' => $replenishment->id,
+                    'transaction_type IN' => [
+                        TransactionType::ReplenishmentOrder->value,
+                        TransactionType::ReplenishmentReceipt->value,
+                    ],
+                ])
+                ->groupBy(['badge_id', 'unit_price'])
+                ->enableHydration(false)
+                ->all();
+
             foreach ($remainingByBadge as $row) {
                 $remaining = max(0, (int)$row['remaining_quantity']);
                 if ($remaining === 0) {
@@ -343,17 +388,26 @@ class ReplenishmentsController extends AppController
                 $stockTransactions->saveOrFail($closeout);
             }
 
-            $this->Replenishments->updateAll([
-                'status' => ReplenishmentStatus::Received->value,
+            $replenishment->set([
+                'status' => ReplenishmentStatus::Received,
                 'order_submitted' => true,
                 'received' => true,
                 'received_date' => DateTime::now(),
-            ], ['id' => $replenishment->id]);
+            ]);
+            $this->Replenishments->saveOrFail($replenishment);
+
+            return true;
         });
+
+        if (!$closed) {
+            $this->Flash->error(__('Only partially received replenishments can be closed this way.'));
+
+            return $this->redirect(['action' => 'view', $id]);
+        }
 
         $this->Flash->success(__('The incomplete replenishment has been accepted and closed.'));
 
-        return $this->redirect(['action' => 'view', $replenishment->id]);
+        return $this->redirect(['action' => 'view', $id]);
     }
 
     /**
