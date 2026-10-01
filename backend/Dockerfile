@@ -13,14 +13,14 @@ ENV TAR_OPTIONS="--no-same-owner"
 WORKDIR /tmp
 
 RUN apk update && \
-    apk add --no-cache bash zip unzip nodejs npm postgresql17-client icu-dev libpq-dev
+    apk add --no-cache bash zip unzip nodejs npm postgresql17-client icu-dev libpq-dev libzip-dev
 
 RUN npm install -g corepack && \
     corepack enable
 
 RUN docker-php-ext-configure intl || true && \
     docker-php-ext-configure pgsql && \
-    docker-php-ext-install intl pgsql pdo pdo_pgsql
+    docker-php-ext-install intl pgsql pdo pdo_pgsql zip
 
 COPY docker/php-fpm-container-logging.conf /usr/local/etc/php-fpm.d/zz-container-logging.conf
 
