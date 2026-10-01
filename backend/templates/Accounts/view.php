@@ -35,7 +35,6 @@
 
             <dl class="account-summary" aria-label="<?= __('Account summary') ?>">
                 <div><dt><?= __('Sections') ?></dt><dd><?= count($account->sections) ?></dd></div>
-                <div><dt><?= __('Users') ?></dt><dd><?= count($account->users) ?></dd></div>
                 <div><dt><?= __('Orders') ?></dt><dd><?= count($account->orders) ?></dd></div>
                 <div><dt><?= __('Fulfilments') ?></dt><dd><?= count($account->fulfilments) ?></dd></div>
                 <div><dt><?= __('Invoices') ?></dt><dd><?= count($account->invoices) ?></dd></div>
@@ -52,21 +51,6 @@
                             <td><strong><?= h($section->section_name) ?></strong></td>
                             <td><?= h(ucfirst($section->section_type)) ?></td>
                             <td><?= h($section->meeting_day ?? __('Not recorded')) ?><?php if ($section->meeting_start_time || $section->meeting_end_time) : ?> · <?= h(implode('–', array_filter([$section->meeting_start_time, $section->meeting_end_time]))) ?><?php endif; ?></td>
-                        </tr><?php endforeach; ?></tbody>
-                    </table></div>
-                <?php endif; ?>
-            </section>
-
-            <section class="related account-view-section">
-                <div class="account-section-heading"><h4><?= __('Users') ?></h4><?= $this->Html->link(__('Manage Users'), ['controller' => 'Users', 'action' => 'index']) ?></div>
-                <?php if (empty($account->users)) : ?>
-                    <p class="account-empty-state"><?= __('No users belong to this account.') ?></p>
-                <?php else : ?>
-                    <div class="table-responsive"><table>
-                        <thead><tr><th><?= __('Name') ?></th><th><?= __('Email') ?></th></tr></thead>
-                        <tbody><?php foreach ($account->users as $user) : ?><tr>
-                            <td><?= $this->Html->link($user->full_name, ['controller' => 'Users', 'action' => 'view', $user->id]) ?></td>
-                            <td><?= $this->Text->autoLinkEmails(h($user->email)) ?></td>
                         </tr><?php endforeach; ?></tbody>
                     </table></div>
                 <?php endif; ?>

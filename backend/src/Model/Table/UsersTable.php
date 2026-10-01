@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Model\Table;
 
 use App\Model\Entity\Account;
+use App\Model\Entity\Group;
 use App\Model\Entity\User;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
@@ -15,7 +16,7 @@ use Cake\Validation\Validator;
 /**
  * Users Model
  *
- * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
+ * @property \App\Model\Table\GroupsTable&\Cake\ORM\Association\BelongsTo $Groups
  * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\HasMany $Fulfilments
  * @property \App\Model\Table\OrdersTable&\Cake\ORM\Association\HasMany $Orders
  * @method \App\Model\Entity\User newEmptyEntity()
@@ -48,9 +49,12 @@ class UsersTable extends Table
         $this->setDisplayField('email');
         $this->setPrimaryKey('id');
 
-        $this->belongsTo('Accounts', [
-            'foreignKey' => 'account_id',
+        $this->belongsTo('Groups', [
+            'foreignKey' => 'group_id',
             'joinType' => 'INNER',
+        ]);
+        $this->addBehavior('CounterCache', [
+            'Groups' => ['users_count'],
         ]);
         $this->hasMany('Orders', [
             'foreignKey' => 'user_id',
@@ -79,8 +83,8 @@ class UsersTable extends Table
             ->notEmptyString('last_name');
 
         $validator
-            ->uuid('account_id')
-            ->notEmptyString('account_id');
+            ->uuid('group_id')
+            ->notEmptyString('group_id');
 
         $validator
             ->email('email')
@@ -113,7 +117,10 @@ class UsersTable extends Table
             return;
         }
 
-        $entity->set('non_district_email', $this->calculateNonDistrictEmail($entity));
+        $entity->set('non_district_email', $this->isNonDistrictEmailForGroup(
+            $entity->email,
+            $this->groupFor($entity),
+        ));
     }
 
     /**
@@ -134,15 +141,23 @@ class UsersTable extends Table
      */
     private function calculateNonDistrictEmail(User $user): bool
     {
-        $account = $user->get('account');
-        if ($account === null || (string)$account->id !== (string)$user->account_id) {
-            $account = $this->Accounts->find()
-                ->contain(['Groups'])
-                ->where(['Accounts.id' => $user->account_id])
+        return $this->isNonDistrictEmailForGroup($user->email, $this->groupFor($user));
+    }
+
+    /**
+     * @param \App\Model\Entity\User $user User whose group is required.
+     * @return \App\Model\Entity\Group|null
+     */
+    private function groupFor(User $user): ?Group
+    {
+        $group = $user->get('group');
+        if ($group === null || (string)$group->id !== (string)$user->group_id) {
+            $group = $this->Groups->find()
+                ->where(['Groups.id' => $user->group_id])
                 ->first();
         }
 
-        return $this->isNonDistrictEmail($user->email, $account);
+        return $group;
     }
 
     /**
@@ -154,7 +169,19 @@ class UsersTable extends Table
      */
     public function isNonDistrictEmail(string $email, ?Account $account): bool
     {
-        $domains = $account?->group?->domains;
+        return $this->isNonDistrictEmailForGroup($email, $account?->group);
+    }
+
+    /**
+     * Check an email address against a group's registered domains.
+     *
+     * @param string $email Email address to inspect.
+     * @param \App\Model\Entity\Group|null $group Group whose domains are checked.
+     * @return bool
+     */
+    private function isNonDistrictEmailForGroup(string $email, ?Group $group): bool
+    {
+        $domains = $group?->domains;
         if (!is_array($domains) || $domains === []) {
             return false;
         }
@@ -183,7 +210,7 @@ class UsersTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->isUnique(['email']), ['errorField' => 'email']);
-        $rules->add($rules->existsIn(['account_id'], 'Accounts'), ['errorField' => 'account_id']);
+        $rules->add($rules->existsIn(['group_id'], 'Groups'), ['errorField' => 'group_id']);
 
         return $rules;
     }

@@ -84,7 +84,7 @@ class UsersControllerTest extends TestCase
         $this->post('/users/add', [
             'first_name' => 'New',
             'last_name' => 'User',
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
             'email' => 'integration.user@example.com',
         ]);
 
@@ -97,7 +97,7 @@ class UsersControllerTest extends TestCase
             ->firstOrFail();
         $this->assertSame('New', $saved->first_name);
         $this->assertSame('User', $saved->last_name);
-        $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
+        $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $saved->group_id);
     }
 
     /**
@@ -115,7 +115,7 @@ class UsersControllerTest extends TestCase
         $this->put("/users/edit/{$id}", [
             'first_name' => 'Updated',
             'last_name' => 'User',
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
             'email' => 'updated.user@example.com',
         ]);
 
@@ -139,7 +139,7 @@ class UsersControllerTest extends TestCase
         $entity = $users->newEntity([
             'first_name' => 'Delete',
             'last_name' => 'User',
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
             'email' => 'delete.user@example.com',
         ]);
         $users->saveOrFail($entity);

@@ -2,7 +2,7 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\User $user
- * @var \Cake\Collection\CollectionInterface|string[] $accounts
+ * @var \Cake\Collection\CollectionInterface|string[] $groups
  */
 ?>
 <div class="row">
@@ -20,7 +20,7 @@
                 <?php
                     echo $this->Form->control('first_name');
                     echo $this->Form->control('last_name');
-                    echo $this->Form->control('account_id', ['options' => $accounts]);
+                    echo $this->Form->control('group_id', ['options' => $groups]);
                     echo $this->Form->control('email');
                 ?>
             </fieldset>

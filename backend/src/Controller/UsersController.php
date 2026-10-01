@@ -18,7 +18,7 @@ class UsersController extends AppController
     public function index()
     {
         $query = $this->Users->find()
-            ->contain(['Accounts']);
+            ->contain(['Groups']);
         $users = $this->paginate($query);
 
         $this->set(compact('users'));
@@ -34,7 +34,7 @@ class UsersController extends AppController
     public function view(?string $id = null)
     {
         $user = $this->Users->get($id, contain: [
-            'Accounts',
+            'Groups',
             'Orders',
             'Fulfilments' => ['sort' => ['Fulfilments.fulfilment_date' => 'DESC']],
         ]);
@@ -58,8 +58,8 @@ class UsersController extends AppController
             }
             $this->Flash->error(__('The user could not be saved. Please, try again.'));
         }
-        $accounts = $this->Users->Accounts->find('list', limit: 200)->all();
-        $this->set(compact('user', 'accounts'));
+        $groups = $this->Users->Groups->find('list', limit: 200)->all();
+        $this->set(compact('user', 'groups'));
     }
 
     /**
@@ -81,8 +81,8 @@ class UsersController extends AppController
             }
             $this->Flash->error(__('The user could not be saved. Please, try again.'));
         }
-        $accounts = $this->Users->Accounts->find('list', limit: 200)->all();
-        $this->set(compact('user', 'accounts'));
+        $groups = $this->Users->Groups->find('list', limit: 200)->all();
+        $this->set(compact('user', 'groups'));
     }
 
     /**

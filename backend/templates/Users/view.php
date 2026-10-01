@@ -39,8 +39,8 @@ $address = array_filter([
 
             <dl class="user-detail-grid user-detail-grid--single" aria-label="<?= __('User details') ?>">
                 <div class="user-detail-item">
-                    <dt><?= __('Account') ?></dt>
-                    <dd><?= $user->hasValue('account') ? $this->Html->link($user->account->account_name, ['controller' => 'Accounts', 'action' => 'view', $user->account->id]) : __('Not assigned') ?></dd>
+                    <dt><?= __('Group') ?></dt>
+                    <dd><?= $user->hasValue('group') ? $this->Html->link($user->group->group_name, ['controller' => 'Groups', 'action' => 'view', $user->group->id]) : __('Not assigned') ?></dd>
                 </div>
             </dl>
 

@@ -43,4 +43,4 @@ Set the `baseUrl` variable in Globals (or create an Environment) to point at you
 |----------|---------------|
 | `baseUrl` | `http://localhost:8765` |
 
-See the [backend README](../backend/README.md#getting-started) for instructions on starting the CakePHP development server.
+See the [backend development guide](../docs/backend-development.md#getting-started) for instructions on starting the CakePHP development server.

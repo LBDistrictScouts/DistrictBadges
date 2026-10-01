@@ -90,7 +90,7 @@ class OrdersControllerTest extends TestCase
         $this->assertSame($createdUser->id, $order->user_id);
         $this->assertSame('Alex', $createdUser->first_name);
         $this->assertSame('Leader', $createdUser->last_name);
-        $this->assertSame($order->account_id, $createdUser->account_id);
+        $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $createdUser->group_id);
     }
 
     public function testPlaceRecordsPostageAndDispatchAddress(): void
@@ -180,15 +180,25 @@ class OrdersControllerTest extends TestCase
         );
     }
 
-    public function testPlaceReusesExistingUserByEmail(): void
+    public function testPlaceReusesExistingUserAcrossGroupAccounts(): void
     {
+        $accounts = $this->getTableLocator()->get('Accounts');
+        $sections = $this->getTableLocator()->get('Sections');
+        $account = $accounts->newEntity([
+            'account_name' => 'Example Cubs',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+        ]);
+        $accounts->saveOrFail($account);
+        $section = $sections->get('d9534dcb-a846-5a22-a2fe-b67580555563');
+        $section->account_id = $account->id;
+        $sections->saveOrFail($section);
+
         $users = $this->getTableLocator()->get('Users');
-        $accountId = 'ae471706-04cc-4c9c-8916-e4be1f913edf';
         $user = $users->newEntity([
             'first_name' => 'Existing',
             'last_name' => 'Leader',
             'email' => 'existing@example.org',
-            'account_id' => $accountId,
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
         ]);
         $users->saveOrFail($user);
         $beforeUsers = $users->find()->count();
@@ -204,7 +214,7 @@ class OrdersControllerTest extends TestCase
         $order = $this->getTableLocator()->get('Orders')->get($payload['order_id']);
         $this->assertSame($beforeUsers, $users->find()->count());
         $this->assertSame($user->id, $order->user_id);
-        $this->assertSame($accountId, $order->account_id);
+        $this->assertSame($account->id, $order->account_id);
         $updatedUser = $users->get($user->id);
         $this->assertSame('Existing', $updatedUser->first_name);
         $this->assertSame('Leader', $updatedUser->last_name);
@@ -235,8 +245,8 @@ class OrdersControllerTest extends TestCase
         $order = $this->getTableLocator()->get('Orders')->get($payload['order_id']);
         $this->assertSame($account->id, $order->account_id);
         $this->assertSame(
-            $account->id,
-            $this->getTableLocator()->get('Users')->get($order->user_id)->account_id,
+            $account->group_id,
+            $this->getTableLocator()->get('Users')->get($order->user_id)->group_id,
         );
     }
 
@@ -259,7 +269,7 @@ class OrdersControllerTest extends TestCase
         $account = $accounts->get($order->account_id);
         $this->assertSame('Lorem ipsum dolor sit amet', $account->account_name);
         $this->assertSame('4d5149f3-6214-4457-a04d-e428dc1200d7', $account->group_id);
-        $this->assertSame($account->id, $users->get($order->user_id)->account_id);
+        $this->assertSame($account->group_id, $users->get($order->user_id)->group_id);
     }
 
     public function testPlaceValidatesPayload(): void

@@ -23,6 +23,8 @@ class GroupsFixture extends TestFixture
                 'group_name' => 'Lorem ipsum dolor sit amet',
                 'group_osm_id' => 1,
                 'sort_order' => 1,
+                'accounts_count' => 1,
+                'users_count' => 0,
                 'domains' => ['example.org'],
                 'type' => 'group',
             ],

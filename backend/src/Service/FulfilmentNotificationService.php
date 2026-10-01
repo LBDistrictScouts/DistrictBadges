@@ -5,6 +5,8 @@ namespace App\Service;
 
 use App\Model\Entity\Fulfilment;
 use App\Model\Enum\DispatchType;
+use App\Model\Enum\FulfilmentStatus;
+use App\Model\Enum\TransactionType;
 use Cake\Core\Configure;
 use Cake\I18n\DateTime;
 use Cake\Mailer\Mailer;
@@ -29,6 +31,8 @@ class FulfilmentNotificationService
             'FulfilmentLines.Badges',
             'FulfilmentLines.OrderLines.Orders.Users',
         ]);
+
+        $backorderLinesByOrder = $this->backorderLinesByOrder($fulfilment);
 
         $user = null;
         $contactEmail = null;
@@ -69,7 +73,7 @@ class FulfilmentNotificationService
             ->setTo($contactEmail, $contactName)
             ->setSubject($subject . $fulfilment->fulfilment_number)
             ->setEmailFormat('both')
-            ->setViewVars(compact('fulfilment', 'user', 'contactName'));
+            ->setViewVars(compact('fulfilment', 'user', 'contactName', 'backorderLinesByOrder'));
         $mailer->viewBuilder()
             ->setTemplate('fulfilment_dispatched')
             ->setLayout('default');
@@ -83,6 +87,95 @@ class FulfilmentNotificationService
         $fulfilment->set('last_notification_sent_at', $sentAt);
 
         return true;
+    }
+
+    /**
+     * Get outstanding order quantities after this dispatch for its orders.
+     *
+     * @param \App\Model\Entity\Fulfilment $fulfilment Dispatched fulfilment.
+     * @return array<string, array<array<string, int|string>>>
+     */
+    private function backorderLinesByOrder(Fulfilment $fulfilment): array
+    {
+        $orderIds = [];
+        $dispatchQuantities = [];
+        foreach ($fulfilment->fulfilment_lines as $line) {
+            $orderLine = $line->order_line;
+            if ($orderLine === null) {
+                continue;
+            }
+
+            $orderIds[(string)$orderLine->order_id] = true;
+            $orderLineId = (string)$orderLine->id;
+            $dispatchQuantities[$orderLineId] = ($dispatchQuantities[$orderLineId] ?? 0)
+                + (int)$line->fulfilled_quantity_change;
+        }
+        if ($orderIds === []) {
+            return [];
+        }
+
+        $orderLines = $this->getTableLocator()->get('OrderLines');
+        $transactionQuery = $orderLines->StockTransactions->find();
+        $fulfilledQuery = $transactionQuery
+            ->select([
+                'order_line_id' => 'StockTransactions.order_line_id',
+                'fulfilled_quantity' => $transactionQuery->func()->sum(
+                    'StockTransactions.fulfilled_quantity_change',
+                ),
+            ])
+            ->innerJoinWith('OrderLines')
+            ->innerJoinWith('Fulfilments')
+            ->where([
+                'OrderLines.order_id IN' => array_keys($orderIds),
+                'StockTransactions.transaction_type' => TransactionType::Fulfilment->value,
+                'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
+                'Fulfilments.id !=' => $fulfilment->id,
+            ]);
+        if ($fulfilment->dispatched_date !== null) {
+            $fulfilledQuery->where(['Fulfilments.dispatched_date <=' => $fulfilment->dispatched_date]);
+        }
+        $fulfilledRows = $fulfilledQuery
+            ->groupBy(['StockTransactions.order_line_id'])
+            ->disableHydration()
+            ->all();
+        $sentBeforeQuantities = [];
+        foreach ($fulfilledRows as $row) {
+            $sentBeforeQuantities[(string)$row['order_line_id']] = (int)$row['fulfilled_quantity'];
+        }
+
+        $backorders = [];
+        foreach (
+            $orderLines->find()
+            ->contain(['Badges', 'Orders'])
+            ->where(['OrderLines.order_id IN' => array_keys($orderIds)])
+            ->all() as $orderLine
+        ) {
+            $orderLineId = (string)$orderLine->id;
+            $orderedQuantity = (int)$orderLine->quantity;
+            $dispatchQuantity = $dispatchQuantities[$orderLineId] ?? 0;
+            $sentBeforeQuantity = min(
+                max(0, $orderedQuantity - $dispatchQuantity),
+                $sentBeforeQuantities[$orderLineId] ?? 0,
+            );
+            $backorderQuantity = max(0, $orderedQuantity - $sentBeforeQuantity - $dispatchQuantity);
+            if (
+                $backorderQuantity === 0
+                && ($sentBeforeQuantity === 0 || $dispatchQuantity === 0)
+            ) {
+                continue;
+            }
+
+            $orderNumber = (string)($orderLine->order->order_number ?? '');
+            $backorders[$orderNumber][] = [
+                'badge_name' => (string)($orderLine->badge->badge_name ?? 'Badge'),
+                'ordered_quantity' => $orderedQuantity,
+                'sent_before_quantity' => $sentBeforeQuantity,
+                'dispatch_quantity' => $dispatchQuantity,
+                'backorder_quantity' => $backorderQuantity,
+            ];
+        }
+
+        return $backorders;
     }
 
     /**

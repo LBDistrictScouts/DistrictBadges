@@ -15,7 +15,6 @@ use Cake\Validation\Validator;
  * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\HasMany $Fulfilments
  * @property \App\Model\Table\OrdersTable&\Cake\ORM\Association\HasMany $Orders
  * @property \App\Model\Table\SectionsTable&\Cake\ORM\Association\HasMany $Sections
- * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\HasMany $Users
  * @method \App\Model\Entity\Account newEmptyEntity()
  * @method \App\Model\Entity\Account newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Account> newEntities(array $data, array $options = [])
@@ -50,6 +49,9 @@ class AccountsTable extends Table
             'foreignKey' => 'group_id',
             'joinType' => 'INNER',
         ]);
+        $this->addBehavior('CounterCache', [
+            'Groups' => ['accounts_count'],
+        ]);
         $this->hasMany('Invoices', [
             'foreignKey' => 'account_id',
         ]);
@@ -58,9 +60,6 @@ class AccountsTable extends Table
             'foreignKey' => 'account_id',
         ]);
         $this->hasMany('Sections', [
-            'foreignKey' => 'account_id',
-        ]);
-        $this->hasMany('Users', [
             'foreignKey' => 'account_id',
         ]);
     }

@@ -302,7 +302,7 @@ class OrderPlacementService
                 'first_name' => trim((string)$data['first_name']),
                 'last_name' => trim((string)$data['last_name']),
                 'email' => $email,
-                'account_id' => $account->id,
+                'group_id' => $section->group_id,
             ]);
             $users->saveOrFail($user);
         }

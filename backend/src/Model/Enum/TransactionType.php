@@ -14,6 +14,7 @@ enum TransactionType: int implements EnumLabelInterface, JsonSerializable
     case Fulfilment = 2;
     case ReplenishmentOrder = 3;
     case ReplenishmentReceipt = 4;
+    case ReplenishmentCloseout = 5;
 
     /**
      * @return string

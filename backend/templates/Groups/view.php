@@ -26,6 +26,20 @@
                     <th><?= __('Group Osm Id') ?></th>
                     <td><?= h((string)$group->group_osm_id) ?></td>
                 </tr>
+                <tr>
+                    <th><?= __('Registered Email Domains') ?></th>
+                    <td>
+                        <?php if ($group->domains) : ?>
+                            <ul>
+                                <?php foreach ($group->domains as $domain) : ?>
+                                    <li><?= h($domain) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else : ?>
+                            <?= __('None registered') ?>
+                        <?php endif; ?>
+                    </td>
+                </tr>
             </table>
             <div class="related">
                 <h4><?= __('Sections') ?></h4>

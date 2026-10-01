@@ -3,6 +3,11 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Replenishment $replenishment
  */
+$closeoutLines = array_filter(
+    $replenishment->stock_transactions ?? [],
+    static fn($line): bool => $line->transaction_type
+        === \App\Model\Enum\TransactionType::ReplenishmentCloseout,
+);
 ?>
 <div class="row">
     <aside class="column">
@@ -27,6 +32,18 @@
                 __('Receive Replenishment'),
                 ['action' => 'receive', $replenishment->id],
                 ['class' => 'side-nav-item'],
+            ) ?>
+            <?php endif; ?>
+            <?php if ($replenishment->status === \App\Model\Enum\ReplenishmentStatus::PartiallyReceived) : ?>
+            <?= $this->Form->postLink(
+                __('Accept Incomplete Receipt'),
+                ['action' => 'acceptIncomplete', $replenishment->id],
+                [
+                    'confirm' => __(
+                        'Accept this partial receipt and close the order? Remaining quantities will be removed from pending stock.',
+                    ),
+                    'class' => 'side-nav-item',
+                ],
             ) ?>
             <?php endif; ?>
             <?php if (!$replenishment->received) : ?>
@@ -166,6 +183,37 @@
                 <p><?= __('No received lines have been added.') ?></p>
                 <?php endif; ?>
             </div>
+
+            <?php if ($closeoutLines !== []) : ?>
+            <div class="related">
+                <h4><?= __('Unreceived Items Closed') ?></h4>
+                <div class="table-responsive">
+                    <table>
+                        <tr>
+                            <th><?= __('Badge') ?></th>
+                            <th><?= __('Quantity') ?></th>
+                            <th><?= __('Unit Price') ?></th>
+                            <th><?= __('Line Amount') ?></th>
+                        </tr>
+                        <?php foreach ($closeoutLines as $line) : ?>
+                        <tr>
+                            <td>
+                                <?= $line->hasValue('badge')
+                                    ? $this->Html->link(
+                                        $line->badge->badge_name,
+                                        ['controller' => 'Badges', 'action' => 'view', $line->badge->id],
+                                    )
+                                    : __('Unknown badge') ?>
+                            </td>
+                            <td><?= $this->Number->format(abs((int)$line->pending_quantity_change)) ?></td>
+                            <td><?= $this->Number->currency($line->unit_price ?? 0) ?></td>
+                            <td><?= $this->Number->currency($line->monetary_amount ?? 0) ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

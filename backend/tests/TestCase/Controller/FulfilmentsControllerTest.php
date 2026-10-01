@@ -706,7 +706,7 @@ class FulfilmentsControllerTest extends TestCase
         $user = $users->newEntity([
             'first_name' => 'Second',
             'last_name' => 'User',
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
             'email' => 'second@example.com',
         ]);
         $users->saveOrFail($user);
@@ -872,7 +872,7 @@ class FulfilmentsControllerTest extends TestCase
         $user = $users->newEntity([
             'first_name' => 'Second',
             'last_name' => 'User',
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
             'email' => 'different@example.com',
         ]);
         $users->saveOrFail($user);

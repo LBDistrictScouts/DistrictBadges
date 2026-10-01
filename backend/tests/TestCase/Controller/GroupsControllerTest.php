@@ -32,11 +32,48 @@ class GroupsControllerTest extends TestCase
      * @return void
      * @link \App\Controller\GroupsController::index()
      */
-    public function testIndex(): void
+    public function testIndexDefaultsToSortOrder(): void
     {
+        $groups = $this->getTableLocator()->get('Groups');
+        $groups->saveOrFail($groups->newEntity([
+            'group_name' => 'Alphabetical First, Sorted Second',
+            'sort_order' => 2,
+        ]));
+
         $this->get('/groups');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(
+            strpos($body, 'Alphabetical First, Sorted Second'),
+            strpos($body, 'Lorem ipsum dolor sit amet'),
+        );
+        $this->assertResponseContains('Accounts');
+        $this->assertResponseContains('Users');
+        $this->assertResponseNotContains('Group Osm Id');
+    }
+
+    /**
+     * Test that a requested column sort overrides the default sort order.
+     *
+     * @return void
+     */
+    public function testIndexAllowsRequestedSorting(): void
+    {
+        $groups = $this->getTableLocator()->get('Groups');
+        $groups->saveOrFail($groups->newEntity([
+            'group_name' => 'Alphabetical First, Sorted Second',
+            'sort_order' => 2,
+        ]));
+
+        $this->get('/groups?sort=group_name&direction=asc');
+
+        $this->assertResponseOk();
+        $body = (string)$this->_response->getBody();
+        $this->assertLessThan(
+            strpos($body, 'Lorem ipsum dolor sit amet'),
+            strpos($body, 'Alphabetical First, Sorted Second'),
+        );
     }
 
     /**
@@ -50,6 +87,8 @@ class GroupsControllerTest extends TestCase
         $this->get('/groups/view/4d5149f3-6214-4457-a04d-e428dc1200d7');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
+        $this->assertResponseContains('Registered Email Domains');
+        $this->assertResponseContains('example.org');
         $this->assertResponseContains('Sections');
         $this->assertResponseContains('Example Beavers');
         $this->assertResponseContains('Beavers');
