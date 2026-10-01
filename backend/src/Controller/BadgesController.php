@@ -210,6 +210,7 @@ class BadgesController extends AppController
         }
         $transactionTypeOptions[TransactionType::ReplenishmentOrder->value] = __('Rep. Order');
         $transactionTypeOptions[TransactionType::ReplenishmentReceipt->value] = __('Rep. Receipt');
+        $transactionTypeOptions[TransactionType::ReplenishmentCloseout->value] = __('Rep. Closeout');
 
         $this->set(compact(
             'badge',

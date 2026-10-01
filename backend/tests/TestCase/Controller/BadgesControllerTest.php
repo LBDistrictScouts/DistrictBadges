@@ -413,8 +413,10 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseContains('All transaction types');
         $this->assertResponseContains('Rep. Order');
         $this->assertResponseContains('Rep. Receipt');
+        $this->assertResponseContains('Rep. Closeout');
         $this->assertResponseNotContains('Replenishment Order');
         $this->assertResponseNotContains('Replenishment Receipt');
+        $this->assertResponseNotContains('Replenishment Closeout');
         $this->assertResponseContains('Audit E/A');
         $this->assertResponseRegExp(
             '#href="/replenishments/view/f6d1f429-877b-4d92-83a0-cb305d853da7"'
@@ -428,7 +430,11 @@ class BadgesControllerTest extends TestCase
             if (
                 in_array(
                     $type,
-                    [TransactionType::ReplenishmentOrder, TransactionType::ReplenishmentReceipt],
+                    [
+                        TransactionType::ReplenishmentOrder,
+                        TransactionType::ReplenishmentReceipt,
+                        TransactionType::ReplenishmentCloseout,
+                    ],
                     true,
                 )
             ) {

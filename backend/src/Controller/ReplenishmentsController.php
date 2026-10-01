@@ -5,6 +5,8 @@ namespace App\Controller;
 
 use App\Model\Entity\Replenishment;
 use App\Model\Enum\ReplenishmentStatus;
+use App\Model\Enum\TransactionType;
+use Cake\I18n\DateTime;
 use Cake\Utility\Text;
 
 /**
@@ -74,6 +76,7 @@ class ReplenishmentsController extends AppController
         $replenishment = $this->Replenishments->get($id, contain: [
             'ReplenishmentOrderLines.Badges',
             'ReplenishmentReceiptLines.Badges',
+            'StockTransactions.Badges',
         ]);
         $this->set(compact('replenishment'));
     }
@@ -276,6 +279,81 @@ class ReplenishmentsController extends AppController
             $this->Flash->error(__('The replenishment receipt could not be recorded. Please, try again.'));
         }
         $this->set(compact('replenishment', 'receiptRows'));
+    }
+
+    /**
+     * Accept a partial receipt and close the remaining quantity on the order.
+     *
+     * @param string|null $id Replenishment id.
+     * @return \Cake\Http\Response|null Redirects to the replenishment view.
+     */
+    public function acceptIncomplete(?string $id = null)
+    {
+        $this->request->allowMethod(['post']);
+        $replenishment = $this->Replenishments->get($id);
+        if ($replenishment->status !== ReplenishmentStatus::PartiallyReceived) {
+            $this->Flash->error(__('Only partially received replenishments can be closed this way.'));
+
+            return $this->redirect(['action' => 'view', $replenishment->id]);
+        }
+
+        $stockTransactions = $this->fetchTable('StockTransactions');
+        $query = $stockTransactions->find();
+        $remainingByBadge = $query
+            ->select([
+                'badge_id',
+                'unit_price',
+                'remaining_quantity' => $query->func()->sum('pending_quantity_change'),
+            ])
+            ->where([
+                'replenishment_id' => $replenishment->id,
+                'transaction_type IN' => [
+                    TransactionType::ReplenishmentOrder->value,
+                    TransactionType::ReplenishmentReceipt->value,
+                ],
+            ])
+            ->groupBy(['badge_id', 'unit_price'])
+            ->enableHydration(false)
+            ->all();
+
+        $this->Replenishments->getConnection()->transactional(function () use (
+            $stockTransactions,
+            $remainingByBadge,
+            $replenishment,
+        ): void {
+            foreach ($remainingByBadge as $row) {
+                $remaining = max(0, (int)$row['remaining_quantity']);
+                if ($remaining === 0) {
+                    continue;
+                }
+
+                $closeout = $stockTransactions->newEntity([
+                    'badge_id' => (string)$row['badge_id'],
+                    'replenishment_id' => (string)$replenishment->id,
+                    'on_hand_quantity_change' => 0,
+                    'receipted_quantity_change' => 0,
+                    'pending_quantity_change' => -$remaining,
+                    'fulfilled_quantity_change' => 0,
+                    'unit_price' => $row['unit_price'],
+                    'monetary_amount' => $row['unit_price'] === null
+                        ? null
+                        : number_format($remaining * (float)$row['unit_price'], 2, '.', ''),
+                    'transaction_type' => TransactionType::ReplenishmentCloseout->value,
+                ]);
+                $stockTransactions->saveOrFail($closeout);
+            }
+
+            $this->Replenishments->updateAll([
+                'status' => ReplenishmentStatus::Received->value,
+                'order_submitted' => true,
+                'received' => true,
+                'received_date' => DateTime::now(),
+            ], ['id' => $replenishment->id]);
+        });
+
+        $this->Flash->success(__('The incomplete replenishment has been accepted and closed.'));
+
+        return $this->redirect(['action' => 'view', $replenishment->id]);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Test\TestCase\Controller;
 
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\ReplenishmentStatus;
+use App\Model\Enum\TransactionType;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -443,6 +444,62 @@ class ReplenishmentsControllerTest extends TestCase
         $this->assertSame(ReplenishmentStatus::PartiallyReceived, $updated->status);
         $this->assertFalse($updated->received);
         $this->assertNull($updated->received_date);
+    }
+
+    public function testAcceptIncompleteReceiptClosesRemainingPendingQuantity(): void
+    {
+        $replenishments = $this->getTableLocator()->get('Replenishments');
+        $stockTransactions = $this->getTableLocator()->get('StockTransactions');
+        $badges = $this->getTableLocator()->get('Badges');
+        $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+        $badgeId = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+        $replenishments->updateAll([
+            'status' => ReplenishmentStatus::PartiallyReceived->value,
+            'order_submitted' => true,
+            'received' => false,
+            'received_date' => null,
+            'total_ordered_quantity' => 4,
+            'total_received_quantity' => 2,
+        ], ['id' => $id]);
+        $stockTransactions->updateAll([
+            'pending_quantity_change' => 4,
+        ], ['id' => '3f1d54b4-2ef6-4dd4-9b8d-6fb7b3b5f2ad']);
+        $stockTransactions->updateAll([
+            'on_hand_quantity_change' => 2,
+            'receipted_quantity_change' => 2,
+            'pending_quantity_change' => -2,
+            'unit_price' => 1.5,
+        ], ['id' => '9b86a2d1-6f94-4d6b-a6b2-0f68f2f30c12']);
+        $stockTransactions->refreshBadgeStockForBadge($badgeId);
+        $pendingBefore = (int)$badges->get($badgeId)->pending_quantity;
+
+        $this->enableCsrfToken();
+        $this->post("/replenishments/accept-incomplete/{$id}");
+
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
+        $this->assertFlashMessage('The incomplete replenishment has been accepted and closed.');
+        $updated = $replenishments->get($id);
+        $this->assertSame(ReplenishmentStatus::Received, $updated->status);
+        $this->assertTrue($updated->received);
+        $this->assertNotNull($updated->received_date);
+        $this->assertSame(2, $updated->total_received_quantity);
+
+        $closeout = $stockTransactions->find()
+            ->where([
+                'replenishment_id' => $id,
+                'transaction_type' => TransactionType::ReplenishmentCloseout,
+            ])
+            ->firstOrFail();
+        $this->assertSame(-2, $closeout->pending_quantity_change);
+        $this->assertSame(0, $closeout->on_hand_quantity_change);
+        $this->assertSame(1.5, (float)$closeout->unit_price);
+        $this->assertSame(3.0, (float)$closeout->monetary_amount);
+        $this->assertSame($pendingBefore - 2, (int)$badges->get($badgeId)->pending_quantity);
+
+        $this->get("/replenishments/view/{$id}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Unreceived Items Closed');
+        $this->assertResponseNotContains('Accept Incomplete Receipt');
     }
 
     public function testReceiveUpdatesReplenishmentToReceived(): void

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="286" viewBox="0 0 1200 286" fill="none">
+  <rect width="1200" height="286" rx="24" fill="#F2F8F6"/>
+  <text x="52" y="50" fill="#17474A" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="1.4">FROM GROUP ORDER TO DISTRICT FULFILMENT</text>
+  <path d="M283 155h146m-8-9 9 9-9 9m351-9h146m-8-9 9 9-9 9" stroke="#82B9AA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <g>
+    <rect x="52" y="79" width="305" height="160" rx="18" fill="#fff" stroke="#D9E9E4"/>
+    <circle cx="96" cy="123" r="24" fill="#E1F2EB"/>
+    <path d="M82 122h28l-3 22H85l-3-22Zm3-8h22l4 8H81l4-8Z" stroke="#177D69" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M90 128h12m-6-6v15" stroke="#177D69" stroke-width="2" stroke-linecap="round"/>
+    <text x="132" y="119" fill="#17474A" font-family="Arial, sans-serif" font-size="17" font-weight="700">A group places an order</text>
+    <text x="78" y="177" fill="#557579" font-family="Arial, sans-serif" font-size="13">Volunteers browse badges and choose</text>
+    <text x="78" y="198" fill="#557579" font-family="Arial, sans-serif" font-size="13">quantities for their group or section.</text>
+    <rect x="78" y="211" width="104" height="18" rx="9" fill="#E8F4EF"/>
+    <text x="89" y="224" fill="#287A69" font-family="Arial, sans-serif" font-size="9" font-weight="700">SIMPLE WEBSTORE</text>
+  </g>
+  <g>
+    <rect x="447" y="79" width="305" height="160" rx="18" fill="#fff" stroke="#D9E9E4"/>
+    <circle cx="491" cy="123" r="24" fill="#E7EFF9"/>
+    <rect x="478" y="111" width="26" height="24" rx="3" stroke="#557FB2" stroke-width="2"/>
+    <path d="M483 116h16m-16 6h16m-16 6h10" stroke="#557FB2" stroke-width="2" stroke-linecap="round"/>
+    <text x="527" y="119" fill="#17474A" font-family="Arial, sans-serif" font-size="17" font-weight="700">The district manages it</text>
+    <text x="473" y="177" fill="#557579" font-family="Arial, sans-serif" font-size="13">Staff review the order, prepare stock</text>
+    <text x="473" y="198" fill="#557579" font-family="Arial, sans-serif" font-size="13">and keep shop records up to date.</text>
+    <rect x="473" y="211" width="116" height="18" rx="9" fill="#EDF2FA"/>
+    <text x="484" y="224" fill="#5577A0" font-family="Arial, sans-serif" font-size="9" font-weight="700">BACK OFFICE TOOLS</text>
+  </g>
+  <g>
+    <rect x="842" y="79" width="305" height="160" rx="18" fill="#fff" stroke="#D9E9E4"/>
+    <circle cx="886" cy="123" r="24" fill="#F8F0E2"/>
+    <path d="M874 119h24v20h-24z" stroke="#B4873C" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M879 119v-5h14v5m-14 8h14m-7-4v8" stroke="#B4873C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="922" y="119" fill="#17474A" font-family="Arial, sans-serif" font-size="17" font-weight="700">Orders become shop work</text>
+    <text x="868" y="177" fill="#557579" font-family="Arial, sans-serif" font-size="13">Stock movements, replenishments</text>
+    <text x="868" y="198" fill="#557579" font-family="Arial, sans-serif" font-size="13">and invoices stay connected.</text>
+    <rect x="868" y="211" width="113" height="18" rx="9" fill="#F8F1E6"/>
+    <text x="879" y="224" fill="#99763D" font-family="Arial, sans-serif" font-size="9" font-weight="700">DISTRICT WORKFLOW</text>
+  </g>
+</svg>
