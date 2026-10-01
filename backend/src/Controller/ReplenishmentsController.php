@@ -227,14 +227,15 @@ class ReplenishmentsController extends AppController
     {
         if ($this->request->is(['post', 'put', 'patch'])) {
             $result = $this->Replenishments->getConnection()->transactional(function () use ($id): array {
-                $replenishment = $this->Replenishments->find()
-                    ->contain([
-                        'ReplenishmentOrderLines.Badges',
-                        'ReplenishmentReceiptLines',
-                    ])
+                $lockedReplenishment = $this->Replenishments->find()
+                    ->select(['id'])
                     ->where(['id' => $id])
                     ->epilog('FOR UPDATE')
                     ->firstOrFail();
+                $replenishment = $this->Replenishments->get($lockedReplenishment->id, contain: [
+                    'ReplenishmentOrderLines.Badges',
+                    'ReplenishmentReceiptLines',
+                ]);
 
                 if (
                     in_array(
@@ -268,11 +269,18 @@ class ReplenishmentsController extends AppController
                         ['associated' => ['ReplenishmentReceiptLines']],
                     )
                 ) {
+                    if ($hasReceiptLines) {
+                        $this->Replenishments->dispatchEvent(
+                            'Replenishment.afterReceive',
+                            [],
+                            $replenishment,
+                        );
+                    }
+
                     return [
                         'status' => 'saved',
                         'replenishment' => $replenishment,
                         'receipt_rows' => $receiptRows,
-                        'has_receipt_lines' => $hasReceiptLines,
                     ];
                 }
 
@@ -290,13 +298,6 @@ class ReplenishmentsController extends AppController
                 return $this->redirect(['action' => 'view', $replenishment->id]);
             }
             if ($result['status'] === 'saved') {
-                if ($result['has_receipt_lines']) {
-                    $this->Replenishments->dispatchEvent(
-                        'Replenishment.afterReceive',
-                        [],
-                        $replenishment,
-                    );
-                }
                 $this->Flash->success(__('The replenishment receipt has been recorded.'));
 
                 return $this->redirect(['action' => 'view', $replenishment->id]);
@@ -388,12 +389,12 @@ class ReplenishmentsController extends AppController
                 $stockTransactions->saveOrFail($closeout);
             }
 
-            $replenishment->set([
+            $replenishment->patch([
                 'status' => ReplenishmentStatus::Received,
                 'order_submitted' => true,
                 'received' => true,
                 'received_date' => DateTime::now(),
-            ]);
+            ], ['guard' => false]);
             $this->Replenishments->saveOrFail($replenishment);
 
             return true;

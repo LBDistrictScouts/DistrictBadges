@@ -98,7 +98,13 @@ class AddGroupCounterCaches extends BaseMigration
             . ')',
         );
 
+        $this->execute(
+            'UPDATE users SET account_id = NULL WHERE account_id IS NOT NULL '
+            . 'AND NOT EXISTS (SELECT 1 FROM accounts WHERE accounts.id = users.account_id)',
+        );
+
         // Users created after this migration have no historical account mapping.
+        // Also covers users whose backed-up account has since been deleted.
         // Assign one account from their group so the previous schema can accept them.
         $this->execute(
             'UPDATE users SET account_id = ('
