@@ -144,7 +144,8 @@ class FulfilmentNotificationService
         }
 
         $backorders = [];
-        foreach ($orderLines->find()
+        foreach (
+            $orderLines->find()
             ->contain(['Badges', 'Orders'])
             ->where(['OrderLines.order_id IN' => array_keys($orderIds)])
             ->all() as $orderLine
