@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
+use App\Model\Enum\OrderStatus;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -141,7 +142,11 @@ class UsersControllerTest extends TestCase
         $userId = '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1';
         $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
         $orders->updateAll(
-            ['contact_email' => 'wrong.address@example.org', 'fulfilled' => false],
+            [
+                'contact_email' => 'wrong.address@example.org',
+                'fulfilled' => false,
+                'status' => OrderStatus::Placed->value,
+            ],
             ['id' => $orderId],
         );
 
@@ -171,7 +176,11 @@ class UsersControllerTest extends TestCase
         $userId = '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1';
         $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
         $orders->updateAll(
-            ['contact_email' => 'wrong.address@example.org', 'fulfilled' => true],
+            [
+                'contact_email' => 'wrong.address@example.org',
+                'fulfilled' => true,
+                'status' => OrderStatus::Fulfilled->value,
+            ],
             ['id' => $orderId],
         );
 

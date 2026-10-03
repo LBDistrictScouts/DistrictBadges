@@ -45,8 +45,8 @@ enum OrderStatus: int implements EnumLabelInterface, JsonSerializable
     public static function activeValues(): array
     {
         return array_map(
-            static fn (self $status): int => $status->value,
-            array_filter(self::cases(), static fn (self $status): bool => $status->isActive()),
+            static fn(self $status): int => $status->value,
+            array_filter(self::cases(), static fn(self $status): bool => $status->isActive()),
         );
     }
 
