@@ -13,13 +13,11 @@ $closeoutLines = array_filter(
     <aside class="column">
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
-            <?php if (!$replenishment->received) : ?>
             <?= $this->Html->link(
-                __('Edit Replenishment Details'),
+                $replenishment->received ? __('Record Actual Postage Cost') : __('Edit Replenishment Details'),
                 ['action' => 'edit', $replenishment->id],
                 ['class' => 'side-nav-item'],
             ) ?>
-            <?php endif; ?>
             <?php if (!in_array(
                 $replenishment->status,
                 [

@@ -82,7 +82,7 @@ class ReplenishmentsController extends AppController
     }
 
     /**
-     * Edit the wholesaler's order reference on an unreceived replenishment.
+     * Edit replenishment details before receipt or record postage after receipt.
      *
      * @param string|null $id Replenishment id.
      * @return \Cake\Http\Response|null|void Redirects on success, renders otherwise.
@@ -91,27 +91,31 @@ class ReplenishmentsController extends AppController
     public function edit(?string $id = null)
     {
         $replenishment = $this->Replenishments->get($id);
-        if ($replenishment->received) {
-            $this->Flash->error(__('Received replenishments cannot be edited.'));
-
-            return $this->redirect(['action' => 'view', $replenishment->id]);
-        }
+        $isReceived = $replenishment->received;
 
         if ($this->request->is(['patch', 'post', 'put'])) {
             $replenishment = $this->Replenishments->patchEntity(
                 $replenishment,
                 $this->request->getData(),
-                ['fields' => ['wholesaler_order_number', 'actual_postage_cost']],
+                [
+                    'fields' => $isReceived
+                        ? ['actual_postage_cost']
+                        : ['wholesaler_order_number', 'actual_postage_cost'],
+                ],
             );
             if ($this->Replenishments->save($replenishment)) {
-                $this->Flash->success(__('The replenishment details have been saved.'));
+                $this->Flash->success($isReceived
+                    ? __('The actual postage cost has been saved.')
+                    : __('The replenishment details have been saved.'));
 
                 return $this->redirect(['action' => 'view', $replenishment->id]);
             }
-            $this->Flash->error(__('The replenishment details could not be saved. Please, try again.'));
+            $this->Flash->error($isReceived
+                ? __('The actual postage cost could not be saved. Please, try again.')
+                : __('The replenishment details could not be saved. Please, try again.'));
         }
 
-        $this->set(compact('replenishment'));
+        $this->set(compact('replenishment', 'isReceived'));
     }
 
     /**

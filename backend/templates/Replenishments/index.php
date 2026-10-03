@@ -80,9 +80,10 @@ use App\Model\Enum\ReplenishmentStatus;
                     <td><?= $this->Number->currency($replenishment->total_received_amount) ?></td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $replenishment->id]) ?>
-                        <?php if (!$replenishment->received) : ?>
-                            <?= $this->Html->link(__('Edit'), ['action' => 'edit', $replenishment->id]) ?>
-                        <?php endif; ?>
+                        <?= $this->Html->link(
+                            $replenishment->received ? __('Postage') : __('Edit'),
+                            ['action' => 'edit', $replenishment->id],
+                        ) ?>
                         <?php $canReceive = !in_array(
                             $replenishment->status,
                             [ReplenishmentStatus::Received, ReplenishmentStatus::Cancelled],
