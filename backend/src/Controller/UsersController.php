@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Enum\OrderStatus;
+
 /**
  * Users Controller
  *
@@ -90,7 +92,7 @@ class UsersController extends AppController
                         ['contact_email' => $user->email],
                         [
                             'user_id' => $user->id,
-                            'fulfilled' => false,
+                            'status IN' => OrderStatus::activeValues(),
                         ],
                     );
                 }

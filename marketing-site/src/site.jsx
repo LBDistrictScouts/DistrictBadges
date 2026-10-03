@@ -32,7 +32,17 @@ function Markdown({ children }) {
     a: ({ href = '', children: linkChildren, ...props }) => {
       if (href === 'product-tour.md') return <Link to="/tour">{linkChildren}</Link>;
       if (href === 'introduction.md') return <Link to="/about">{linkChildren}</Link>;
-      const githubPath = href === '../README.md' ? `${repoUrl}/blob/main/README.md` : href.endsWith('.md') ? `${repoUrl}/blob/main/docs/${href.replace(/^\.\//, '')}` : href;
+      const isRelativeDirectory = href.endsWith('/')
+        && !href.startsWith('/')
+        && !href.startsWith('#')
+        && !/^[a-z][a-z\d+.-]*:/i.test(href);
+      const githubPath = href === '../README.md'
+        ? `${repoUrl}/blob/main/README.md`
+        : href.endsWith('.md')
+          ? `${repoUrl}/blob/main/docs/${href.replace(/^\.\//, '')}`
+          : isRelativeDirectory
+            ? `${repoUrl}/tree/main/docs/${href.replace(/^\.\//, '').replace(/\/$/, '')}`
+            : href;
       return <a href={githubPath} {...(githubPath.startsWith('http') ? { target: '_blank', rel: 'noreferrer' } : {})} {...props}>{linkChildren}</a>;
     },
   }}>{children}</ReactMarkdown>;
