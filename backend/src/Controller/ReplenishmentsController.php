@@ -101,14 +101,14 @@ class ReplenishmentsController extends AppController
             $replenishment = $this->Replenishments->patchEntity(
                 $replenishment,
                 $this->request->getData(),
-                ['fields' => ['wholesaler_order_number']],
+                ['fields' => ['wholesaler_order_number', 'actual_postage_cost']],
             );
             if ($this->Replenishments->save($replenishment)) {
-                $this->Flash->success(__('The wholesaler order number has been saved.'));
+                $this->Flash->success(__('The replenishment details have been saved.'));
 
                 return $this->redirect(['action' => 'view', $replenishment->id]);
             }
-            $this->Flash->error(__('The wholesaler order number could not be saved. Please, try again.'));
+            $this->Flash->error(__('The replenishment details could not be saved. Please, try again.'));
         }
 
         $this->set(compact('replenishment'));
@@ -134,7 +134,11 @@ class ReplenishmentsController extends AppController
                 $replenishment,
                 $data,
                 [
-                    'fields' => ['wholesaler_order_number', 'replenishment_order_lines'],
+                    'fields' => [
+                        'wholesaler_order_number',
+                        'actual_postage_cost',
+                        'replenishment_order_lines',
+                    ],
                     'associated' => ['ReplenishmentOrderLines'],
                 ],
             );

@@ -24,9 +24,15 @@
         <div class="replenishments form content">
             <?= $this->Form->create($replenishment) ?>
             <fieldset>
-                <legend><?= __('Edit Wholesaler Order Number') ?></legend>
+                <legend><?= __('Edit Replenishment Details') ?></legend>
                 <?= $this->Form->control('wholesaler_order_number', [
                     'label' => __('Wholesaler Order Number'),
+                ]) ?>
+                <?= $this->Form->control('actual_postage_cost', [
+                    'label' => __('Actual Postage Cost (GBP)'),
+                    'type' => 'number',
+                    'min' => 0,
+                    'step' => '0.01',
                 ]) ?>
             </fieldset>
             <?= $this->Form->button(__('Save')) ?>

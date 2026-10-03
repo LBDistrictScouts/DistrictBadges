@@ -218,7 +218,7 @@ class ReplenishmentsControllerTest extends TestCase
 
         $this->get("/replenishments/edit/{$id}");
         $this->assertResponseOk();
-        $this->assertResponseContains('Edit Wholesaler Order Number');
+        $this->assertResponseContains('Edit Replenishment Details');
         $this->assertResponseContains('name="wholesaler_order_number"');
         $this->assertResponseNotContains('name="total_ordered_amount"');
 
@@ -230,7 +230,7 @@ class ReplenishmentsControllerTest extends TestCase
         ]);
 
         $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
-        $this->assertFlashMessage('The wholesaler order number has been saved.');
+        $this->assertFlashMessage('The replenishment details have been saved.');
         $updated = $replenishments->get($id);
         $this->assertSame('SUP-UPDATED', $updated->wholesaler_order_number);
         $this->assertSame((float)$before->total_ordered_amount, (float)$updated->total_ordered_amount);

@@ -32,6 +32,7 @@ class ReplenishmentsFixture extends TestFixture
                 'total_received_quantity' => 0,
                 'replenishment_number' => 'REP-2026-02-01',
                 'wholesaler_order_number' => 'SUP-12345',
+                'actual_postage_cost' => null,
             ],
         ];
         parent::init();

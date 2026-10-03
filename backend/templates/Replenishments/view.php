@@ -15,7 +15,7 @@ $closeoutLines = array_filter(
             <h4 class="heading"><?= __('Actions') ?></h4>
             <?php if (!$replenishment->received) : ?>
             <?= $this->Html->link(
-                __('Edit Wholesaler Order Number'),
+                __('Edit Replenishment Details'),
                 ['action' => 'edit', $replenishment->id],
                 ['class' => 'side-nav-item'],
             ) ?>
@@ -115,6 +115,12 @@ $closeoutLines = array_filter(
                         <?= __('items') ?>,
                         <?= $this->Number->currency($replenishment->total_received_amount) ?>
                     </td>
+                </tr>
+                <tr>
+                    <th><?= __('Actual Postage Cost') ?></th>
+                    <td><?= $replenishment->actual_postage_cost === null
+                        ? __('Not recorded')
+                        : $this->Number->currency($replenishment->actual_postage_cost) ?></td>
                 </tr>
             </table>
 
