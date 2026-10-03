@@ -198,7 +198,9 @@ class AuditsControllerTest extends TestCase
         $this->enableCsrfToken();
         $this->post('/audits/complete/' . $audit->id);
         $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $audit->id]);
-        $this->assertTrue($audits->get($audit->id)->audit_completed);
+        $completedAudit = $audits->get($audit->id);
+        $this->assertTrue($completedAudit->audit_completed);
+        $this->assertNotNull($completedAudit->audit_completed_date);
         $this->assertSame(7, (int)$badges->get($badgeId)->on_hand_quantity);
 
         $this->enableCsrfToken();

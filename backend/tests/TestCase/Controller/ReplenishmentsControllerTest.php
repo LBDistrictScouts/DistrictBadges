@@ -218,7 +218,7 @@ class ReplenishmentsControllerTest extends TestCase
 
         $this->get("/replenishments/edit/{$id}");
         $this->assertResponseOk();
-        $this->assertResponseContains('Edit Wholesaler Order Number');
+        $this->assertResponseContains('Edit Replenishment Details');
         $this->assertResponseContains('name="wholesaler_order_number"');
         $this->assertResponseNotContains('name="total_ordered_amount"');
 
@@ -230,21 +230,38 @@ class ReplenishmentsControllerTest extends TestCase
         ]);
 
         $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
-        $this->assertFlashMessage('The wholesaler order number has been saved.');
+        $this->assertFlashMessage('The replenishment details have been saved.');
         $updated = $replenishments->get($id);
         $this->assertSame('SUP-UPDATED', $updated->wholesaler_order_number);
         $this->assertSame((float)$before->total_ordered_amount, (float)$updated->total_ordered_amount);
         $this->assertSame(ReplenishmentStatus::Submitted, $updated->status);
     }
 
-    public function testEditRejectsReceivedReplenishment(): void
+    public function testEditRecordsPostageForReceivedReplenishmentOnly(): void
     {
         $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+        $replenishments = $this->getTableLocator()->get('Replenishments');
 
         $this->get("/replenishments/edit/{$id}");
 
+        $this->assertResponseOk();
+        $this->assertResponseContains('Record Actual Postage Cost');
+        $this->assertResponseContains('name="actual_postage_cost"');
+        $this->assertResponseNotContains('name="wholesaler_order_number"');
+
+        $this->enableCsrfToken();
+        $this->post("/replenishments/edit/{$id}", [
+            'actual_postage_cost' => '8.75',
+            'wholesaler_order_number' => 'SUP-TAMPERED',
+            'status' => ReplenishmentStatus::Cancelled->value,
+        ]);
+
         $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
-        $this->assertFlashMessage('Received replenishments cannot be edited.');
+        $this->assertFlashMessage('The actual postage cost has been saved.');
+        $updated = $replenishments->get($id);
+        $this->assertSame(8.75, (float)$updated->actual_postage_cost);
+        $this->assertSame('SUP-12345', $updated->wholesaler_order_number);
+        $this->assertSame(ReplenishmentStatus::Received, $updated->status);
     }
 
     public function testAddPrepopulatesRequiredReplenishmentLines(): void

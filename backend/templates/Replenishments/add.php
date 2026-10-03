@@ -21,6 +21,12 @@
                 <?= $this->Form->control('wholesaler_order_number', [
                     'label' => __('Wholesaler Order Number'),
                 ]) ?>
+                <?= $this->Form->control('actual_postage_cost', [
+                    'label' => __('Actual Postage Cost (GBP)'),
+                    'type' => 'number',
+                    'min' => 0,
+                    'step' => '0.01',
+                ]) ?>
             </fieldset>
             <?= $this->StockTransactionLines->grid($replenishment, $badges, $lineGrid) ?>
             <?= $this->Form->button(__('Submit')) ?>

@@ -94,6 +94,11 @@ class ReplenishmentsTable extends Table
             ->allowEmptyString('wholesaler_order_number');
 
         $validator
+            ->decimal('actual_postage_cost')
+            ->greaterThanOrEqual('actual_postage_cost', 0)
+            ->allowEmptyString('actual_postage_cost');
+
+        $validator
             ->integer('status')
             ->inList('status', array_column(ReplenishmentStatus::cases(), 'value'))
             ->allowEmptyString('status');

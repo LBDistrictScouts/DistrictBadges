@@ -13,6 +13,7 @@ use Cake\ORM\Entity;
  * @property string $user_id
  * @property \Cake\I18n\DateTime $audit_timestamp
  * @property bool $audit_completed
+ * @property \Cake\I18n\DateTime|null $audit_completed_date
  *
  * @property \App\Model\Entity\User $user
  * @property \App\Model\Entity\StockTransaction[] $stock_transactions

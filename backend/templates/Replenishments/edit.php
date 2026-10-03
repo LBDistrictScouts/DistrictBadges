@@ -2,6 +2,7 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Replenishment $replenishment
+ * @var bool $isReceived
  */
 ?>
 <div class="row">
@@ -24,9 +25,17 @@
         <div class="replenishments form content">
             <?= $this->Form->create($replenishment) ?>
             <fieldset>
-                <legend><?= __('Edit Wholesaler Order Number') ?></legend>
+                <legend><?= $isReceived ? __('Record Actual Postage Cost') : __('Edit Replenishment Details') ?></legend>
+                <?php if (!$isReceived) : ?>
                 <?= $this->Form->control('wholesaler_order_number', [
                     'label' => __('Wholesaler Order Number'),
+                ]) ?>
+                <?php endif; ?>
+                <?= $this->Form->control('actual_postage_cost', [
+                    'label' => __('Actual Postage Cost (GBP)'),
+                    'type' => 'number',
+                    'min' => 0,
+                    'step' => '0.01',
                 ]) ?>
             </fieldset>
             <?= $this->Form->button(__('Save')) ?>
