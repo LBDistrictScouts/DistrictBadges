@@ -56,6 +56,7 @@ echo $this->Html->css('home', ['block' => true]);
             <?= $this->Html->link('<span>Groups</span><small>Manage customer groups</small>', ['controller' => 'Groups', 'action' => 'index'], ['escape' => false]) ?>
             <?= $this->Html->link('<span>Accounts</span><small>Billing and account details</small>', ['controller' => 'Accounts', 'action' => 'index'], ['escape' => false]) ?>
             <?= $this->Html->link('<span>Invoices</span><small>Create invoices and manage billing dates</small>', ['controller' => 'Invoices', 'action' => 'index'], ['escape' => false]) ?>
+            <?= $this->Html->link('<span>Financial summary</span><small>Review yearly totals and monthly figures</small>', ['controller' => 'FinancialSummary', 'action' => 'index'], ['escape' => false]) ?>
             <?= $this->Html->link('<span>Users</span><small>Manage operations access</small>', ['controller' => 'Users', 'action' => 'index'], ['escape' => false]) ?>
         </nav>
     </section>
