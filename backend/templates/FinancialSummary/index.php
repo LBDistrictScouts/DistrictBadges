@@ -159,6 +159,6 @@ foreach ($months as $month) {
                 </tfoot>
             </table>
         </div>
-        <p class="financial-note">Invoices are grouped by invoice date. Stock and inbound postage are grouped by replenishment received date. Postage is included only where an actual cost has been recorded. This view does not track customer payments or other expenses.</p>
+        <p class="financial-note">Invoices are grouped by invoice date. Stock is grouped by receipt transaction date; inbound postage is grouped by final receipt date. Postage is included only where an actual cost has been recorded. This view does not track customer payments or other expenses.</p>
     </section>
 </section>

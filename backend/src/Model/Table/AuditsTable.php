@@ -93,6 +93,10 @@ class AuditsTable extends Table
             ->boolean('audit_completed')
             ->notEmptyString('audit_completed');
 
+        $validator
+            ->dateTime('audit_completed_date')
+            ->allowEmptyDateTime('audit_completed_date');
+
         return $validator;
     }
 

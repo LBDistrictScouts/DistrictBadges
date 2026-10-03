@@ -47,9 +47,9 @@ class FinancialSummaryControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseContains('2 invoices');
         $this->assertResponseContains('£90.00');
-        $this->assertResponseContains('£100.00');
+        $this->assertResponseContains('£80.00');
         $this->assertResponseContains('£15.00');
-        $this->assertResponseContains('-£25.00');
+        $this->assertResponseContains('-£5.00');
         $this->assertResponseContains('30 units on hand');
         $this->assertResponseContains('£60.00');
         $this->assertResponseContains('£45.00');
@@ -58,10 +58,32 @@ class FinancialSummaryControllerTest extends TestCase
         $this->assertResponseNotContains('£999.00');
         $this->assertResponseNotContains('£500.00');
 
-        $this->assertMonthRowHasValues('January', ['£50.00', '£5.00', '-£55.00']);
+        $this->assertMonthRowHasValues('January', ['£30.00', '£5.00', '-£35.00']);
         $this->assertMonthRowHasValues('February', ['1</td>', '£30.00', '£0.00']);
         $this->assertMonthRowHasValues('March', ['£50.00', '£10.00', '-£60.00']);
         $this->assertMonthRowHasValues('April', ['1</td>', '£60.00']);
+
+        $this->get('/financial-summary?year=2024');
+        $this->assertResponseContains('value="2024" selected="selected"');
+        $this->assertMetricValue('Stock received', '£20.00');
+        $this->assertMonthRowHasValues('December', ['£20.00']);
+    }
+
+    public function testYearSelectorIncludesEarlierOrderActivity(): void
+    {
+        $connection = $this->getTableLocator()->get('Orders')->getConnection();
+        (new FinancialSummaryAggregationDataset())->load($connection);
+        $connection->updateQuery()
+            ->update('orders')
+            ->set(['placed_date' => '2023-12-31 23:00:00'])
+            ->where(['order_number' => 'ORD-2025-004'])
+            ->execute();
+
+        $this->get('/financial-summary?year=2023');
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('value="2023" selected="selected"');
+        $this->assertMetricValue('Unfulfilled value', '£20.00');
     }
 
     /**

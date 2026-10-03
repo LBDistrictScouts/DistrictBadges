@@ -23,6 +23,9 @@ class FinancialSummaryController extends AppController
     {
         $invoices = $this->fetchTable('Invoices');
         $replenishments = $this->fetchTable('Replenishments');
+        $stockTransactions = $this->fetchTable('StockTransactions');
+        $orders = $this->fetchTable('Orders');
+        $audits = $this->fetchTable('Audits');
         $currentYear = (int)(new DateTimeImmutable())->format('Y');
 
         $earliestYear = $currentYear;
@@ -30,6 +33,9 @@ class FinancialSummaryController extends AppController
             [
             [$invoices, 'invoice_date'],
             [$replenishments, 'received_date'],
+            [$stockTransactions, 'transaction_timestamp'],
+            [$orders, 'placed_date'],
+            [$audits, 'audit_timestamp'],
             ] as [$table, $field]
         ) {
             $query = $table->find();
@@ -79,7 +85,7 @@ class FinancialSummaryController extends AppController
         }
 
         $replenishmentRows = $replenishments->find()
-            ->select(['received_date', 'total_received_amount', 'actual_postage_cost'])
+            ->select(['received_date', 'actual_postage_cost'])
             ->where([
                 'received_date >=' => $yearStart,
                 'received_date <' => $nextYearStart,
@@ -90,8 +96,26 @@ class FinancialSummaryController extends AppController
             if ($month === null) {
                 continue;
             }
-            $months[$month]['stock_received'] += (float)$replenishment->total_received_amount;
             $months[$month]['postage'] += (float)($replenishment->actual_postage_cost ?? 0);
+        }
+
+        $receiptRows = $stockTransactions->find()
+            ->select(['transaction_timestamp', 'receipted_quantity_change', 'unit_price', 'monetary_amount'])
+            ->where([
+                'transaction_type' => TransactionType::ReplenishmentReceipt->value,
+                'transaction_timestamp >=' => $yearStart,
+                'transaction_timestamp <' => $nextYearStart,
+            ])
+            ->all();
+        foreach ($receiptRows as $receipt) {
+            $month = $this->monthNumber($receipt->transaction_timestamp);
+            if ($month === null) {
+                continue;
+            }
+            $receiptAmount = $receipt->monetary_amount === null
+                ? (int)$receipt->receipted_quantity_change * (float)$receipt->unit_price
+                : (float)$receipt->monetary_amount;
+            $months[$month]['stock_received'] += $receiptAmount;
         }
 
         $totals = [
@@ -136,7 +160,7 @@ class FinancialSummaryController extends AppController
                     return $query->select(['id', 'status', 'dispatched_date']);
                 },
                 'Audits' => function ($query) {
-                    return $query->select(['id', 'audit_completed']);
+                    return $query->select(['id', 'audit_completed', 'audit_completed_date']);
                 },
             ])
             ->select([
@@ -169,8 +193,16 @@ class FinancialSummaryController extends AppController
                     continue;
                 }
             }
-            if ($transaction->audit_id !== null && !($transaction->audit?->audit_completed ?? false)) {
-                continue;
+            if ($transaction->audit_id !== null) {
+                $audit = $transaction->audit;
+                if (
+                    $audit === null
+                    || !$audit->audit_completed
+                    || !($audit->audit_completed_date instanceof DateTimeInterface)
+                    || $audit->audit_completed_date > $stockAsOf
+                ) {
+                    continue;
+                }
             }
 
             if ($transaction->transaction_type === TransactionType::Fulfilment) {

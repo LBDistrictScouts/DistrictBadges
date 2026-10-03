@@ -67,19 +67,21 @@ final class FinancialSummaryAggregationDataset
                 'user_id' => self::USER_ID,
                 'audit_timestamp' => '2025-01-01 09:00:00',
                 'audit_completed' => 1,
+                'audit_completed_date' => '2025-01-01 09:00:00',
                 'audit_number' => 'AUD-2025-001',
             ],
             [
                 'id' => '40000000-0000-4000-8000-000000000002',
                 'user_id' => self::USER_ID,
                 'audit_timestamp' => '2025-01-02 09:00:00',
-                'audit_completed' => 0,
+                'audit_completed' => 1,
+                'audit_completed_date' => '2026-01-02 09:00:00',
                 'audit_number' => 'AUD-2025-002',
             ],
         ]);
 
         $this->insertRows($connection, 'replenishments', [
-            $this->replenishment('50000000-0000-4000-8000-000000000001', 'REP-2025-001', '2025-01-10 12:00:00', 50.00, 5.00),
+            $this->replenishment('50000000-0000-4000-8000-000000000001', 'REP-2025-001', '2025-01-20 12:00:00', 50.00, 5.00),
             $this->replenishment('50000000-0000-4000-8000-000000000002', 'REP-2025-002', '2025-03-10 12:00:00', 50.00, 10.00),
             $this->replenishment('50000000-0000-4000-8000-000000000003', 'REP-2026-001', '2026-01-10 12:00:00', 500.00, 50.00),
         ]);
@@ -133,8 +135,9 @@ final class FinancialSummaryAggregationDataset
         $transactions = [
             $this->transaction('80000000-0000-4000-8000-000000000001', '2025-01-01 09:00:00', 0, 100, 0, auditId: '40000000-0000-4000-8000-000000000001'),
             $this->transaction('80000000-0000-4000-8000-000000000002', '2025-01-02 09:00:00', 0, 1000, 0, auditId: '40000000-0000-4000-8000-000000000002'),
-            $this->transaction('80000000-0000-4000-8000-000000000003', '2025-01-10 12:00:00', 4, 25, 0, replenishmentId: '50000000-0000-4000-8000-000000000001', amount: 50.00, unitPrice: 2.00),
-            $this->transaction('80000000-0000-4000-8000-000000000010', '2025-03-10 12:00:00', 4, 25, 0, replenishmentId: '50000000-0000-4000-8000-000000000002', amount: 50.00, unitPrice: 2.00),
+            $this->transaction('80000000-0000-4000-8000-000000000003', '2024-12-31 12:00:00', 4, 10, 0, replenishmentId: '50000000-0000-4000-8000-000000000001', amount: 20.00, unitPrice: 2.00, receiptedQuantityChange: 10, pendingQuantityChange: -10),
+            $this->transaction('80000000-0000-4000-8000-000000000011', '2025-01-10 12:00:00', 4, 15, 0, replenishmentId: '50000000-0000-4000-8000-000000000001', amount: 30.00, unitPrice: 2.00, receiptedQuantityChange: 15, pendingQuantityChange: -15),
+            $this->transaction('80000000-0000-4000-8000-000000000010', '2025-03-10 12:00:00', 4, 25, 0, replenishmentId: '50000000-0000-4000-8000-000000000002', amount: 50.00, unitPrice: 2.00, receiptedQuantityChange: 25, pendingQuantityChange: -25),
             $this->transaction('80000000-0000-4000-8000-000000000004', '2025-02-01 10:00:00', 2, -20, 20, fulfilmentId: '30000000-0000-4000-8000-000000000001', amount: 30.00, unitPrice: 1.50, orderLineId: '20000000-0000-4000-8000-000000000001'),
             $this->transaction('80000000-0000-4000-8000-000000000005', '2025-04-01 10:00:00', 2, -40, 40, fulfilmentId: '30000000-0000-4000-8000-000000000002', amount: 60.00, unitPrice: 1.50, orderLineId: '20000000-0000-4000-8000-000000000002'),
             $this->transaction('80000000-0000-4000-8000-000000000006', '2025-06-01 10:00:00', 2, -60, 60, fulfilmentId: '30000000-0000-4000-8000-000000000003', amount: 90.00, unitPrice: 1.50, orderLineId: '20000000-0000-4000-8000-000000000003'),
@@ -267,6 +270,8 @@ final class FinancialSummaryAggregationDataset
         ?float $amount = null,
         ?float $unitPrice = null,
         ?string $orderLineId = null,
+        int $receiptedQuantityChange = 0,
+        ?int $pendingQuantityChange = null,
     ): array {
         return [
             'id' => $id,
@@ -277,8 +282,8 @@ final class FinancialSummaryAggregationDataset
             'audit_id' => $auditId,
             'replenishment_id' => $replenishmentId,
             'on_hand_quantity_change' => $onHandChange,
-            'receipted_quantity_change' => 0,
-            'pending_quantity_change' => $type === 3 ? 100 : 0,
+            'receipted_quantity_change' => $receiptedQuantityChange,
+            'pending_quantity_change' => $pendingQuantityChange ?? ($type === 3 ? 100 : 0),
             'fulfilled_quantity_change' => $fulfilledChange,
             'monetary_amount' => $amount,
             'unit_price' => $unitPrice,

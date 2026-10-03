@@ -6,6 +6,7 @@ namespace App\Controller;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\MethodNotAllowedException;
 use Cake\Http\Response;
+use Cake\I18n\DateTime;
 
 /**
  * Audits Controller
@@ -224,6 +225,7 @@ class AuditsController extends AppController
             }
 
             $audit->audit_completed = true;
+            $audit->set('audit_completed_date', DateTime::now(), ['guard' => false]);
             $this->Audits->saveOrFail($audit);
             foreach ($audit->audit_lines as $line) {
                 $this->Audits->AuditLines->refreshBadgeStockForBadge((string)$line->badge_id);
