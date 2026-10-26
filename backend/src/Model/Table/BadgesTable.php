@@ -224,6 +224,7 @@ class BadgesTable extends Table
         $this->setTable('badges');
         $this->setDisplayField('badge_name');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
         $this->getSchema()->setColumnType('status', EnumType::from(BadgeStatus::class));
 
         $this->hasMany('StockTransactions', [

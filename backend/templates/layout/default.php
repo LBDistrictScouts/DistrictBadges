@@ -88,8 +88,26 @@ $entityCategory = $entityCategories[$controller] ?? 'default';
             <?= $this->Html->link('Fulfilments', ['controller' => 'Fulfilments', 'action' => 'index'], ['class' => $entityCategory === 'fulfilments' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Replenishments', ['controller' => 'Replenishments', 'action' => 'index'], ['class' => $entityCategory === 'replenishments' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Audits', ['controller' => 'Audits', 'action' => 'index'], ['class' => $entityCategory === 'audits' ? 'is-active' : '']) ?>
-            <?= $this->Html->link('Invoices', ['controller' => 'Invoices', 'action' => 'index'], ['class' => $entityCategory === 'invoices' ? 'is-active' : '']) ?>
             <?= $this->Html->link('Badges', ['controller' => 'Badges', 'action' => 'index'], ['class' => $entityCategory === 'badges' ? 'is-active' : '']) ?>
+            <?= $this->Html->link('Invoices', ['controller' => 'Invoices', 'action' => 'index'], ['class' => $entityCategory === 'invoices' ? 'is-active' : '']) ?>
+            <?php if (isset($currentUser)): ?>
+                <div class="top-nav-account">
+                    <svg class="top-nav-account__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="8" r="3.5"></circle>
+                        <path d="M5 20c.7-3.4 3.2-5.2 7-5.2s6.3 1.8 7 5.2"></path>
+                    </svg>
+                    <span class="top-nav-user-details">
+                        <strong class="top-nav-user"><?= h($currentUser->full_name) ?></strong>
+                        <small class="top-nav-group"><?= h($currentUser->group->group_name) ?></small>
+                    </span>
+                    <?= $this->Form->create(null, [
+                        'url' => ['controller' => 'Auth', 'action' => 'logout'],
+                        'class' => 'top-nav-signout',
+                    ]) ?>
+                    <?= $this->Form->button('Sign out', ['class' => 'top-nav-signout__button']) ?>
+                    <?= $this->Form->end() ?>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="top-nav-overlay" data-nav-overlay></div>
     </nav>

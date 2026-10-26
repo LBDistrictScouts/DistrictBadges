@@ -26,6 +26,9 @@ The 1Password item should expose these keys:
 - `SQS_BADGE_IMPORT_QUEUE_URL`
 - `ALGOLIA_APP_ID`
 - `ALGOLIA_ADMIN_API_KEY`
+- `COGNITO_CLIENT_ID`
+- `COGNITO_CLIENT_SECRET`
+- `COGNITO_HOSTED_UI_DOMAIN`
 
 Use the matching `badges_queue_consumer_credentials` Terraform output from
 `DistrictInfrastructure` for each environment. Map
@@ -58,6 +61,8 @@ bash K8S/scripts/generate-1password-items.sh --env test --dry-run
 ```
 
 Non-secret environment variables live in `base/config/app-config-map.yaml` and are patched per environment.
+
+Cognito sign-in requires a User Pool app client configured for the authorization-code flow with the `openid` and `email` scopes, a client secret, and callback/sign-out URLs at `/auth/callback` and `/auth/login` on each backend host. The backend derives its callback URL from `APP_FULL_BASE_URL`. The user pool ID and region are configured in the base ConfigMap; set the Hosted UI domain (including `https://`) and app-client ID/secret in each environment's 1Password item. Dev, test, and prod all require membership in the shared Cognito group `badge-admin`. The application defaults `COGNITO_REQUIRED_GROUP` to `badge-admin`; the Kubernetes configs set the same value in every environment. Add staff users to that Cognito group and pre-provision each user in the backend Users page with the local badge system group they should access.
 
 Order notification email is enabled with `ORDER_NOTIFICATIONS_ENABLED`. Set it
 to `"false"` in an overlay to suppress delivery without removing the SES

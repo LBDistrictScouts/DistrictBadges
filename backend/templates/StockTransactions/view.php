@@ -71,6 +71,10 @@
                     <td><?= h($stockTransaction->transaction_timestamp) ?></td>
                 </tr>
             </table>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $stockTransaction,
+                'heading' => __('Stock Transaction History'),
+            ]) ?>
         </div>
     </div>
 </div>

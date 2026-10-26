@@ -35,6 +35,7 @@ class BadgeTagsTable extends Table
         $this->setTable('badge_tags');
         $this->setDisplayField('tag_name');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
         $this->getSchema()->setColumnType(
             'tag_category',
             EnumType::from(TagCategory::class),

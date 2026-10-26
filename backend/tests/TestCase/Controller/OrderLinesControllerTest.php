@@ -3,18 +3,13 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
-
 /**
  * App\Controller\OrderLinesController Test Case
  *
  * @link \App\Controller\OrderLinesController
  */
-class OrderLinesControllerTest extends TestCase
+class OrderLinesControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *

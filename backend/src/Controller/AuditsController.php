@@ -77,6 +77,8 @@ class AuditsController extends AppController
     public function view(?string $id = null)
     {
         $audit = $this->Audits->get($id, contain: [
+            'CreatedByUser',
+            'UpdatedByUser',
             'Users',
             'AuditLines' => ['Badges'],
         ]);

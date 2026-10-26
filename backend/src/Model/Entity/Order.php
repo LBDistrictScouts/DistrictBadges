@@ -20,8 +20,13 @@ use Cake\ORM\Entity;
  * @property string $account_id
  * @property string $user_id
  * @property string|null $section_id
- * @property string $idempotency_key
+ * @property string|null $idempotency_key
+ * @property string $created_via
  * @property string|null $request_fingerprint
+ * @property \Cake\I18n\DateTime|null $created_date
+ * @property \Cake\I18n\DateTime|null $updated_date
+ * @property string|null $user_created
+ * @property string|null $user_updated
  * @property string|null $contact_first_name
  * @property string|null $contact_last_name
  * @property string|null $contact_email
@@ -35,11 +40,18 @@ use Cake\ORM\Entity;
  *
  * @property \App\Model\Entity\Account $account
  * @property \App\Model\Entity\User $user
+ * @property \App\Model\Entity\User|null $created_by_user
+ * @property \App\Model\Entity\User|null $updated_by_user
  * @property \App\Model\Entity\Section|null $section
  * @property \App\Model\Entity\OrderLine[] $order_lines
  */
 class Order extends Entity
 {
+    /**
+     * @var array<string>
+     */
+    protected array $_virtual = ['created_via'];
+
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
      *
@@ -70,4 +82,16 @@ class Order extends Entity
         'section' => true,
         'order_lines' => true,
     ];
+
+    /**
+     * Return the channel that created this order.
+     *
+     * @return string
+     */
+    protected function _getCreatedVia(): string
+    {
+        return (string)($this->get('idempotency_key') ?? '') !== ''
+            ? 'Webstore'
+            : 'Admin backend';
+    }
 }

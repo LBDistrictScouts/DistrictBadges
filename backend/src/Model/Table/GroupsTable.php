@@ -42,6 +42,7 @@ class GroupsTable extends Table
         $this->setTable('groups');
         $this->setDisplayField('group_name');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
         $this->getSchema()->setColumnType('type', EnumType::from(GroupType::class));
         $this->getSchema()->setColumnType('domains', 'json');
 

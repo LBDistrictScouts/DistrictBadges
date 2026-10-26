@@ -117,6 +117,10 @@ $address = array_filter([
                     </div>
                 <?php endif; ?>
             </section>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $user,
+                'heading' => __('User History'),
+            ]) ?>
         </div>
     </div>
 </div>

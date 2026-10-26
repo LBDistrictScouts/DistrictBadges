@@ -174,10 +174,14 @@ class InvoicesController extends AppController
         $showAllDetails = $this->request->getQuery('show_details') === '1';
         $invoice = $this->Invoices->get($id, contain: [
             'Accounts',
+            'CreatedByUser',
+            'UpdatedByUser',
             'InvoiceSummaries' => [
+                'CreatedByUser',
+                'UpdatedByUser',
                 'Orders' => ['Users', 'Sections'],
                 'Fulfilments',
-                'InvoiceLines' => ['Badges'],
+                'InvoiceLines' => ['Badges', 'CreatedByUser', 'UpdatedByUser'],
             ],
         ]);
         $this->set(compact('invoice', 'showAllDetails'));

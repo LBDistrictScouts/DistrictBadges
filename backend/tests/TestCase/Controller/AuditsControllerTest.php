@@ -3,18 +3,13 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
-
 /**
  * App\Controller\AuditsController Test Case
  *
  * @link \App\Controller\AuditsController
  */
-class AuditsControllerTest extends TestCase
+class AuditsControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *

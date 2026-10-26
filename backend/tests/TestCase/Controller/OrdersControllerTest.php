@@ -7,18 +7,14 @@ use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
 use Cake\Core\Configure;
 use Cake\I18n\FrozenTime;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
 /**
  * App\Controller\OrdersController Test Case
  *
  * @link \App\Controller\OrdersController
  */
-class OrdersControllerTest extends TestCase
+class OrdersControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *
@@ -156,7 +152,7 @@ class OrdersControllerTest extends TestCase
         $this->assertResponseContains('Order Lines');
         $this->assertResponseContains('Unit Price');
         $this->assertResponseContains('Line Amount');
-        $this->assertResponseContains('Edit Order');
+        $this->assertResponseNotContains('Edit Order');
         $this->assertResponseContains('Resend Order Email');
         $this->assertResponseContains('Order for');
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
@@ -340,7 +336,8 @@ class OrdersControllerTest extends TestCase
                 'total_ordered_quantity' => 2,
                 'total_fulfilled_amount' => 10.00,
                 'total_fulfilled_quantity' => 1,
-                'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+                'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+                'section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
                 'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
                 'order_lines' => [
                     [
@@ -372,6 +369,7 @@ class OrdersControllerTest extends TestCase
         $this->assertSame(0.0, (float)$saved->total_fulfilled_amount);
         $this->assertSame(0, (int)$saved->total_fulfilled_quantity);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
+        $this->assertSame('d9534dcb-a846-5a22-a2fe-b67580555563', $saved->section_id);
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
 
         $line = $orders->OrderLines->find()
@@ -420,6 +418,11 @@ class OrdersControllerTest extends TestCase
     {
         $orders = $this->getTableLocator()->get('Orders');
         $id = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $orders->updateAll([
+            'status' => OrderStatus::Placed->value,
+            'fulfilled' => false,
+            'total_fulfilled_quantity' => 0,
+        ], ['id' => $id]);
         $original = $orders->get($id);
 
         $this->enableCsrfToken();
@@ -431,7 +434,8 @@ class OrdersControllerTest extends TestCase
             'total_ordered_quantity' => 3,
             'total_fulfilled_amount' => 20.00,
             'total_fulfilled_quantity' => 2,
-            'account_id' => 'ae471706-04cc-4c9c-8916-e4be1f913edf',
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
             'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
         ]);
 
@@ -457,5 +461,147 @@ class OrdersControllerTest extends TestCase
             (int)$original->total_fulfilled_quantity,
             (int)$updated->total_fulfilled_quantity,
         );
+    }
+
+    public function testEditUpdatesUnfulfilledLineAndRefreshesOrderTotalsAndAudit(): void
+    {
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $lineId = 'be20de8c-eea8-4114-a98e-1d55e483e8db';
+        $orders = $this->getTableLocator()->get('Orders');
+        $orders->updateAll([
+            'status' => OrderStatus::Placed->value,
+            'fulfilled' => false,
+            'total_fulfilled_quantity' => 0,
+        ], ['id' => $orderId]);
+
+        $this->enableCsrfToken();
+        $this->put("/orders/edit/{$orderId}", [
+            'group_id' => '4d5149f3-6214-4457-a04d-e428dc1200d7',
+            'section_id' => 'd9534dcb-a846-5a22-a2fe-b67580555563',
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'order_lines' => [
+                ['id' => $lineId, 'quantity' => '10'],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Orders', 'action' => 'index']);
+        $line = $orders->OrderLines->get($lineId);
+        $this->assertSame(10, (int)$line->quantity);
+        $this->assertSame('15.00', (string)$line->amount);
+        $this->assertFalse((bool)$line->fulfilled);
+        $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $line->user_updated);
+
+        $order = $orders->get($orderId);
+        $this->assertSame(OrderStatus::Placed, $order->status);
+        $this->assertSame(10, (int)$order->total_ordered_quantity);
+        $this->assertSame('15.00', (string)$order->total_ordered_amount);
+        $this->assertSame(0, (int)$order->total_fulfilled_quantity);
+        $this->assertNotNull($order->updated_date);
+        $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $order->user_updated);
+    }
+
+    public function testEditAllowsUntouchedLinesOnPartiallyFulfilledOrder(): void
+    {
+        [$orderId, $openLineId] = $this->makePartiallyFulfilledOrder();
+        $this->get("/orders/view/{$orderId}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Edit Order');
+
+        $this->enableCsrfToken();
+        $this->put("/orders/edit/{$orderId}", [
+            'order_lines' => [
+                ['id' => $openLineId, 'quantity' => '5'],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Orders', 'action' => 'index']);
+        $orders = $this->getTableLocator()->get('Orders');
+        $changedLine = $orders->OrderLines->get($openLineId);
+        $this->assertSame(5, (int)$changedLine->quantity);
+        $this->assertSame('7.50', (string)$changedLine->amount);
+        $this->assertSame(0, (int)$changedLine->fulfilled_quantity);
+
+        $order = $orders->get($orderId);
+        $this->assertSame(OrderStatus::PartiallyFulfilled, $order->status);
+        $this->assertSame(15, (int)$order->total_ordered_quantity);
+        $this->assertSame('22.50', (string)$order->total_ordered_amount);
+        $this->assertSame(2, (int)$order->total_fulfilled_quantity);
+        $this->assertSame('3.00', (string)$order->total_fulfilled_amount);
+        $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $order->user_updated);
+    }
+
+    public function testEditRejectsChangesToPartiallyFulfilledLine(): void
+    {
+        [$orderId, $openLineId] = $this->makePartiallyFulfilledOrder();
+        $partiallyFulfilledLineId = 'be20de8c-eea8-4114-a98e-1d55e483e8db';
+
+        $this->enableCsrfToken();
+        $this->put("/orders/edit/{$orderId}", [
+            'order_lines' => [
+                ['id' => $partiallyFulfilledLineId, 'quantity' => '9'],
+                ['id' => $openLineId, 'quantity' => '5'],
+            ],
+        ]);
+
+        $this->assertResponseOk();
+        $this->assertResponseContains('The order could not be saved. Please, try again.');
+        $orderLines = $this->getTableLocator()->get('OrderLines');
+        $this->assertSame(10, (int)$orderLines->get($partiallyFulfilledLineId)->quantity);
+        $this->assertSame(10, (int)$orderLines->get($openLineId)->quantity);
+    }
+
+    public function testEditBlocksFulfilledOrder(): void
+    {
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $lineId = 'be20de8c-eea8-4114-a98e-1d55e483e8db';
+
+        $this->enableCsrfToken();
+        $this->put("/orders/edit/{$orderId}", [
+            'order_lines' => [
+                ['id' => $lineId, 'quantity' => '10'],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Orders', 'action' => 'view', $orderId]);
+        $this->assertFlashMessage('This order can no longer be edited.');
+        $this->assertSame(1, (int)$this->getTableLocator()->get('OrderLines')->get($lineId)->quantity);
+    }
+
+    /**
+     * @return array{string, string} Order id and the still-unfulfilled line id.
+     */
+    private function makePartiallyFulfilledOrder(): array
+    {
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $partiallyFulfilledLineId = 'be20de8c-eea8-4114-a98e-1d55e483e8db';
+        $openLineId = 'b9ff5ca8-7c25-4d24-90a2-7f19bf4c8d32';
+        $orders = $this->getTableLocator()->get('Orders');
+        $orderLines = $orders->OrderLines;
+        $orderLines->updateAll([
+            'quantity' => 10,
+            'amount' => '15.00',
+            'fulfilled_quantity' => 2,
+            'fulfilled' => false,
+        ], ['id' => $partiallyFulfilledLineId]);
+        $openLine = $orderLines->newEmptyEntity();
+        $openLine->set('id', $openLineId);
+        $openLine = $orderLines->patchEntity($openLine, [
+            'order_id' => $orderId,
+            'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+            'quantity' => 10,
+            'unit_price' => '1.50',
+            'amount' => '15.00',
+            'fulfilled_quantity' => 0,
+            'fulfilled' => false,
+        ]);
+        $orderLines->saveOrFail($openLine);
+        $orders->updateAll([
+            'status' => OrderStatus::PartiallyFulfilled->value,
+            'fulfilled' => false,
+            'total_fulfilled_quantity' => 2,
+            'total_fulfilled_amount' => '3.00',
+        ], ['id' => $orderId]);
+
+        return [$orderId, $openLineId];
     }
 }

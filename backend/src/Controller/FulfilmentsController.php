@@ -76,7 +76,11 @@ class FulfilmentsController extends AppController
      */
     public function view(?string $id = null)
     {
-        $fulfilment = $this->Fulfilments->get($id, contain: ['FulfilmentLines.Badges']);
+        $fulfilment = $this->Fulfilments->get($id, contain: [
+            'FulfilmentLines.Badges',
+            'CreatedByUser',
+            'UpdatedByUser',
+        ]);
         $this->Fulfilments->loadInto($fulfilment, ['Users', 'Accounts.Groups']);
         $user = $fulfilment->user;
         $account = $fulfilment->account;

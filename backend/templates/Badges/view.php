@@ -152,6 +152,10 @@ $badgeTypes = $badge->badge_types;
                     </section>
                 </div>
             </div>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $badge,
+                'heading' => __('Badge History'),
+            ]) ?>
         </div>
     </div>
 </div>

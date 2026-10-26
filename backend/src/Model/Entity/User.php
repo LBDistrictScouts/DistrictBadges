@@ -13,6 +13,7 @@ use Cake\ORM\Entity;
  * @property string $last_name
  * @property string $group_id
  * @property string $email
+ * @property string|null $cognito_sub
  * @property string|null $address_line_1
  * @property string|null $address_line_2
  * @property string|null $town

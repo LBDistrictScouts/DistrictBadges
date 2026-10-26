@@ -5,18 +5,14 @@ namespace App\Test\TestCase\Controller;
 
 use Cake\Controller\Exception\MissingActionException;
 use Cake\I18n\FrozenTime;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
 /**
  * App\Controller\StockTransactionsController Test Case
  *
  * @link \App\Controller\StockTransactionsController
  */
-class StockTransactionsControllerTest extends TestCase
+class StockTransactionsControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *

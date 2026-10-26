@@ -45,7 +45,11 @@ class BadgeTagsController extends AppController
      */
     public function view(?string $id = null)
     {
-        $badgeTag = $this->BadgeTags->get($id, contain: ['Badges']);
+        $badgeTag = $this->BadgeTags->get($id, contain: [
+            'Badges',
+            'CreatedByUser',
+            'UpdatedByUser',
+        ]);
         $this->set(compact('badgeTag'));
     }
 
