@@ -109,6 +109,7 @@ class InvoiceLinesTable extends Table
         $this->setTable('invoice_lines');
         $this->setDisplayField('description');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->belongsTo('InvoiceSummaries', [
             'foreignKey' => 'invoice_summary_id',

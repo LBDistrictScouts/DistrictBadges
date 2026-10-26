@@ -35,7 +35,7 @@ Key variables to set in `config/.env`:
 | `APP_NAME` | Application name (used for cache key prefixes) |
 | `DEBUG` | Set to `true` in development, `false` in production |
 | `SECURITY_SALT` | A long random string used for hashing |
-| `APP_FULL_BASE_URL` | Full URL of this application (e.g. `https://badges.example.com`) |
+| `APP_FULL_BASE_URL` | Full URL of this application (local default: `http://localhost:8765`) |
 | `DATABASE_URL` | Full DSN for the primary database (see below) |
 | `DATABASE_TEST_URL` | Full DSN for the test database |
 | `DISTRICT_CORE_DATA_URL` | Basic Auth-protected DistrictCoreData base/landing URL |
@@ -147,9 +147,7 @@ erDiagram
         string last_name
         uuid group_id FK
         string email
-        string login
-        integer admin_role
-        boolean can_login
+        uuid cognito_sub UK
     }
     orders {
         uuid id PK
@@ -240,6 +238,10 @@ erDiagram
 
 > For a detailed explanation of how stock transactions are recorded and the derived line models (AuditLines, FulfilmentLines, ReplenishmentOrderLines, ReplenishmentReceiptLines), see [stock transactions](backend/stock-transactions.md).
 
+## Record tracking
+
+Editable records use the `UserTracking` behavior to set `created_date`, `updated_date`, `user_created`, and `user_updated` on ORM saves. It reads the authenticated staff user from the request session; trusted CLI or service code can supply a `userId` save option. The behavior is applied to accounts, badges and tags, users and groups, orders and lines, fulfilments and stock transactions, audits, replenishments, invoices and their lines and summaries, and sections. Existing records keep null values where their original audit data is unavailable. To enable tracking on another model, add the four columns in a migration and call `$this->addBehavior('UserTracking')` in its table's `initialize()` method.
+
 ## Webstore order API
 
 `POST /api/orders.json` accepts a contact name and email, shared `group_id` and `section_id` UUIDs, and order lines containing only `badge_id` and `quantity`. It verifies that the section belongs to the group and calculates prices and totals from backend badge records; client-supplied totals are not trusted. The account, user, order, and lines are persisted synchronously in one transaction, and successful requests return HTTP `201`.
@@ -249,6 +251,12 @@ The API Gateway/SQS route accepts the identical JSON payload. The `orders:consum
 [`backend/config/schema/scout-shop-order-v2.json`](../backend/config/schema/scout-shop-order-v2.json) is the latest canonical, versioned transport contract for both the `POST /api/orders.json` request body and the unchanged SQS message body. Version 2 adds optional `postage` and `dispatch_address` properties. Version 1 remains available for existing clients. Edge services must reject payloads that fail their selected schema version before enqueueing them. Database-backed checks, including group/section relationships and badge existence, are performed when the backend processes the valid payload.
 
 The per-dispatch postage charge is configured with the backend `POSTAGE_PRICE` environment variable and is available as `Postage.price`. Keep it aligned with the webstore deployment's separate `VITE_POSTAGE_PRICE` value.
+
+## Staff authentication
+
+The staff interface uses the Cognito Hosted UI authorization-code flow. The app validates the ID token signature and standard claims against the User Pool, requires membership in `COGNITO_REQUIRED_GROUP` (default `badge-admin`), and links the Cognito `sub` UUID to a pre-provisioned local user. The first link uses the Cognito email claim; subsequent sign-ins use the stored `sub`. Staff must also have a local Users record assigned to a badge system group. The public `/api` order endpoints remain available to the webstore without staff authentication.
+
+Set `COGNITO_REGION`, `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, `COGNITO_CLIENT_SECRET`, and `COGNITO_HOSTED_UI_DOMAIN`. `COGNITO_REQUIRED_GROUP` defaults to `badge-admin`; override it only if the deployment uses a different Cognito group. Register `/auth/callback` and `/auth/login` as the app client's callback and sign-out URLs on the backend host. The callback flow requests `openid email` and uses PKCE. The SAML identity's `email_verified` claim may be false; access still requires the signed Cognito group claim and a matching pre-provisioned user.
 
 Run `bin/cake district_core_data:sync` whenever the canonical group or section data changes. Deploy and sync DistrictCoreData changes before deploying a webstore build that contains the new UUIDs.
 
@@ -291,6 +299,7 @@ vendor/bin/phpstan analyse
 | `config/app.php` | Application-wide defaults (encoding, locale, timezone, cache, email) |
 | `config/app_local.php` | Environment-specific overrides – **not committed to source control** |
 | `config/.env` | Environment variables loaded in development – **not committed to source control** |
+| `COGNITO_*` environment variables | Cognito User Pool, app client, Hosted UI domain and required group for staff sign-in |
 | `phpcs.xml` | PHP_CodeSniffer ruleset |
 | `phpstan.neon` | PHPStan configuration |
 | `phpunit.xml.dist` | PHPUnit test configuration |

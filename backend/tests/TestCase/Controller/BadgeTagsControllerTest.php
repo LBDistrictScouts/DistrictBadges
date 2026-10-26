@@ -4,24 +4,22 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Controller;
 
 use App\Model\Enum\TagCategory;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
 /**
  * App\Controller\BadgeTagsController Test Case
  *
  * @link \App\Controller\BadgeTagsController
  */
-class BadgeTagsControllerTest extends TestCase
+class BadgeTagsControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *
      * @var array<string>
      */
     protected array $fixtures = [
+        'app.Groups',
+        'app.Users',
         'app.BadgeTags',
         'app.Badges',
         'app.BadgesBadgeTags',

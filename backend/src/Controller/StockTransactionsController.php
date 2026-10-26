@@ -33,7 +33,12 @@ class StockTransactionsController extends AppController
      */
     public function view(?string $id = null)
     {
-        $stockTransaction = $this->StockTransactions->get($id, contain: ['Badges', 'Fulfilments']);
+        $stockTransaction = $this->StockTransactions->get($id, contain: [
+            'Badges',
+            'Fulfilments',
+            'CreatedByUser',
+            'UpdatedByUser',
+        ]);
         $this->set(compact('stockTransaction'));
     }
 

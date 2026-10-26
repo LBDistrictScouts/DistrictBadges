@@ -21,6 +21,7 @@ class SectionsTable extends Table
         $this->setTable('sections');
         $this->setDisplayField('section_name');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->belongsTo('Groups', [
             'foreignKey' => 'group_id',

@@ -44,6 +44,7 @@ class AccountsTable extends Table
         $this->setTable('accounts');
         $this->setDisplayField('account_name');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->belongsTo('Groups', [
             'foreignKey' => 'group_id',

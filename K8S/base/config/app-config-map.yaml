@@ -10,6 +10,9 @@ data:
   APP_DEFAULT_TIMEZONE: Europe/London
   APP_FULL_BASE_URL: https://badges.example.com
   AWS_REGION: eu-west-1
+  COGNITO_REGION: eu-west-1
+  COGNITO_USER_POOL_ID: eu-west-1_ypD0Rpdvt
+  COGNITO_REQUIRED_GROUP: badge-admin
   DEBUG: "false"
   EMAIL_FROM_ADDRESS: orders@badges-dev.lbdscouts.org.uk
   EMAIL_FROM_NAME: LBA Scouts District Badge Shop (Development)

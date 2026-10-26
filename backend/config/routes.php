@@ -57,6 +57,11 @@ return function (RouteBuilder $routes): void {
     });
 
     $routes->scope('/', function (RouteBuilder $builder): void {
+        $builder->connect('/auth/login', ['controller' => 'Auth', 'action' => 'login']);
+        $builder->connect('/auth/start', ['controller' => 'Auth', 'action' => 'start']);
+        $builder->connect('/auth/callback', ['controller' => 'Auth', 'action' => 'callback']);
+        $builder->connect('/auth/logout', ['controller' => 'Auth', 'action' => 'logout']);
+
         /*
          * Here, we are connecting '/' (base path) to a controller called 'Pages',
          * its action called 'display', and we pass a param to select the view file

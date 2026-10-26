@@ -218,6 +218,10 @@ $closeoutLines = array_filter(
                 </div>
             </div>
             <?php endif; ?>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $replenishment,
+                'heading' => __('Replenishment History'),
+            ]) ?>
         </div>
     </div>
 </div>

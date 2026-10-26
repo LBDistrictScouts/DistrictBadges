@@ -50,6 +50,7 @@ class FulfilmentsTable extends Table
         $this->setTable('fulfilments');
         $this->setDisplayField('fulfilment_number');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
         $this->getSchema()->setColumnType(
             'status',
             EnumType::from(FulfilmentStatus::class),

@@ -4,6 +4,7 @@ use Cake\Core\Configure;
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Order $order
+ * @var bool $canEdit
  */
 $dispatchAddress = array_filter([
     $order->dispatch_address_line_1,
@@ -13,6 +14,9 @@ $dispatchAddress = array_filter([
     $order->dispatch_postcode,
 ]);
 $postagePrice = $this->Number->currency((float)Configure::read('Postage.price', 0));
+$createdAt = $order->created_date ?? $order->placed_date;
+$createdBy = $order->created_by_user
+    ?? ($order->created_via === 'Webstore' ? $order->user : null);
 $multipleOrdersMessage = 'If the customer places multiple orders, they may be grouped into one dispatch '
     . 'and charged postage once.';
 ?>
@@ -20,11 +24,13 @@ $multipleOrdersMessage = 'If the customer places multiple orders, they may be gr
     <aside class="column">
         <div class="side-nav">
             <h4 class="heading"><?= __('Actions') ?></h4>
-            <?= $this->Html->link(
-                __('Edit Order'),
-                ['action' => 'edit', $order->id],
-                ['class' => 'side-nav-item'],
-            ) ?>
+            <?php if ($canEdit) : ?>
+                <?= $this->Html->link(
+                    __('Edit Order'),
+                    ['action' => 'edit', $order->id],
+                    ['class' => 'side-nav-item'],
+                ) ?>
+            <?php endif; ?>
             <?= $this->Html->link(__('List Orders'), ['action' => 'index'], ['class' => 'side-nav-item']) ?>
             <?= $this->Html->link(__('New Order'), ['action' => 'add'], ['class' => 'side-nav-item']) ?>
         </div>
@@ -118,6 +124,36 @@ $multipleOrdersMessage = 'If the customer places multiple orders, they may be gr
                     </td>
                 </tr>
             </table>
+
+            <section class="related order-audit-well" aria-labelledby="order-history-heading">
+                <h4 id="order-history-heading"><?= __('Order History') ?></h4>
+                <dl>
+                    <div class="order-audit-well__source">
+                        <dt><?= __('Created via') ?></dt>
+                        <dd><?= h($order->created_via) ?></dd>
+                    </div>
+                    <div>
+                        <dt><?= __('Created') ?></dt>
+                        <dd><?= $createdAt ? h($createdAt->i18nFormat('dd MMM yyyy HH:mm')) : __('Not recorded') ?></dd>
+                    </div>
+                    <div>
+                        <dt><?= __('Created by') ?></dt>
+                        <dd><?= $createdBy ? h($createdBy->full_name) : __('Not recorded') ?></dd>
+                    </div>
+                    <div>
+                        <dt><?= __('Last modified') ?></dt>
+                        <dd><?= $order->updated_date
+                            ? h($order->updated_date->i18nFormat('dd MMM yyyy HH:mm'))
+                            : __('Not recorded') ?></dd>
+                    </div>
+                    <div>
+                        <dt><?= __('Modified by') ?></dt>
+                        <dd><?= $order->updated_by_user
+                            ? h($order->updated_by_user->full_name)
+                            : __('Not recorded') ?></dd>
+                    </div>
+                </dl>
+            </section>
 
             <div class="related">
                 <h4><?= __('Delivery') ?></h4>

@@ -43,6 +43,7 @@ class AuditsTable extends Table
         $this->setTable('audits');
         $this->setDisplayField('audit_number');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->addBehavior('Timestamp', [
             'events' => [

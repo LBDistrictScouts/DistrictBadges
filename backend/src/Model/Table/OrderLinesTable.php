@@ -42,6 +42,7 @@ class OrderLinesTable extends Table
         $this->setTable('order_lines');
         $this->setDisplayField('id');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->belongsTo('Orders', [
             'foreignKey' => 'order_id',

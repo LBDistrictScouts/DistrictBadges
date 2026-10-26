@@ -3,18 +3,13 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
-
 /**
  * App\Controller\ReplenishmentReceiptLinesController Test Case
  *
  * @link \App\Controller\ReplenishmentReceiptLinesController
  */
-class ReplenishmentReceiptLinesControllerTest extends TestCase
+class ReplenishmentReceiptLinesControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *

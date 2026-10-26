@@ -112,6 +112,10 @@
                     </table></div>
                 <?php endif; ?>
             </section>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $account,
+                'heading' => __('Account History'),
+            ]) ?>
         </div>
     </div>
 </div>

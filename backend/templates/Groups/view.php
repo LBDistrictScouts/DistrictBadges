@@ -101,6 +101,10 @@
                 </div>
                 <?php endif; ?>
             </div>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $group,
+                'heading' => __('Group History'),
+            ]) ?>
         </div>
     </div>
 </div>

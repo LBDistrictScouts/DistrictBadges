@@ -103,7 +103,27 @@
                                             <td><?= $this->Number->currency($invoiceLine->line_amount) ?></td>
                                             <td><?= __('Badge detail') ?></td>
                                         </tr>
+                                        <tr class="invoice-reconciliation-row"
+                                            data-summary-id="<?= h($summary->id) ?>" <?= $showAllDetails ? '' : 'hidden' ?>>
+                                            <td colspan="6">
+                                                <?= $this->element('user_tracking_well', [
+                                                    'entity' => $invoiceLine,
+                                                    'heading' => __('Invoice Line History'),
+                                                    'headingId' => 'invoice-line-history-' . $invoiceLine->id,
+                                                ]) ?>
+                                            </td>
+                                        </tr>
                                     <?php endforeach; ?>
+                                    <tr class="invoice-reconciliation-row"
+                                        data-summary-id="<?= h($summary->id) ?>" <?= $showAllDetails ? '' : 'hidden' ?>>
+                                        <td colspan="6">
+                                            <?= $this->element('user_tracking_well', [
+                                                'entity' => $summary,
+                                                'heading' => __('Invoice Summary History'),
+                                                'headingId' => 'invoice-summary-history-' . $summary->id,
+                                            ]) ?>
+                                        </td>
+                                    </tr>
                                 <?php endforeach; ?>
                             </tbody>
                             <tfoot>
@@ -117,6 +137,10 @@
                     </div>
                 <?php endif; ?>
             </div>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $invoice,
+                'heading' => __('Invoice History'),
+            ]) ?>
         </div>
     </div>
 </div>

@@ -7,8 +7,11 @@ use App\Model\Entity\Account;
 use App\Model\Entity\Group;
 use App\Model\Entity\User;
 use ArrayObject;
+use Cake\Database\Expression\FunctionExpression;
+use Cake\Database\Expression\QueryExpression;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
+use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -48,6 +51,7 @@ class UsersTable extends Table
         $this->setTable('users');
         $this->setDisplayField('email');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->belongsTo('Groups', [
             'foreignKey' => 'group_id',
@@ -133,6 +137,73 @@ class UsersTable extends Table
     {
         $user->set('non_district_email', $this->calculateNonDistrictEmail($user));
         $this->saveOrFail($user, ['checkRules' => false, 'validate' => false]);
+    }
+
+    /**
+     * Find and link a pre-provisioned local user to a Cognito subject.
+     *
+     * Email is used only for the first link. Future sign-ins must present the
+     * same Cognito subject, so a changed email cannot transfer an account.
+     */
+    public function findForCognitoIdentity(string $email, string $cognitoSub): ?User
+    {
+        $normalizedEmail = mb_strtolower(trim($email));
+        if ($normalizedEmail === '' || $cognitoSub === '') {
+            return null;
+        }
+
+        $linkedUserEntity = $this->find()
+            ->contain(['Groups'])
+            ->where(['Users.cognito_sub' => $cognitoSub])
+            ->first();
+        $linkedUser = $linkedUserEntity instanceof User ? $linkedUserEntity : null;
+        if ($linkedUser !== null) {
+            return $linkedUser->group !== null ? $linkedUser : null;
+        }
+
+        $matches = $this->find()
+            ->contain(['Groups'])
+            ->where(function (QueryExpression $expression, SelectQuery $query) use ($normalizedEmail) {
+                return $expression->eq(
+                    new FunctionExpression('LOWER', ['Users.email' => 'literal']),
+                    $normalizedEmail,
+                );
+            })
+            ->all()
+            ->toList();
+
+        if (count($matches) !== 1) {
+            return null;
+        }
+
+        $user = $matches[0] instanceof User ? $matches[0] : null;
+        if ($user === null) {
+            return null;
+        }
+        if ($user->group === null) {
+            return null;
+        }
+
+        $storedSub = $user->get('cognito_sub');
+        if (is_string($storedSub) && $storedSub !== '') {
+            return hash_equals($storedSub, $cognitoSub) ? $user : null;
+        }
+
+        $updated = $this->updateAll(
+            ['cognito_sub' => $cognitoSub],
+            ['id' => $user->id, 'cognito_sub IS' => null],
+        );
+        if ($updated !== 1) {
+            $linkedUserEntity = $this->find()
+                ->contain(['Groups'])
+                ->where(['Users.cognito_sub' => $cognitoSub, 'Users.id' => $user->id])
+                ->first();
+            $linkedUser = $linkedUserEntity instanceof User ? $linkedUserEntity : null;
+
+            return $linkedUser?->group !== null ? $linkedUser : null;
+        }
+
+        return $user;
     }
 
     /**
