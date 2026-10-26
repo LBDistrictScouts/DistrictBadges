@@ -18,6 +18,8 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
  * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
+ * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $CreatedByUser
+ * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $UpdatedByUser
  * @property \App\Model\Table\SectionsTable&\Cake\ORM\Association\BelongsTo $Sections
  * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\HasMany $OrderLines
  * @method \App\Model\Entity\Order newEmptyEntity()
@@ -49,6 +51,7 @@ class OrdersTable extends Table
         $this->setTable('orders');
         $this->setDisplayField('order_number');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
         $this->getSchema()->setColumnType('status', EnumType::from(OrderStatus::class));
 
         $this->addBehavior('Timestamp', [

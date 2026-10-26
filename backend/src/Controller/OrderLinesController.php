@@ -33,7 +33,12 @@ class OrderLinesController extends AppController
      */
     public function view(?string $id = null)
     {
-        $orderLine = $this->OrderLines->get($id, contain: ['Orders', 'Badges']);
+        $orderLine = $this->OrderLines->get($id, contain: [
+            'Orders',
+            'Badges',
+            'CreatedByUser',
+            'UpdatedByUser',
+        ]);
         $this->set(compact('orderLine'));
     }
 

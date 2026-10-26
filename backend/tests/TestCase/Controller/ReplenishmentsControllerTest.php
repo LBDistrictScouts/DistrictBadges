@@ -6,18 +6,14 @@ namespace App\Test\TestCase\Controller;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\ReplenishmentStatus;
 use App\Model\Enum\TransactionType;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
 /**
  * App\Controller\ReplenishmentsController Test Case
  *
  * @link \App\Controller\ReplenishmentsController
  */
-class ReplenishmentsControllerTest extends TestCase
+class ReplenishmentsControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *

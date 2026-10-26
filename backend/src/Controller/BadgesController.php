@@ -161,7 +161,12 @@ class BadgesController extends AppController
      */
     public function view(?string $id = null)
     {
-        $badge = $this->Badges->get($id, contain: ['BadgeSections', 'BadgeTypes']);
+        $badge = $this->Badges->get($id, contain: [
+            'BadgeSections',
+            'BadgeTypes',
+            'CreatedByUser',
+            'UpdatedByUser',
+        ]);
         $this->set(compact('badge'));
     }
 

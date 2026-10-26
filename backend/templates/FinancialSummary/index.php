@@ -21,7 +21,7 @@ foreach ($months as $month) {
         <div>
             <p class="financial-eyebrow">Finance</p>
             <h1>Financial summary</h1>
-            <p>Invoiced sales and recorded replenishment costs, month by month.</p>
+            <p>Invoiced sales by billing period end, with recorded replenishment costs month by month.</p>
         </div>
         <?= $this->Form->create(null, ['type' => 'get', 'class' => 'financial-year-filter']) ?>
             <?= $this->Form->label('year', 'Year') ?>
@@ -159,6 +159,6 @@ foreach ($months as $month) {
                 </tfoot>
             </table>
         </div>
-        <p class="financial-note">Invoices are grouped by invoice date. Stock is grouped by receipt transaction date; inbound postage is grouped by final receipt date. Postage is included only where an actual cost has been recorded. This view does not track customer payments or other expenses.</p>
+        <p class="financial-note">Invoices are grouped by period end date (or invoice date when no period end is recorded). Stock is grouped by receipt transaction date; inbound postage is grouped by final receipt date. Postage is included only where an actual cost has been recorded. This view does not track customer payments or other expenses.</p>
     </section>
 </section>

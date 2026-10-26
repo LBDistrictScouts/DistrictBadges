@@ -3,14 +3,10 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-class InvoiceLinesControllerTest extends TestCase
+class InvoiceLinesControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     protected array $fixtures = [
         'app.Groups',
         'app.Accounts',

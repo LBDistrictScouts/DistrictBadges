@@ -63,6 +63,7 @@ class StockTransactionsTable extends Table
         $this->setTable('stock_transactions');
         $this->setDisplayField('transaction_type');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
         $this->getSchema()->setColumnType('transaction_type', EnumType::from(TransactionType::class));
 
         $this->addBehavior('Timestamp', [

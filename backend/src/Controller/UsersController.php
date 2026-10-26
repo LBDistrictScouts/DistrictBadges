@@ -37,6 +37,8 @@ class UsersController extends AppController
     {
         $user = $this->Users->get($id, contain: [
             'Groups',
+            'CreatedByUser',
+            'UpdatedByUser',
             'Orders',
             'Fulfilments' => ['sort' => ['Fulfilments.fulfilment_date' => 'DESC']],
         ]);

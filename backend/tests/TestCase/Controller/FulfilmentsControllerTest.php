@@ -7,18 +7,14 @@ use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use Cake\Core\Configure;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
 /**
  * App\Controller\FulfilmentsController Test Case
  *
  * @link \App\Controller\FulfilmentsController
  */
-class FulfilmentsControllerTest extends TestCase
+class FulfilmentsControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *
@@ -98,15 +94,15 @@ class FulfilmentsControllerTest extends TestCase
 
         $this->get('/fulfilments?number=Missing');
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
 
         $this->get('/fulfilments?status=' . FulfilmentStatus::Draft->value);
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
 
         $this->get('/fulfilments?created_from=2030-01-01');
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
     }
 
     public function testIndexPaginationPreservesFalseyStatusFilter(): void
@@ -362,7 +358,9 @@ class FulfilmentsControllerTest extends TestCase
             'dispatched_date' => null,
         ], ['id' => $id]);
 
-        $this->configRequest(['headers' => ['Referer' => 'http://localhost/fulfilments']]);
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        Configure::write('App.fullBaseUrl', 'http://' . $host);
+        $this->configRequest(['headers' => ['Referer' => 'http://' . $host . '/fulfilments']]);
         $this->enableCsrfToken();
         $this->post("/fulfilments/dispatch/{$id}");
 

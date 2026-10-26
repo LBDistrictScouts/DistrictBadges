@@ -56,6 +56,7 @@ class InvoicesTable extends Table
         $this->setTable('invoices');
         $this->setDisplayField('invoice_number');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->addBehavior('EntityNumber', [
             'field' => 'invoice_number',

@@ -18,15 +18,19 @@ namespace App\Test\TestCase\Controller;
 
 use Cake\Core\Configure;
 use Cake\TestSuite\Constraint\Response\StatusCode;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
 /**
  * PagesControllerTest class
  */
-class PagesControllerTest extends TestCase
+class PagesControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
+    /**
+     * @var array<string>
+     */
+    protected array $fixtures = [
+        'app.Groups',
+        'app.Users',
+    ];
 
     /**
      * testDisplay method

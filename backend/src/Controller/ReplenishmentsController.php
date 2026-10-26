@@ -74,6 +74,8 @@ class ReplenishmentsController extends AppController
     public function view(?string $id = null)
     {
         $replenishment = $this->Replenishments->get($id, contain: [
+            'CreatedByUser',
+            'UpdatedByUser',
             'ReplenishmentOrderLines.Badges',
             'ReplenishmentReceiptLines.Badges',
             'StockTransactions.Badges',

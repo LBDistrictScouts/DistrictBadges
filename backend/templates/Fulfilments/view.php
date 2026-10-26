@@ -202,6 +202,10 @@ $dispatchAddress = array_filter([
                 <p><?= __('No fulfilment lines have been added.') ?></p>
                 <?php endif; ?>
             </div>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $fulfilment,
+                'heading' => __('Fulfilment History'),
+            ]) ?>
         </div>
     </div>
 </div>

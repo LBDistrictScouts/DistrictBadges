@@ -34,6 +34,8 @@ class AccountsController extends AppController
     public function view(?string $id = null)
     {
         $account = $this->Accounts->get($id, contain: [
+            'CreatedByUser',
+            'UpdatedByUser',
             'Groups',
             'Sections' => fn($query) => $query->orderByAsc('section_name'),
             'Invoices' => fn($query) => $query

@@ -47,18 +47,12 @@ class ReplenishmentsTable extends Table
         $this->setTable('replenishments');
         $this->setDisplayField('replenishment_number');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
         $this->getSchema()->setColumnType(
             'status',
             EnumType::from(ReplenishmentStatus::class),
         );
 
-        $this->addBehavior('Timestamp', [
-            'events' => [
-                'Model.beforeSave' => [
-                    'created_date' => 'new',
-                ],
-            ],
-        ]);
         $this->addBehavior('EntityNumber', [
             'field' => 'replenishment_number',
             'prefix' => Configure::read('EntityNumbers.replenishmentPrefix', 'REP'),

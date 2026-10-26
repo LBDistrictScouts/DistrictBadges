@@ -76,6 +76,10 @@
                     <td><?= $this->Number->format($orderLine->remaining_quantity) ?></td>
                 </tr>
             </table>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $orderLine,
+                'heading' => __('Order Line History'),
+            ]) ?>
         </div>
     </div>
 </div>

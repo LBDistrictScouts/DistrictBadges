@@ -16,8 +16,11 @@ declare(strict_types=1);
  */
 namespace App\Controller;
 
+use App\Model\Entity\User;
+use App\Model\Table\UsersTable;
 use Cake\Controller\Controller;
 use Cake\Event\EventInterface;
+use LogicException;
 
 /**
  * Application Controller
@@ -63,6 +66,57 @@ class AppController extends Controller
     public function beforeFilter(EventInterface $event): void
     {
         parent::beforeFilter($event);
+
+        if ($this->request->getParam('prefix') === 'Api') {
+            return;
+        }
+
+        $controller = (string)$this->request->getParam('controller');
+        if ($controller === 'Auth') {
+            return;
+        }
+
+        $session = $this->request->getSession();
+        $identity = $session->read('Auth.identity');
+        $user = null;
+        if (
+            is_array($identity)
+            && is_string($identity['user_id'] ?? null)
+            && is_string($identity['group_id'] ?? null)
+            && is_int($identity['expires_at'] ?? null)
+            && $identity['expires_at'] > time()
+        ) {
+            $users = $this->fetchTable('Users');
+            if (!$users instanceof UsersTable) {
+                throw new LogicException('The Users table must use UsersTable.');
+            }
+
+            $userEntity = $users->find()
+                ->contain(['Groups'])
+                ->where(['Users.id' => $identity['user_id']])
+                ->first();
+            $user = $userEntity instanceof User ? $userEntity : null;
+        }
+
+        if (
+            $user === null
+            || (string)$user->group_id !== $identity['group_id']
+            || $user->group === null
+        ) {
+            $session->delete('Auth.identity');
+            $uri = $this->request->getUri();
+            $returnPath = $uri->getPath() ?: '/';
+            $query = $this->request->getQueryParams();
+            if ($query !== []) {
+                $returnPath .= '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+            }
+            $session->write('Auth.redirect', $returnPath);
+            $event->setResult($this->redirect(['controller' => 'Auth', 'action' => 'login']));
+
+            return;
+        }
+
+        $this->set('currentUser', $user);
 
         if ($this->request->getParam('action') !== 'index') {
             return;

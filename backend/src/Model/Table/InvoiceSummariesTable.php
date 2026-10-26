@@ -19,6 +19,7 @@ class InvoiceSummariesTable extends Table
         parent::initialize($config);
         $this->setTable('invoice_summaries');
         $this->setPrimaryKey('id');
+        $this->addBehavior('UserTracking');
 
         $this->addBehavior('LineTotals', [
             'association' => 'Invoices',

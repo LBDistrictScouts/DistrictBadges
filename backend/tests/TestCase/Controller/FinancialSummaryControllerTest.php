@@ -5,13 +5,9 @@ namespace App\Test\TestCase\Controller;
 
 use App\Test\Fixture\FinancialSummaryAggregationDataset;
 use Cake\ORM\TableRegistry;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
-class FinancialSummaryControllerTest extends TestCase
+class FinancialSummaryControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * @var array<string>
      */
@@ -86,6 +82,25 @@ class FinancialSummaryControllerTest extends TestCase
         $this->assertMetricValue('Unfulfilled value', '£20.00');
     }
 
+    public function testInvoiceMonthlyTotalsUsePeriodEndDate(): void
+    {
+        $connection = $this->getTableLocator()->get('Invoices')->getConnection();
+        (new FinancialSummaryAggregationDataset())->load($connection);
+        $connection->updateQuery()
+            ->update('invoices')
+            ->set(['period_end_date' => '2025-01-31'])
+            ->where(['invoice_number' => 'INV-2025-001'])
+            ->execute();
+
+        $this->get('/financial-summary?year=2025');
+
+        $this->assertResponseOk();
+        $this->assertMetricValue('Invoiced', '£90.00');
+        $this->assertMonthRowHasValues('January', ['£30.00']);
+        $this->assertMonthInvoiceCount('January', 1);
+        $this->assertMonthInvoiceCount('February', 0);
+    }
+
     /**
      * Assert the amount rendered next to a metric label.
      *
@@ -126,5 +141,31 @@ class FinancialSummaryControllerTest extends TestCase
         foreach ($values as $value) {
             $this->assertStringContainsString($value, $matches[1], sprintf('Expected %s in %s.', $value, $month));
         }
+    }
+
+    /**
+     * Assert the invoice count in a monthly table row.
+     *
+     * @param string $month Month name.
+     * @param int $count Expected invoice count.
+     * @return void
+     */
+    private function assertMonthInvoiceCount(string $month, int $count): void
+    {
+        $body = (string)$this->_response->getBody();
+        $found = preg_match(
+            '~<tr>\s*<th scope="row">' . preg_quote($month, '~') . '</th>(.*?)</tr>~s',
+            $body,
+            $rowMatches,
+        );
+        $this->assertSame(1, $found, sprintf('Expected a monthly row for %s.', $month));
+
+        $countFound = preg_match(
+            '~<td class="financial-table__number">(\d+)</td>~',
+            $rowMatches[1],
+            $countMatches,
+        );
+        $this->assertSame(1, $countFound, sprintf('Expected an invoice count in %s.', $month));
+        $this->assertSame($count, (int)$countMatches[1]);
     }
 }

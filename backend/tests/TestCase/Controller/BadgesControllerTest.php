@@ -6,18 +6,14 @@ namespace App\Test\TestCase\Controller;
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\TagCategory;
 use App\Model\Enum\TransactionType;
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
 
 /**
  * App\Controller\BadgesController Test Case
  *
  * @link \App\Controller\BadgesController
  */
-class BadgesControllerTest extends TestCase
+class BadgesControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *
@@ -81,11 +77,11 @@ class BadgesControllerTest extends TestCase
 
         $this->get('/badges?name=Missing');
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
 
         $this->get('/badges?status=' . BadgeStatus::Unavailable->value);
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Second badge');
     }
 
@@ -142,7 +138,7 @@ class BadgesControllerTest extends TestCase
         $this->get('/badges/stock?sort=on_hand_quantity&direction=desc');
 
         $this->assertResponseOk();
-        $body = (string)$this->_response->getBody();
+        $body = $this->responseWithoutNavigation();
         $this->assertLessThan(
             strpos($body, 'Lorem ipsum dolor sit amet'),
             strpos($body, 'Second badge'),
@@ -169,7 +165,7 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseOk();
         $this->assertResponseContains('badge-stock-grid');
 
-        $this->_session = ['Badges' => ['viewStyle' => 'stock']];
+        $this->session(['Badges' => ['viewStyle' => 'stock']]);
         $this->get('/badges');
         $this->assertResponseOk();
         $this->assertResponseContains('badge-stock-grid');
@@ -179,7 +175,7 @@ class BadgesControllerTest extends TestCase
         $this->assertResponseNotContains('badge-stock-grid');
         $this->assertResponseContains('<table>');
 
-        $this->_session = ['Badges' => ['viewStyle' => 'table']];
+        $this->session(['Badges' => ['viewStyle' => 'table']]);
         $this->get('/badges');
         $this->assertResponseOk();
         $this->assertResponseNotContains('badge-stock-grid');
@@ -258,13 +254,13 @@ class BadgesControllerTest extends TestCase
 
         $this->get('/badges?stocked=0');
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Second badge');
 
         $this->get('/badges?stocked=0&status=' . BadgeStatus::Available->value);
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
-        $this->assertResponseNotContains('Second badge');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Second badge');
     }
 
     public function testIndexFiltersListedAndUnlistedBadges(): void
@@ -276,7 +272,7 @@ class BadgesControllerTest extends TestCase
 
         $this->get('/badges?stocked=&listed=0');
         $this->assertResponseOk();
-        $this->assertResponseNotContains('Lorem ipsum dolor sit amet');
+        $this->assertContentNotContains('Lorem ipsum dolor sit amet');
         $this->assertResponseContains('Second badge');
     }
 

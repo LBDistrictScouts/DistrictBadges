@@ -110,6 +110,10 @@ foreach ($audit->audit_lines as $line) {
             <?= $this->Form->end() ?>
         </dialog>
     <?php endif; ?>
+    <?= $this->element('user_tracking_well', [
+        'entity' => $audit,
+        'heading' => __('Audit History'),
+    ]) ?>
 </div>
 
 <?php if (!$audit->audit_completed) : ?>

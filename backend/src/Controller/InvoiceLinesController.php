@@ -34,6 +34,8 @@ class InvoiceLinesController extends AppController
     public function view(?string $id = null)
     {
         $invoiceLine = $this->InvoiceLines->get($id, contain: [
+            'CreatedByUser',
+            'UpdatedByUser',
             'InvoiceSummaries' => ['Invoices', 'Fulfilments', 'Orders' => ['Users', 'Sections']],
             'Badges',
         ]);

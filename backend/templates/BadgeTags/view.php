@@ -112,6 +112,10 @@
                 </div>
                 <?php endif; ?>
             </div>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $badgeTag,
+                'heading' => __('Badge Tag History'),
+            ]) ?>
         </div>
     </div>
 </div>

@@ -6,6 +6,7 @@ namespace App\Controller;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\TransactionType;
+use Cake\I18n\Date;
 use DateTimeImmutable;
 use DateTimeInterface;
 
@@ -32,6 +33,7 @@ class FinancialSummaryController extends AppController
         foreach (
             [
             [$invoices, 'invoice_date'],
+            [$invoices, 'period_end_date'],
             [$replenishments, 'received_date'],
             [$stockTransactions, 'transaction_timestamp'],
             [$orders, 'placed_date'],
@@ -69,14 +71,23 @@ class FinancialSummaryController extends AppController
         }
 
         $invoiceRows = $invoices->find()
-            ->select(['invoice_date', 'total_amount'])
+            ->select(['invoice_date', 'period_end_date', 'total_amount'])
             ->where([
-                'invoice_date >=' => $yearStart,
-                'invoice_date <' => $nextYearStart,
+                'OR' => [
+                    [
+                        'period_end_date >=' => $yearStart,
+                        'period_end_date <' => $nextYearStart,
+                    ],
+                    [
+                        'period_end_date IS' => null,
+                        'invoice_date >=' => $yearStart,
+                        'invoice_date <' => $nextYearStart,
+                    ],
+                ],
             ])
             ->all();
         foreach ($invoiceRows as $invoice) {
-            $month = $this->monthNumber($invoice->invoice_date);
+            $month = $this->monthNumber($invoice->period_end_date ?? $invoice->invoice_date);
             if ($month === null) {
                 continue;
             }
@@ -314,7 +325,7 @@ class FinancialSummaryController extends AppController
      */
     private function monthNumber(mixed $date): ?int
     {
-        if ($date instanceof DateTimeInterface) {
+        if ($date instanceof DateTimeInterface || $date instanceof Date) {
             return (int)$date->format('n');
         }
 

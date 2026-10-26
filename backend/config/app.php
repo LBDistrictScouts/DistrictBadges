@@ -47,7 +47,7 @@ return [
      *   IMPORTANT: This MUST be set in production to prevent Host Header Injection attacks
      *   that can compromise password reset and other security-critical features.
      *   Set this via APP_FULL_BASE_URL environment variable or directly in config.
-     *   Example: 'https://example.com'
+     *   Example: 'https://badges.your-domain.org'
      *   When not set, the application will throw an exception in production mode.
      * - imageBaseUrl - Web path to the public images/ directory under webroot.
      * - cssBaseUrl - Web path to the public css/ directory under webroot.
@@ -106,6 +106,16 @@ return [
             'trim',
             explode(',', (string)env('WEBSTORE_ALLOWED_ORIGINS', 'http://localhost:5173')),
         ))),
+    ],
+
+    'Cognito' => [
+        'region' => env('COGNITO_REGION', env('AWS_REGION', 'eu-west-1')),
+        'userPoolId' => env('COGNITO_USER_POOL_ID', ''),
+        'clientId' => env('COGNITO_CLIENT_ID', ''),
+        'clientSecret' => env('COGNITO_CLIENT_SECRET', ''),
+        'hostedUiDomain' => env('COGNITO_HOSTED_UI_DOMAIN', ''),
+        'requiredGroup' => env('COGNITO_REQUIRED_GROUP', 'badge-admin'),
+        'redirectUri' => env('COGNITO_REDIRECT_URI', ''),
     ],
 
     'Postage' => [
@@ -187,6 +197,14 @@ return [
             'serialize' => true,
             'duration' => '+1 years',
             'url' => env('CACHE_CAKEMODEL_URL', null),
+        ],
+        'cognito_jwks' => [
+            'className' => FileEngine::class,
+            'prefix' => 'district_badges_cognito_jwks_',
+            'path' => CACHE . 'cognito' . DS,
+            'serialize' => true,
+            'duration' => '+6 hours',
+            'url' => env('CACHE_COGNITO_JWKS_URL', null),
         ],
     ],
 

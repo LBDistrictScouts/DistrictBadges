@@ -56,6 +56,10 @@
                     <td><?= $this->Number->currency($invoiceLine->line_amount) ?></td>
                 </tr>
             </table>
+            <?= $this->element('user_tracking_well', [
+                'entity' => $invoiceLine,
+                'heading' => __('Invoice Line History'),
+            ]) ?>
         </div>
     </div>
 </div>

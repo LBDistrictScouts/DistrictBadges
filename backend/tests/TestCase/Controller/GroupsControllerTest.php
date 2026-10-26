@@ -3,18 +3,13 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use Cake\TestSuite\IntegrationTestTrait;
-use Cake\TestSuite\TestCase;
-
 /**
  * App\Controller\GroupsController Test Case
  *
  * @link \App\Controller\GroupsController
  */
-class GroupsControllerTest extends TestCase
+class GroupsControllerTest extends AuthenticatedControllerTestCase
 {
-    use IntegrationTestTrait;
-
     /**
      * Fixtures
      *
@@ -22,6 +17,7 @@ class GroupsControllerTest extends TestCase
      */
     protected array $fixtures = [
         'app.Groups',
+        'app.Users',
         'app.Accounts',
         'app.Sections',
     ];
@@ -43,7 +39,7 @@ class GroupsControllerTest extends TestCase
         $this->get('/groups');
         $this->assertResponseOk();
         $this->assertResponseContains('Lorem ipsum dolor sit amet');
-        $body = (string)$this->_response->getBody();
+        $body = $this->responseWithoutNavigation();
         $this->assertLessThan(
             strpos($body, 'Alphabetical First, Sorted Second'),
             strpos($body, 'Lorem ipsum dolor sit amet'),
@@ -69,7 +65,7 @@ class GroupsControllerTest extends TestCase
         $this->get('/groups?sort=group_name&direction=asc');
 
         $this->assertResponseOk();
-        $body = (string)$this->_response->getBody();
+        $body = $this->responseWithoutNavigation();
         $this->assertLessThan(
             strpos($body, 'Lorem ipsum dolor sit amet'),
             strpos($body, 'Alphabetical First, Sorted Second'),

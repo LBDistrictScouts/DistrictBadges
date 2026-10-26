@@ -25,6 +25,9 @@ REQUIRED_KEYS=(
   "DISTRICT_CORE_DATA_URL"
   "DISTRICT_CORE_DATA_USERNAME"
   "DISTRICT_CORE_DATA_PASSWORD"
+  "COGNITO_CLIENT_ID"
+  "COGNITO_CLIENT_SECRET"
+  "COGNITO_HOSTED_UI_DOMAIN"
 )
 
 usage() {
@@ -191,6 +194,7 @@ upsert_item() {
   local db_name db_user db_pass security_salt smtp_url
   local aws_key aws_secret sqs_order sqs_badge algolia_app algolia_key
   local core_data_url core_data_username core_data_password
+  local cognito_client_id cognito_client_secret cognito_domain
   local db_host db_url
   local exists=false
 
@@ -214,6 +218,9 @@ upsert_item() {
     core_data_url="$(existing_field "$vault" "$item" DISTRICT_CORE_DATA_URL)"
     core_data_username="$(existing_field "$vault" "$item" DISTRICT_CORE_DATA_USERNAME)"
     core_data_password="$(existing_field "$vault" "$item" DISTRICT_CORE_DATA_PASSWORD)"
+    cognito_client_id="$(existing_field "$vault" "$item" COGNITO_CLIENT_ID)"
+    cognito_client_secret="$(existing_field "$vault" "$item" COGNITO_CLIENT_SECRET)"
+    cognito_domain="$(existing_field "$vault" "$item" COGNITO_HOSTED_UI_DOMAIN)"
   else
     db_name="district_badges"
     db_user="district_badges"
@@ -231,6 +238,9 @@ upsert_item() {
     core_data_url=""
     core_data_username=""
     core_data_password=""
+    cognito_client_id=""
+    cognito_client_secret=""
+    cognito_domain=""
   fi
 
   db_name="$(prompt_with_default "POSTGRES_DB" "$db_name")"
@@ -249,6 +259,9 @@ upsert_item() {
   core_data_url="$(prompt_with_default "DISTRICT_CORE_DATA_URL" "$core_data_url")"
   core_data_username="$(prompt_with_default "DISTRICT_CORE_DATA_USERNAME" "$core_data_username")"
   core_data_password="$(prompt_secret_with_default "DISTRICT_CORE_DATA_PASSWORD" "$core_data_password" "$([ "$exists" = true ] && printf 'keep existing' || printf 'empty')")"
+  cognito_client_id="$(prompt_with_default "COGNITO_CLIENT_ID" "$cognito_client_id")"
+  cognito_client_secret="$(prompt_secret_with_default "COGNITO_CLIENT_SECRET" "$cognito_client_secret" "$([ "$exists" = true ] && printf 'keep existing' || printf 'empty')")"
+  cognito_domain="$(prompt_with_default "COGNITO_HOSTED_UI_DOMAIN" "$cognito_domain")"
 
   local op_fields=(
     "SECURITY_SALT[text]=${security_salt}"
@@ -266,6 +279,9 @@ upsert_item() {
     "DISTRICT_CORE_DATA_URL[text]=${core_data_url}"
     "DISTRICT_CORE_DATA_USERNAME[text]=${core_data_username}"
     "DISTRICT_CORE_DATA_PASSWORD[password]=${core_data_password}"
+    "COGNITO_CLIENT_ID[text]=${cognito_client_id}"
+    "COGNITO_CLIENT_SECRET[password]=${cognito_client_secret}"
+    "COGNITO_HOSTED_UI_DOMAIN[text]=${cognito_domain}"
   )
 
   log ""
