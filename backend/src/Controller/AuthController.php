@@ -9,6 +9,7 @@ use Cake\Controller\Controller;
 use Cake\Core\Configure;
 use Cake\Http\Response;
 use Cake\Log\Log;
+use RuntimeException;
 use Throwable;
 
 /** Cognito Hosted UI sign-in and local session management. */
@@ -152,7 +153,7 @@ class AuthController extends Controller
             ];
             if (
                 $failureStage === 'Cognito token exchange and ID-token validation'
-                && $exception::class === \RuntimeException::class
+                && $exception::class === RuntimeException::class
                 && in_array($exception->getMessage(), $safeCognitoDetails, true)
             ) {
                 // Only log allow-listed service messages, never arbitrary exception text or token data.
@@ -192,8 +193,7 @@ class AuthController extends Controller
         string $reason = 'Unknown sign-in failure.',
         array $context = [],
         string $level = 'warning',
-    ): ?Response
-    {
+    ): ?Response {
         $message = 'Cognito sign-in rejected: {reason}';
         $details = [];
         foreach ($context as $key => $value) {
