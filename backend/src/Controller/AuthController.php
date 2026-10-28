@@ -8,6 +8,8 @@ use App\Service\CognitoService;
 use Cake\Controller\Controller;
 use Cake\Core\Configure;
 use Cake\Http\Response;
+use Cake\Log\Log;
+use RuntimeException;
 use Throwable;
 
 /** Cognito Hosted UI sign-in and local session management. */
@@ -75,11 +77,11 @@ class AuthController extends Controller
             || !is_string($receivedState)
             || !hash_equals($oauth['state'], $receivedState)
         ) {
-            return $this->signInFailed();
+            return $this->signInFailed('OAuth state did not match the session.');
         }
 
         if ($this->request->getQuery('error') !== null) {
-            return $this->signInFailed();
+            return $this->signInFailed('Cognito returned an authorization error.');
         }
 
         $code = $this->request->getQuery('code');
@@ -89,18 +91,20 @@ class AuthController extends Controller
             || !is_string($oauth['nonce'] ?? null)
             || !is_string($oauth['verifier'] ?? null)
         ) {
-            return $this->signInFailed();
+            return $this->signInFailed('Cognito callback did not contain a valid authorization code.');
         }
 
+        $failureStage = 'Cognito token exchange and ID-token validation';
         try {
             $claims = (new CognitoService())->exchangeAndValidate(
                 $code,
                 $oauth['verifier'],
                 $oauth['nonce'],
             );
+            $failureStage = 'local user lookup';
             $users = $this->fetchTable('Users');
             if (!$users instanceof UsersTable) {
-                return $this->signInFailed();
+                return $this->signInFailed('The Users table was unavailable.');
             }
 
             $user = $users->findForCognitoIdentity(
@@ -108,7 +112,7 @@ class AuthController extends Controller
                 (string)$claims['sub'],
             );
             if ($user === null) {
-                return $this->signInFailed();
+                return $this->signInFailed('No unique local user matched the Cognito identity.');
             }
 
             $session->renew();
@@ -122,8 +126,45 @@ class AuthController extends Controller
             $session->delete('Auth.redirect');
 
             return $this->redirect($this->safeReturnPath($redirect));
-        } catch (Throwable) {
-            return $this->signInFailed();
+        } catch (Throwable $exception) {
+            $context = [
+                'stage' => $failureStage,
+                'exception' => $exception::class,
+            ];
+            $safeCognitoDetails = [
+                'Cognito token exchange failed.',
+                'Cognito did not return an ID token.',
+                'Invalid Cognito ID token.',
+                'Invalid Cognito ID token signature.',
+                'Cognito ID token issuer did not match.',
+                'Cognito ID token use was not id.',
+                'Cognito ID token audience did not match this app client.',
+                'Cognito ID token authorized party did not match this app client.',
+                'Cognito ID token expiry is invalid.',
+                'Cognito ID token issue time is invalid.',
+                'Cognito ID token nonce did not match the session.',
+                'Cognito ID token does not contain the required group.',
+                'Cognito ID token identity is incomplete.',
+                'Cognito ID token subject claim is missing or invalid.',
+                'Cognito ID token subject is not a UUID.',
+                'Cognito ID token email claim is missing or invalid.',
+                'Cognito ID token email claim is not a valid email address.',
+                'Cognito signing key was not found.',
+                'Could not load Cognito signing keys.',
+                'Invalid Cognito signing key.',
+                'Invalid base64url data.',
+                'DER length cannot be negative.',
+            ];
+            if (
+                $failureStage === 'Cognito token exchange and ID-token validation'
+                && $exception::class === RuntimeException::class
+                && in_array($exception->getMessage(), $safeCognitoDetails, true)
+            ) {
+                // Only log allow-listed service messages, never arbitrary exception text or token data.
+                $context['detail'] = $exception->getMessage();
+            }
+
+            return $this->signInFailed('The callback threw an exception.', $context, 'error');
         }
     }
 
@@ -152,8 +193,22 @@ class AuthController extends Controller
     /**
      * Store a generic sign-in error and return to the login page.
      */
-    private function signInFailed(): ?Response
-    {
+    private function signInFailed(
+        string $reason = 'Unknown sign-in failure.',
+        array $context = [],
+        string $level = 'warning',
+    ): ?Response {
+        $message = 'Cognito sign-in rejected: {reason}';
+        $details = [];
+        foreach ($context as $key => $value) {
+            if (is_scalar($value)) {
+                $details[] = $key . '={' . $key . '}';
+            }
+        }
+        if ($details !== []) {
+            $message .= ' (' . implode(', ', $details) . ')';
+        }
+        Log::write($level, $message, ['reason' => $reason] + $context);
         $session = $this->request->getSession();
         $session->write(
             'Auth.error',

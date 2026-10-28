@@ -169,19 +169,29 @@ class CognitoService
         $issuer = $this->issuer();
         $audience = $claims['aud'] ?? null;
         $now = time();
+        if (($claims['iss'] ?? null) !== $issuer) {
+            throw new RuntimeException('Cognito ID token issuer did not match.');
+        }
+        if (($claims['token_use'] ?? null) !== 'id') {
+            throw new RuntimeException('Cognito ID token use was not id.');
+        }
+        if ($audience !== (string)$this->config['clientId']) {
+            throw new RuntimeException('Cognito ID token audience did not match this app client.');
+        }
+        if (isset($claims['azp']) && $claims['azp'] !== (string)$this->config['clientId']) {
+            throw new RuntimeException('Cognito ID token authorized party did not match this app client.');
+        }
+        if (!is_int($claims['exp'] ?? null) || $claims['exp'] <= $now) {
+            throw new RuntimeException('Cognito ID token expiry is invalid.');
+        }
+        if (!is_int($claims['iat'] ?? null) || $claims['iat'] > $now + 60) {
+            throw new RuntimeException('Cognito ID token issue time is invalid.');
+        }
         if (
-            ($claims['iss'] ?? null) !== $issuer
-            || ($claims['token_use'] ?? null) !== 'id'
-            || $audience !== (string)$this->config['clientId']
-            || (isset($claims['azp']) && $claims['azp'] !== (string)$this->config['clientId'])
-            || !is_int($claims['exp'] ?? null)
-            || $claims['exp'] <= $now
-            || !is_int($claims['iat'] ?? null)
-            || $claims['iat'] > $now + 60
-            || !is_string($claims['nonce'] ?? null)
+            !is_string($claims['nonce'] ?? null)
             || !hash_equals($expectedNonce, $claims['nonce'])
         ) {
-            throw new RuntimeException('Cognito ID token validation failed.');
+            throw new RuntimeException('Cognito ID token nonce did not match the session.');
         }
 
         $groups = $claims['cognito:groups'] ?? [];
@@ -189,19 +199,25 @@ class CognitoService
             !is_array($groups)
             || !in_array((string)$this->config['requiredGroup'], $groups, true)
         ) {
-            throw new RuntimeException('Cognito user is not in the required group.');
+            throw new RuntimeException('Cognito ID token does not contain the required group.');
         }
 
+        if (!is_string($claims['sub'] ?? null)) {
+            throw new RuntimeException('Cognito ID token subject claim is missing or invalid.');
+        }
         if (
-            !is_string($claims['sub'] ?? null)
-            || preg_match(
-                '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+            preg_match(
+                '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
                 $claims['sub'],
             ) !== 1
-            || !is_string($claims['email'] ?? null)
-            || filter_var($claims['email'], FILTER_VALIDATE_EMAIL) === false
         ) {
-            throw new RuntimeException('Cognito user identity is incomplete.');
+            throw new RuntimeException('Cognito ID token subject is not a UUID.');
+        }
+        if (!is_string($claims['email'] ?? null)) {
+            throw new RuntimeException('Cognito ID token email claim is missing or invalid.');
+        }
+        if (filter_var($claims['email'], FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Cognito ID token email claim is not a valid email address.');
         }
 
         return $claims;

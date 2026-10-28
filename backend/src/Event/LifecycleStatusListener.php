@@ -29,6 +29,7 @@ class LifecycleStatusListener implements EventListenerInterface
     {
         return [
             'Order.afterPlace' => 'orderPlaced',
+            'Order.afterLineQuantityChange' => 'orderLineQuantityChanged',
             'Replenishment.afterSubmit' => 'replenishmentSubmitted',
             'Replenishment.afterReceive' => 'replenishmentReceived',
             'Fulfilment.afterDispatch' => 'fulfilmentDispatched',
@@ -55,6 +56,27 @@ class LifecycleStatusListener implements EventListenerInterface
         }
 
         $this->updateStatus($order, OrderStatus::Placed);
+    }
+
+    /**
+     * Recalculate order status after an ordered line quantity changes.
+     *
+     * @param \Cake\Event\EventInterface $event Event.
+     * @return void
+     */
+    public function orderLineQuantityChanged(EventInterface $event): void
+    {
+        $order = $event->getSubject();
+        if (!$order instanceof Order) {
+            throw new UnexpectedValueException(sprintf(
+                'Expected event subject to be an instance of %s, got %s.',
+                Order::class,
+                get_debug_type($order),
+            ));
+        }
+
+        $order = $this->orders()->get($order->id);
+        $this->updateStatus($order, $this->statusFromTotals($order));
     }
 
     /**

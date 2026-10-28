@@ -54,10 +54,4 @@ RUN test ! -f config/app_local.php && \
     composer run-script post-install-cmd --no-interaction && \
     rm -f config/app_local.php && \
     mkdir -p logs && \
-    ln -sf /dev/stdout logs/debug.log && \
-    ln -sf /dev/stderr logs/error.log && \
-    ln -sf /dev/stdout logs/cli-debug.log && \
-    ln -sf /dev/stderr logs/cli-error.log && \
-    ln -sf /dev/stdout logs/badge-import.log && \
-    ln -sf /dev/stdout logs/queries.log && \
     test ! -f config/app_local.php

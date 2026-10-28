@@ -37,8 +37,11 @@ spec:
           image: ghcr.io/lbdistrictscouts/districtbadges-backend:latest
           imagePullPolicy: Always
           command:
-            - php-fpm
-            - -F
+            - sh
+            - -c
+            - >-
+              mkdir -p /var/www/html/logs &&
+              exec php-fpm -F
           envFrom:
             - configMapRef:
                 name: district-badges-config

@@ -64,8 +64,18 @@
                     <td><?= $this->Number->format($orderLine->amount) ?></td>
                 </tr>
                 <tr>
-                    <th><?= __('Fulfilled') ?></th>
-                    <td><?= $orderLine->fulfilled ? __('Yes') : __('No'); ?></td>
+                    <th><?= __('Status') ?></th>
+                    <td>
+                        <?php if ((int)$orderLine->quantity === 0) : ?>
+                            <?= __('Cancelled') ?>
+                        <?php elseif ($orderLine->fulfilled) : ?>
+                            <?= __('Fulfilled') ?>
+                        <?php elseif ((int)$orderLine->fulfilled_quantity > 0) : ?>
+                            <?= __('Partially Fulfilled') ?>
+                        <?php else : ?>
+                            <?= __('Open') ?>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <tr>
                     <th><?= __('Fulfilled Quantity') ?></th>

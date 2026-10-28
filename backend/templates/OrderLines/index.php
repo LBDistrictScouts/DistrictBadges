@@ -46,7 +46,13 @@
                     <td><?= $this->Number->format($orderLine->remaining_quantity) ?></td>
                     <td><?= $this->Number->currency($orderLine->unit_price) ?></td>
                     <td><?= $this->Number->format($orderLine->amount) ?></td>
-                    <td><?= $orderLine->fulfilled ? __('Fulfilled') : __('Open') ?></td>
+                    <td>
+                        <?php if ((int)$orderLine->quantity === 0) : ?>
+                            <?= __('Cancelled') ?>
+                        <?php else : ?>
+                            <?= $orderLine->fulfilled ? __('Fulfilled') : __('Open') ?>
+                        <?php endif; ?>
+                    </td>
                     <td class="actions">
                         <?= $this->Html->link(__('View'), ['action' => 'view', $orderLine->id]) ?>
                         <?= $this->Html->link(__('Edit'), ['action' => 'edit', $orderLine->id]) ?>

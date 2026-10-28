@@ -14,6 +14,7 @@ data:
   COGNITO_USER_POOL_ID: eu-west-1_ypD0Rpdvt
   COGNITO_REQUIRED_GROUP: badge-admin
   DEBUG: "false"
+  LOG_TO_CONSOLE: "true"
   EMAIL_FROM_ADDRESS: orders@badges-dev.lbdscouts.org.uk
   EMAIL_FROM_NAME: LBA Scouts District Badge Shop (Development)
   ORDER_NOTIFICATIONS_ENABLED: "true"

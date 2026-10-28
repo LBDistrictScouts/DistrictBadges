@@ -62,7 +62,7 @@ if (is_array($orderLineErrors)) {
             </fieldset>
             <section class="related">
                 <h4><?= __('Order Lines') ?></h4>
-                <p><?= __('Only lines with no fulfilled units can be changed.') ?></p>
+                <p><?= __('Set a line quantity to zero to cancel it. A partially fulfilled line cannot be reduced below the quantity already fulfilled.') ?></p>
                 <?php if (!empty($order->order_lines)) : ?>
                     <div class="table-responsive">
                         <table class="orders-edit-lines">
@@ -77,10 +77,12 @@ if (is_array($orderLineErrors)) {
                             <tbody>
                                 <?php foreach ($order->order_lines as $index => $line) : ?>
                                     <?php $unitPriceCents = (int)round((float)$line->unit_price * 100); ?>
+                                    <?php $fulfilledQuantity = (int)$line->fulfilled_quantity; ?>
+                                    <?php $canEditQuantity = $fulfilledQuantity === 0 || $fulfilledQuantity < (int)($line->getOriginal('quantity') ?? $line->quantity); ?>
                                     <tr>
                                         <td>
                                             <?= h($line->badge?->badge_name ?? __('Unknown badge')) ?>
-                                            <?php if ((int)$line->fulfilled_quantity === 0) : ?>
+                                            <?php if ($canEditQuantity) : ?>
                                                 <input
                                                     type="hidden"
                                                     name="order_lines[<?= (int)$index ?>][id]"
@@ -89,13 +91,13 @@ if (is_array($orderLineErrors)) {
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php if ((int)$line->fulfilled_quantity === 0) : ?>
+                                            <?php if ($canEditQuantity) : ?>
                                                 <input
                                                     type="number"
                                                     id="order-line-quantity-<?= (int)$index ?>"
                                                     name="order_lines[<?= (int)$index ?>][quantity]"
                                                     value="<?= h($line->quantity) ?>"
-                                                    min="1"
+                                                    min="<?= $fulfilledQuantity ?>"
                                                     step="1"
                                                     required
                                                     data-order-line-quantity
@@ -104,7 +106,7 @@ if (is_array($orderLineErrors)) {
                                                 >
                                             <?php else : ?>
                                                 <?= $this->Number->format($line->quantity) ?>
-                                                <small><?= __('{0} already fulfilled', $this->Number->format($line->fulfilled_quantity)) ?></small>
+                                                <small><?= __('Fully fulfilled') ?></small>
                                             <?php endif; ?>
                                         </td>
                                         <td><?= $this->Number->currency($line->unit_price) ?></td>
