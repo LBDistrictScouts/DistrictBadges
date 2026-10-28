@@ -3,6 +3,7 @@
 use Cake\Cache\Engine\FileEngine;
 use Cake\Database\Connection;
 use Cake\Database\Driver\Postgres;
+use Cake\Log\Engine\ConsoleLog;
 use Cake\Log\Engine\FileLog;
 use Cake\Mailer\Transport\MailTransport;
 use function Cake\Core\env;
@@ -13,6 +14,9 @@ if (is_string($emailTransportDefaultUrl)) {
     // the encoded value instead of the SMTP password.
     $emailTransportDefaultUrl = rawurldecode($emailTransportDefaultUrl);
 }
+$logEngine = filter_var(env('LOG_TO_CONSOLE', false), FILTER_VALIDATE_BOOLEAN)
+    ? ConsoleLog::class
+    : FileLog::class;
 
 return [
     /*
@@ -429,34 +433,38 @@ return [
      */
     'Log' => [
         'debug' => [
-            'className' => FileLog::class,
+            'className' => $logEngine,
             'path' => LOGS,
             'file' => 'debug',
+            'stream' => 'php://stdout',
             'url' => env('LOG_DEBUG_URL', null),
             'scopes' => null,
             'levels' => ['notice', 'info', 'debug'],
         ],
         'error' => [
-            'className' => FileLog::class,
+            'className' => $logEngine,
             'path' => LOGS,
             'file' => 'error',
+            'stream' => 'php://stderr',
             'url' => env('LOG_ERROR_URL', null),
             'scopes' => null,
             'levels' => ['warning', 'error', 'critical', 'alert', 'emergency'],
         ],
         'badge_import' => [
-            'className' => FileLog::class,
+            'className' => $logEngine,
             'path' => LOGS,
             'file' => 'badge-import',
+            'stream' => 'php://stdout',
             'url' => env('LOG_BADGE_IMPORT_URL', null),
             'scopes' => ['badge_import'],
             'levels' => ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'],
         ],
         // To enable this dedicated query log, you need to set your datasource's log flag to true
         'queries' => [
-            'className' => FileLog::class,
+            'className' => $logEngine,
             'path' => LOGS,
             'file' => 'queries',
+            'stream' => 'php://stdout',
             'url' => env('LOG_QUERIES_URL', null),
             'scopes' => ['cake.database.queries'],
         ],

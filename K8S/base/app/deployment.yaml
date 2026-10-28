@@ -41,12 +41,6 @@ spec:
             - -c
             - >-
               mkdir -p /var/www/html/logs &&
-              ln -sf /dev/stdout /var/www/html/logs/debug.log &&
-              ln -sf /dev/stderr /var/www/html/logs/error.log &&
-              ln -sf /dev/stdout /var/www/html/logs/cli-debug.log &&
-              ln -sf /dev/stderr /var/www/html/logs/cli-error.log &&
-              ln -sf /dev/stdout /var/www/html/logs/badge-import.log &&
-              ln -sf /dev/stdout /var/www/html/logs/queries.log &&
               exec php-fpm -F
           envFrom:
             - configMapRef:
