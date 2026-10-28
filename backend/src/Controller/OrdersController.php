@@ -324,6 +324,9 @@ class OrdersController extends AppController
                     foreach ($lineUpdates['lines'] as $line) {
                         $this->Orders->OrderLines->saveOrFail($line, ['userId' => $userId]);
                     }
+                    if ($lineUpdates['lines'] !== []) {
+                        $this->Orders->dispatchEvent('Order.afterLineQuantityChange', [], $order);
+                    }
 
                     return true;
                 });
@@ -465,7 +468,7 @@ class OrdersController extends AppController
     private function orderHasUnfulfilledLines(Order $order): bool
     {
         foreach ($order->order_lines ?? [] as $line) {
-            if ((int)$line->fulfilled_quantity === 0 && (int)$line->quantity > 0) {
+            if ((int)$line->quantity > (int)$line->fulfilled_quantity) {
                 return true;
             }
         }
@@ -492,7 +495,7 @@ class OrdersController extends AppController
     }
 
     /**
-     * Validate quantity changes for the order's existing, unfulfilled lines.
+     * Validate quantity changes for the order's existing lines with units outstanding.
      *
      * @param \App\Model\Entity\Order $order Order with lines loaded.
      * @param mixed $submittedLines Submitted line rows.
@@ -538,14 +541,19 @@ class OrdersController extends AppController
             $quantity = filter_var(
                 $row['quantity'] ?? null,
                 FILTER_VALIDATE_INT,
-                ['options' => ['min_range' => 1]],
+                ['options' => ['min_range' => 0]],
             );
             if ($quantity === false) {
-                $errors[] = __('Enter a quantity of at least one for each order line.');
+                $errors[] = __('Enter a quantity of zero or more for each order line.');
                 continue;
             }
-            if ((int)$line->fulfilled_quantity > 0) {
-                $errors[] = __('Lines that have been fulfilled cannot be changed.');
+            $fulfilledQuantity = (int)$line->fulfilled_quantity;
+            if ($fulfilledQuantity > 0 && $fulfilledQuantity >= (int)$line->quantity) {
+                $errors[] = __('Lines that have been fully fulfilled cannot be changed.');
+                continue;
+            }
+            if ($quantity < $fulfilledQuantity) {
+                $errors[] = __('The quantity cannot be lower than the number already fulfilled.');
                 continue;
             }
 
@@ -555,6 +563,7 @@ class OrdersController extends AppController
             $unitPriceCents = (int)round((float)$line->unit_price * 100);
             $line->set('quantity', $quantity);
             $line->set('amount', number_format($quantity * $unitPriceCents / 100, 2, '.', ''));
+            $line->set('fulfilled', $quantity > 0 && $quantity <= $fulfilledQuantity);
             $updates[] = $line;
         }
 

@@ -530,7 +530,82 @@ class OrdersControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $order->user_updated);
     }
 
-    public function testEditRejectsChangesToPartiallyFulfilledLine(): void
+    public function testEditCanReducePartiallyFulfilledLineToFulfilledQuantity(): void
+    {
+        $orderId = 'dd7b14cc-abe6-4e58-b63d-070678d78644';
+        $lineId = 'be20de8c-eea8-4114-a98e-1d55e483e8db';
+        $orders = $this->getTableLocator()->get('Orders');
+        $orders->OrderLines->updateAll([
+            'quantity' => 10,
+            'amount' => '15.00',
+            'fulfilled_quantity' => 2,
+            'fulfilled' => false,
+        ], ['id' => $lineId]);
+        $orders->updateAll([
+            'status' => OrderStatus::PartiallyFulfilled->value,
+            'fulfilled' => false,
+            'total_ordered_quantity' => 10,
+            'total_ordered_amount' => '15.00',
+            'total_fulfilled_quantity' => 2,
+            'total_fulfilled_amount' => '3.00',
+        ], ['id' => $orderId]);
+
+        $this->get("/orders/edit/{$orderId}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('order-line-quantity-0');
+
+        $this->enableCsrfToken();
+        $this->put("/orders/edit/{$orderId}", [
+            'order_lines' => [
+                ['id' => $lineId, 'quantity' => '2'],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Orders', 'action' => 'index']);
+        $line = $orders->OrderLines->get($lineId);
+        $this->assertSame(2, (int)$line->quantity);
+        $this->assertSame(2, (int)$line->fulfilled_quantity);
+        $this->assertTrue((bool)$line->fulfilled);
+
+        $order = $orders->get($orderId);
+        $this->assertSame(OrderStatus::Fulfilled, $order->status);
+        $this->assertTrue((bool)$order->fulfilled);
+        $this->assertSame(2, (int)$order->total_ordered_quantity);
+        $this->assertSame('3.00', (string)$order->total_ordered_amount);
+        $this->assertSame(2, (int)$order->total_fulfilled_quantity);
+        $this->assertSame('3.00', (string)$order->total_fulfilled_amount);
+    }
+
+    public function testEditCanCancelUnfulfilledLineWithZeroQuantity(): void
+    {
+        [$orderId, $lineId] = $this->makePartiallyFulfilledOrder();
+        $orders = $this->getTableLocator()->get('Orders');
+
+        $this->enableCsrfToken();
+        $this->put("/orders/edit/{$orderId}", [
+            'order_lines' => [
+                ['id' => $lineId, 'quantity' => '0'],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Orders', 'action' => 'index']);
+        $line = $orders->OrderLines->get($lineId);
+        $this->assertSame(0, (int)$line->quantity);
+        $this->assertSame('0.00', (string)$line->amount);
+        $this->assertSame(0, (int)$line->fulfilled_quantity);
+        $this->assertFalse((bool)$line->fulfilled);
+
+        $order = $orders->get($orderId);
+        $this->assertSame(OrderStatus::PartiallyFulfilled, $order->status);
+        $this->assertSame(10, (int)$order->total_ordered_quantity);
+        $this->assertSame('15.00', (string)$order->total_ordered_amount);
+
+        $this->get("/orders/view/{$orderId}");
+        $this->assertResponseOk();
+        $this->assertResponseContains('Cancelled');
+    }
+
+    public function testEditRejectsQuantityBelowPartiallyFulfilledLine(): void
     {
         [$orderId, $openLineId] = $this->makePartiallyFulfilledOrder();
         $partiallyFulfilledLineId = 'be20de8c-eea8-4114-a98e-1d55e483e8db';
@@ -538,13 +613,14 @@ class OrdersControllerTest extends AuthenticatedControllerTestCase
         $this->enableCsrfToken();
         $this->put("/orders/edit/{$orderId}", [
             'order_lines' => [
-                ['id' => $partiallyFulfilledLineId, 'quantity' => '9'],
+                ['id' => $partiallyFulfilledLineId, 'quantity' => '1'],
                 ['id' => $openLineId, 'quantity' => '5'],
             ],
         ]);
 
         $this->assertResponseOk();
         $this->assertResponseContains('The order could not be saved. Please, try again.');
+        $this->assertResponseContains('The quantity cannot be lower than the number already fulfilled.');
         $orderLines = $this->getTableLocator()->get('OrderLines');
         $this->assertSame(10, (int)$orderLines->get($partiallyFulfilledLineId)->quantity);
         $this->assertSame(10, (int)$orderLines->get($openLineId)->quantity);

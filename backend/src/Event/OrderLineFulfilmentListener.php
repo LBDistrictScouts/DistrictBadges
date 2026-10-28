@@ -61,7 +61,8 @@ class OrderLineFulfilmentListener implements EventListenerInterface
             (int)$orderLine->quantity,
             max(0, (int)($result['fulfilled_quantity'] ?? 0)),
         );
-        $fulfilled = $fulfilledQuantity >= (int)$orderLine->quantity;
+        $fulfilled = (int)$orderLine->quantity > 0
+            && $fulfilledQuantity >= (int)$orderLine->quantity;
         $orderLines = $this->fetchModel('OrderLines');
         $orderLines->updateAll([
             'fulfilled_quantity' => $fulfilledQuantity,

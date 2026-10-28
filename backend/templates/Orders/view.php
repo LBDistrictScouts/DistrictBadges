@@ -230,7 +230,9 @@ $multipleOrdersMessage = 'If the customer places multiple orders, they may be gr
                             <td><?= $this->Number->currency($line->unit_price) ?></td>
                             <td><?= $this->Number->currency($line->amount) ?></td>
                             <td>
-                                <?php if ($line->fulfilled) : ?>
+                                <?php if ((int)$line->quantity === 0) : ?>
+                                    <?= __('Cancelled') ?>
+                                <?php elseif ($line->fulfilled) : ?>
                                     <?= __('Fulfilled') ?>
                                 <?php elseif ($line->fulfilled_quantity > 0) : ?>
                                     <?= __('Partially Fulfilled') ?>
