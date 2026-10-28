@@ -202,16 +202,22 @@ class CognitoService
             throw new RuntimeException('Cognito ID token does not contain the required group.');
         }
 
+        if (!is_string($claims['sub'] ?? null)) {
+            throw new RuntimeException('Cognito ID token subject claim is missing or invalid.');
+        }
         if (
-            !is_string($claims['sub'] ?? null)
-            || preg_match(
-                '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+            preg_match(
+                '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
                 $claims['sub'],
             ) !== 1
-            || !is_string($claims['email'] ?? null)
-            || filter_var($claims['email'], FILTER_VALIDATE_EMAIL) === false
         ) {
-            throw new RuntimeException('Cognito ID token identity is incomplete.');
+            throw new RuntimeException('Cognito ID token subject is not a UUID.');
+        }
+        if (!is_string($claims['email'] ?? null)) {
+            throw new RuntimeException('Cognito ID token email claim is missing or invalid.');
+        }
+        if (filter_var($claims['email'], FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Cognito ID token email claim is not a valid email address.');
         }
 
         return $claims;
