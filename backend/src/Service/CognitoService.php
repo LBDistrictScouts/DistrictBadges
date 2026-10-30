@@ -10,7 +10,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * OIDC authorization-code flow and ID-token validation for the Cognito user pool.
+ * OIDC authorization-code flow, token refresh and ID-token validation for Cognito.
  */
 class CognitoService
 {
@@ -92,7 +92,7 @@ class CognitoService
     /**
      * Exchange an authorization code and validate the returned ID token.
      *
-     * @return array<string, mixed>
+     * @return array{claims: array<string, mixed>, refresh_token: string}
      */
     public function exchangeAndValidate(string $code, string $codeVerifier, string $expectedNonce): array
     {
@@ -119,11 +119,59 @@ class CognitoService
         }
 
         $tokens = $response->getJson();
-        if (!is_array($tokens) || !is_string($tokens['id_token'] ?? null)) {
+        if (
+            !is_array($tokens)
+            || !is_string($tokens['id_token'] ?? null)
+        ) {
             throw new RuntimeException('Cognito did not return an ID token.');
         }
+        if (!is_string($tokens['refresh_token'] ?? null) || $tokens['refresh_token'] === '') {
+            throw new RuntimeException('Cognito did not return a refresh token.');
+        }
 
-        return $this->validateIdToken($tokens['id_token'], $expectedNonce);
+        return [
+            'claims' => $this->validateIdToken($tokens['id_token'], $expectedNonce),
+            'refresh_token' => $tokens['refresh_token'],
+        ];
+    }
+
+    /**
+     * Use a Cognito refresh token to renew the ID token.
+     *
+     * @return array{claims: array<string, mixed>, refresh_token: string}
+     */
+    public function refreshIdToken(string $refreshToken): array
+    {
+        $clientId = (string)$this->config['clientId'];
+        $response = $this->http->post(
+            rtrim((string)$this->config['hostedUiDomain'], '/') . '/oauth2/token',
+            [
+                'grant_type' => 'refresh_token',
+                'client_id' => $clientId,
+                'refresh_token' => $refreshToken,
+            ],
+            [
+                'headers' => [
+                    'Authorization' => 'Basic ' . base64_encode(
+                        $clientId . ':' . (string)$this->config['clientSecret'],
+                    ),
+                ],
+            ],
+        );
+
+        $tokens = $response->getJson();
+        if (!$response->isOk() || !is_array($tokens) || !is_string($tokens['id_token'] ?? null)) {
+            throw new RuntimeException('Cognito token refresh failed.');
+        }
+
+        return [
+            'claims' => $this->validateIdToken($tokens['id_token'], null),
+            // Cognito only returns a replacement when refresh token rotation is enabled.
+            'refresh_token' => is_string($tokens['refresh_token'] ?? null)
+                && $tokens['refresh_token'] !== ''
+                ? $tokens['refresh_token']
+                : $refreshToken,
+        ];
     }
 
     /**
@@ -131,7 +179,7 @@ class CognitoService
      *
      * @return array<string, mixed>
      */
-    private function validateIdToken(string $token, string $expectedNonce): array
+    private function validateIdToken(string $token, ?string $expectedNonce): array
     {
         $segments = explode('.', $token);
         if (count($segments) !== 3) {
@@ -188,8 +236,10 @@ class CognitoService
             throw new RuntimeException('Cognito ID token issue time is invalid.');
         }
         if (
+            $expectedNonce !== null && (
             !is_string($claims['nonce'] ?? null)
             || !hash_equals($expectedNonce, $claims['nonce'])
+            )
         ) {
             throw new RuntimeException('Cognito ID token nonce did not match the session.');
         }

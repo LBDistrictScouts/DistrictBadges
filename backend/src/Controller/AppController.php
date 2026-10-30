@@ -18,9 +18,12 @@ namespace App\Controller;
 
 use App\Model\Entity\User;
 use App\Model\Table\UsersTable;
+use App\Service\CognitoService;
 use Cake\Controller\Controller;
 use Cake\Event\EventInterface;
+use Cake\Log\Log;
 use LogicException;
+use Throwable;
 
 /**
  * Application Controller
@@ -33,6 +36,7 @@ use LogicException;
 class AppController extends Controller
 {
     private const PAGINATION_LIMITS = [10, 25, 50, 75, 100];
+    private const TOKEN_REFRESH_BUFFER_SECONDS = 60;
 
     /**
      * Initialization hook method.
@@ -78,6 +82,39 @@ class AppController extends Controller
 
         $session = $this->request->getSession();
         $identity = $session->read('Auth.identity');
+
+        if (
+            is_array($identity)
+            && is_int($identity['expires_at'] ?? null)
+            && $identity['expires_at'] <= time() + self::TOKEN_REFRESH_BUFFER_SECONDS
+        ) {
+            if (
+                is_string($identity['refresh_token'] ?? null)
+                && $identity['refresh_token'] !== ''
+                && is_string($identity['cognito_sub'] ?? null)
+            ) {
+                try {
+                    $tokens = (new CognitoService())->refreshIdToken($identity['refresh_token']);
+                    $claims = $tokens['claims'];
+                    if (hash_equals($identity['cognito_sub'], (string)$claims['sub'])) {
+                        $identity['expires_at'] = (int)$claims['exp'];
+                        $identity['refresh_token'] = $tokens['refresh_token'];
+                        $session->write('Auth.identity', $identity);
+                    } else {
+                        $identity = null;
+                    }
+                } catch (Throwable $exception) {
+                    Log::write('warning', 'Cognito session token refresh failed.', [
+                        'exception' => $exception::class,
+                    ]);
+                    $identity = null;
+                }
+            } else {
+                // Sessions created before refresh tokens were retained must sign in again.
+                $identity = null;
+            }
+        }
+
         $user = null;
         if (
             is_array($identity)

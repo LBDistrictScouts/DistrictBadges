@@ -96,11 +96,12 @@ class AuthController extends Controller
 
         $failureStage = 'Cognito token exchange and ID-token validation';
         try {
-            $claims = (new CognitoService())->exchangeAndValidate(
+            $tokens = (new CognitoService())->exchangeAndValidate(
                 $code,
                 $oauth['verifier'],
                 $oauth['nonce'],
             );
+            $claims = $tokens['claims'];
             $failureStage = 'local user lookup';
             $users = $this->fetchTable('Users');
             if (!$users instanceof UsersTable) {
@@ -119,7 +120,9 @@ class AuthController extends Controller
             $session->write('Auth.identity', [
                 'user_id' => (string)$user->id,
                 'group_id' => (string)$user->group_id,
+                'cognito_sub' => (string)$claims['sub'],
                 'expires_at' => (int)$claims['exp'],
+                'refresh_token' => $tokens['refresh_token'],
             ]);
 
             $redirect = $session->read('Auth.redirect');
