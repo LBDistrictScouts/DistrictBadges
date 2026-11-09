@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Behavior;
 
+use App\Utility\Value;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -33,13 +34,13 @@ class UserTrackingBehavior extends Behavior
     {
         $this->_table->belongsTo('CreatedByUser', [
             'className' => 'Users',
-            'foreignKey' => (string)$this->getConfig('userCreatedField'),
+            'foreignKey' => Value::string($this->getConfig('userCreatedField')),
             'joinType' => 'LEFT',
             'propertyName' => 'created_by_user',
         ]);
         $this->_table->belongsTo('UpdatedByUser', [
             'className' => 'Users',
-            'foreignKey' => (string)$this->getConfig('userUpdatedField'),
+            'foreignKey' => Value::string($this->getConfig('userUpdatedField')),
             'joinType' => 'LEFT',
             'propertyName' => 'updated_by_user',
         ]);
@@ -51,7 +52,7 @@ class UserTrackingBehavior extends Behavior
      * A `userId` save option can be supplied by trusted command-line or service
      * code. Web requests use the validated identity stored in the session.
      *
-     * @param \Cake\Event\EventInterface $event Event instance.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event instance.
      * @param \Cake\Datasource\EntityInterface $entity Entity being saved.
      * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
@@ -119,7 +120,7 @@ class UserTrackingBehavior extends Behavior
      */
     private function setField(string $configKey, EntityInterface $entity, mixed $value): void
     {
-        $field = (string)$this->getConfig($configKey);
+        $field = Value::string($this->getConfig($configKey));
         if ($this->_table->getSchema()->hasColumn($field)) {
             $entity->set($field, $value);
         }
@@ -135,7 +136,7 @@ class UserTrackingBehavior extends Behavior
      */
     private function keepCreationFieldUnchanged(string $configKey, EntityInterface $entity): void
     {
-        $field = (string)$this->getConfig($configKey);
+        $field = Value::string($this->getConfig($configKey));
         if (
             $this->_table->getSchema()->hasColumn($field)
             && $entity->isDirty($field)

@@ -288,11 +288,23 @@ Auto-fix fixable violations:
 composer cs-fix
 ```
 
-Static analysis (PHPStan at level 8):
+Run all backend checks (tests, coding standards and static analysis):
 
 ```bash
-vendor/bin/phpstan analyse
+composer check
 ```
+
+Static analysis (PHPStan at level 10 with `phpstan-strict-rules`):
+
+```bash
+composer phpstan
+```
+
+PHPStan checks `src/` without a baseline. Every finding fails `composer phpstan` and the backend CI workflow. Fix the underlying code or type contract when a new finding is reported.
+
+Checked conversions in `App\Utility\Value` validate untyped inputs. `TypedTableLocatorTrait` preserves registered aliases, association conditions and finders while checking table implementations.
+
+Table classes declare CakePHP's entity and association generics so queries and inherited CRUD methods retain their types. Keep these declarations accurate when adding models; avoid reintroducing generated `@method` overrides for inherited CRUD methods. The narrow stubs in `phpstan/stubs/` describe framework behavior that its upstream annotations do not express, such as `h()` returning a string for string input.
 
 ## Configuration Reference
 

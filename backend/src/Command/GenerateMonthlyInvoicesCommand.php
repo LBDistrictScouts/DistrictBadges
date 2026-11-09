@@ -3,12 +3,15 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Model\Table\InvoicesTable;
+use App\Utility\Value;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Core\Configure;
 use Cake\ORM\TableRegistry;
 use DateTimeImmutable;
+use LogicException;
 
 class GenerateMonthlyInvoicesCommand extends Command
 {
@@ -35,8 +38,11 @@ class GenerateMonthlyInvoicesCommand extends Command
      */
     public function execute(Arguments $args, ConsoleIo $io): int
     {
-        $minimumTotal = (float)Configure::read('Invoices.minimumTotal', 15);
+        $minimumTotal = Value::float(Configure::read('Invoices.minimumTotal', 15));
         $invoices = TableRegistry::getTableLocator()->get('Invoices');
+        if (!$invoices instanceof InvoicesTable) {
+            throw new LogicException('Invoices must use InvoicesTable.');
+        }
         $result = $invoices->generateMonthly(new DateTimeImmutable(), $minimumTotal);
         foreach ($result['messages'] as $message) {
             $io->verbose($message);

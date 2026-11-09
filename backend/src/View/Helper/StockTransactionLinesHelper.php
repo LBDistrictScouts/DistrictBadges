@@ -3,44 +3,82 @@ declare(strict_types=1);
 
 namespace App\View\Helper;
 
+use App\Model\Entity\Audit;
 use Cake\Datasource\EntityInterface;
 use Cake\View\Helper;
+use InvalidArgumentException;
 
+/**
+ * @extends \Cake\View\Helper<\App\View\AppView>
+ * @property \Cake\View\Helper\FormHelper $Form
+ * @property \Cake\View\Helper\NumberHelper $Number
+ * @property \Cake\View\Helper\UrlHelper $Url
+ * @phpstan-type FieldConfig array{
+ *   label: string, source?: string, type?: string, min?: int|float, max?: int|float,
+ *   step?: int|float|string, default?: int|float|string, editable?: bool, currency?: string,
+ *   target?: string, changes?: array<string, int>,
+ *   calculation?: array{operation: string, fields: list<string>}
+ * }
+ * @phpstan-type SelectorConfig array{label: string, options: array<string, string>, empty?: string}
+ * @phpstan-type OrderDetails array{id: string, order_number: string, section: string, user: string, group: string}
+ * @phpstan-type GridConfig array{
+ *   inputKey: string, property?: string, legend: string, fields: array<string, FieldConfig>,
+ *   selectors?: array<string, SelectorConfig>, rowUrl: array<string, mixed>|string,
+ *   priceUrl?: array<string, mixed>|string, ajaxError?: string, addLabel?: string,
+ *   hideLineBuilder?: bool, rowGroups?: array<string, OrderDetails>,
+ *   bulkLoader?: array{
+ *     field: string, label: string, options: array<string, string|array<string, string>>, url: array<string, mixed>|string,
+ *     empty?: string, addLabel?: string, alerts?: array<string, array{html: string}>,
+ *     optionUserIds?: array<string, string>, optionAccountIds?: array<string, string>
+ *   }
+ * }
+ * @phpstan-type RowConfig array{
+ *   inputKey: string, badgeId: string, badgeName: string, index: int,
+ *   fields: array<string, FieldConfig>, values: array<string, int|float|string|null>,
+ *   selectors?: array<string, array{value: string, label: string}>
+ * }
+ */
 class StockTransactionLinesHelper extends Helper
 {
     /**
-     * @var array<string>
+     * @var array<int|string, array<string, mixed>|string>
      */
     protected array $helpers = ['Form', 'Number', 'Url'];
 
     /**
      * @param \Cake\Datasource\EntityInterface $entity Parent entity.
      * @param array<string, string> $badges Badge options.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param GridConfig $config Grid configuration.
      * @return string
      */
     public function grid(EntityInterface $entity, array $badges, array $config): string
     {
-        $inputKey = (string)$config['inputKey'];
-        $property = (string)($config['property'] ?? $inputKey);
+        $inputKey = $config['inputKey'];
+        $property = $config['property'] ?? $inputKey;
         $lines = $entity->get($property) ?? [];
+        if (!is_iterable($lines)) {
+            throw new InvalidArgumentException('Stock transaction lines must be iterable.');
+        }
         $rows = '';
         $groupedRows = [];
 
         foreach ($lines as $index => $line) {
+            if (!is_int($index) || !$line instanceof EntityInterface) {
+                throw new InvalidArgumentException('Stock transaction lines must be indexed entities.');
+            }
             $values = [];
             foreach ($config['fields'] as $field => $fieldConfig) {
-                $values[$field] = $line->get($fieldConfig['source'] ?? $field);
+                $values[$field] = $this->fieldValue($line->get($fieldConfig['source'] ?? $field));
             }
             $selectors = [];
             foreach ($config['selectors'] ?? [] as $field => $selectorConfig) {
-                $value = (string)$line->get($field);
+                $value = $this->identifier($line->get($field));
                 $selectors[$field] = [
                     'value' => $value,
-                    'label' => (string)($selectorConfig['options'][$value] ?? $value),
+                    'label' => $selectorConfig['options'][$value] ?? $value,
                 ];
             }
-            $badgeId = (string)$line->get('badge_id');
+            $badgeId = $this->identifier($line->get('badge_id'));
             $row = $this->row([
                 'inputKey' => $inputKey,
                 'badgeId' => $badgeId,
@@ -50,9 +88,10 @@ class StockTransactionLinesHelper extends Helper
                 'selectors' => $selectors,
                 'index' => $index,
             ]);
-            $group = $config['rowGroups'][$selectors['order_line_id']['value'] ?? ''] ?? null;
-            if (is_array($group)) {
-                $groupId = (string)$group['id'];
+            $rowGroups = $config['rowGroups'] ?? [];
+            $group = $rowGroups[$selectors['order_line_id']['value'] ?? ''] ?? null;
+            if ($group !== null) {
+                $groupId = $group['id'];
                 if (!isset($groupedRows[$groupId])) {
                     $groupedRows[$groupId] = ['details' => $group, 'rows' => ''];
                 }
@@ -81,8 +120,8 @@ class StockTransactionLinesHelper extends Helper
         foreach ($config['fields'] as $field => $fieldConfig) {
             if (isset($fieldConfig['calculation'])) {
                 $value = (string)($fieldConfig['default'] ?? '0.00');
-                $displayValue = !empty($fieldConfig['currency'])
-                    ? $this->Number->currency($value, (string)$fieldConfig['currency'])
+                $displayValue = isset($fieldConfig['currency']) && $fieldConfig['currency'] !== ''
+                    ? $this->Number->currency($value, $fieldConfig['currency'])
                     : $value;
                 $fieldControls .= '<div class="column stock-line-builder-column"><label>'
                     . h($fieldConfig['label'])
@@ -100,9 +139,9 @@ class StockTransactionLinesHelper extends Helper
                     'value' => $fieldConfig['default'] ?? 0,
                     'data-stock-line-field' => $field,
                 ]);
-                if (!empty($fieldConfig['currency'])) {
+                if (isset($fieldConfig['currency']) && $fieldConfig['currency'] !== '') {
                     $control = '<div class="stock-line-currency-control"><span aria-hidden="true">'
-                        . h($this->currencySymbol((string)$fieldConfig['currency']))
+                        . h($this->currencySymbol($fieldConfig['currency']))
                         . '</span>' . $control . '</div>';
                 }
                 $fieldControls .= '<div class="column stock-line-builder-column">'
@@ -117,7 +156,7 @@ class StockTransactionLinesHelper extends Helper
 
         $error = $entity->getError($inputKey);
         $errorMessages = $this->flattenErrors($error);
-        $errorHtml = $error
+        $errorHtml = $error !== []
             ? '<p class="error-message">' . h(implode(' ', $errorMessages)) . '</p>'
             : '';
         $endpoint = json_encode($this->Url->build($config['rowUrl']), JSON_THROW_ON_ERROR);
@@ -136,7 +175,7 @@ class StockTransactionLinesHelper extends Helper
         $bulkAlerts = '[]';
         $bulkOptionUserIds = '[]';
         $bulkOptionAccountIds = '[]';
-        if (is_array($bulkLoader)) {
+        if ($bulkLoader !== null) {
             $bulkEndpoint = json_encode(
                 $this->Url->build($bulkLoader['url']),
                 JSON_THROW_ON_ERROR,
@@ -145,7 +184,7 @@ class StockTransactionLinesHelper extends Helper
             $bulkOptionUserIds = json_encode($bulkLoader['optionUserIds'] ?? [], JSON_THROW_ON_ERROR);
             $bulkOptionAccountIds = json_encode($bulkLoader['optionAccountIds'] ?? [], JSON_THROW_ON_ERROR);
             $bulkLoaderHtml = '<div class="row stock-line-bulk-loader"><div class="column stock-line-bulk-source">'
-                . $this->Form->control((string)$bulkLoader['field'], [
+                . $this->Form->control($bulkLoader['field'], [
                     'label' => $bulkLoader['label'],
                     'options' => $bulkLoader['options'],
                     'empty' => $bulkLoader['empty'] ?? __('Select an option'),
@@ -161,7 +200,7 @@ class StockTransactionLinesHelper extends Helper
         return '<fieldset class="stock-transaction-lines" data-stock-transaction-lines>'
             . '<legend>' . h($config['legend']) . '</legend>'
             . $bulkLoaderHtml
-            . (empty($config['hideLineBuilder'])
+            . (!($config['hideLineBuilder'] ?? false)
                 ? '<div class="row stock-line-builder"><div class="column stock-line-badge-column">'
             . $this->Form->control('line_badge_id', [
                 'label' => __('Badge'),
@@ -195,19 +234,19 @@ class StockTransactionLinesHelper extends Helper
      * Audit rows are saved individually, so they intentionally do not use the
      * nested editable inputs produced by grid().
      *
-     * @param \Cake\Datasource\EntityInterface $audit Audit with AuditLines.Badges loaded.
+     * @param \App\Model\Entity\Audit $audit Audit with AuditLines.Badges loaded.
      * @return string
      */
-    public function auditGrid(EntityInterface $audit): string
+    public function auditGrid(Audit $audit): string
     {
-        $editable = !$audit->get('audit_completed');
+        $editable = !$audit->audit_completed;
         $rows = '';
 
-        foreach ($audit->get('audit_lines') ?? [] as $line) {
-            $expected = (int)$line->get('audit_expected_quantity');
-            $actual = (int)$line->get('audit_actual_quantity');
+        foreach ($audit->audit_lines ?? [] as $line) {
+            $expected = (int)$line->audit_expected_quantity;
+            $actual = (int)$line->audit_actual_quantity;
             $difference = $actual - $expected;
-            $badgeName = (string)$line->badge->badge_name;
+            $badgeName = $line->badge->badge_name;
             $action = '';
             if ($editable) {
                 $action = sprintf(
@@ -215,7 +254,7 @@ class StockTransactionLinesHelper extends Helper
                     . 'class="button button-outline audit-count-button" '
                     . 'data-badge-id="%s" data-badge-name="%s" '
                     . 'data-expected="%d" data-actual="%d">%s</button></td>',
-                    h((string)$line->get('badge_id')),
+                    h($line->badge_id),
                     h($badgeName),
                     $expected,
                     $actual,
@@ -269,7 +308,7 @@ class StockTransactionLinesHelper extends Helper
     }
 
     /**
-     * @param array<string, mixed> $config Row configuration.
+     * @param RowConfig $config Row configuration.
      * @return string
      */
     public function row(array $config): string
@@ -296,8 +335,8 @@ class StockTransactionLinesHelper extends Helper
                 $field,
             );
             if (isset($fieldConfig['calculation'])) {
-                $displayValue = !empty($fieldConfig['currency'])
-                    ? $this->Number->currency($value, (string)$fieldConfig['currency'])
+                $displayValue = isset($fieldConfig['currency']) && $fieldConfig['currency'] !== ''
+                    ? $this->Number->currency($value, $fieldConfig['currency'])
                     : (string)$value;
                 $cells .= '<td><output class="stock-line-calculated" data-stock-row-output="'
                     . h($field) . '">' . h($displayValue) . '</output>'
@@ -307,7 +346,7 @@ class StockTransactionLinesHelper extends Helper
                         h((string)$value),
                         h($field),
                     ) . '</td>';
-            } elseif (!empty($fieldConfig['editable'])) {
+            } elseif ($fieldConfig['editable'] ?? false) {
                 $control = $this->Form->control($inputName, [
                     'label' => false,
                     'type' => 'number',
@@ -317,9 +356,9 @@ class StockTransactionLinesHelper extends Helper
                     'value' => $value,
                     'data-stock-row-field' => $field,
                 ]);
-                if (!empty($fieldConfig['currency'])) {
+                if (isset($fieldConfig['currency']) && $fieldConfig['currency'] !== '') {
                     $control = '<div class="stock-line-currency-control"><span aria-hidden="true">'
-                        . h($this->currencySymbol((string)$fieldConfig['currency']))
+                        . h($this->currencySymbol($fieldConfig['currency']))
                         . '</span>' . $control . '</div>';
                 }
                 $cells .= '<td>' . $control . '</td>';
@@ -351,8 +390,8 @@ class StockTransactionLinesHelper extends Helper
     /**
      * Render a separately labelled table for one source order.
      *
-     * @param array<string, string> $details Order details.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param OrderDetails $details Order details.
+     * @param array{fields: array<string, array{label: string}>, selectors?: array<string, array{label: string}>} $config Grid configuration.
      * @param string $rows Table rows.
      * @return string
      */
@@ -371,8 +410,8 @@ class StockTransactionLinesHelper extends Helper
     }
 
     /**
-     * @param array<string, mixed> $config Grid configuration.
-     * @param array<string, array{details: array<string, string>, rows: string}> $groupedRows Grouped rows.
+     * @param GridConfig $config Grid configuration.
+     * @param array<string, array{details: OrderDetails, rows: string}> $groupedRows Grouped rows.
      * @return string
      */
     private function gridTables(
@@ -403,7 +442,7 @@ class StockTransactionLinesHelper extends Helper
     }
 
     /**
-     * @param array<string, string> $details Order details.
+     * @param OrderDetails $details Order details.
      * @return string
      */
     private function orderGroupTable(array $details, string $selectorHeaders, string $headers, string $rows): string
@@ -434,13 +473,39 @@ class StockTransactionLinesHelper extends Helper
     }
 
     /**
+     * @param mixed $value Entity field value.
+     * @return string|float|int|null
+     */
+    private function fieldValue(mixed $value): int|float|string|null
+    {
+        if ($value === null || is_int($value) || is_float($value) || is_string($value)) {
+            return $value;
+        }
+
+        throw new InvalidArgumentException('Stock transaction values must be numbers, strings or null.');
+    }
+
+    /**
+     * @param mixed $value Entity identifier.
+     * @return string
+     */
+    private function identifier(mixed $value): string
+    {
+        if ($value === null || is_string($value) || is_int($value)) {
+            return (string)$value;
+        }
+
+        throw new InvalidArgumentException('Stock transaction identifiers must be strings or integers.');
+    }
+
+    /**
      * @param mixed $errors Validation errors.
      * @return array<string>
      */
     private function flattenErrors(mixed $errors): array
     {
         if (!is_array($errors)) {
-            return $errors ? [(string)$errors] : [];
+            return is_scalar($errors) && (string)$errors !== '' ? [(string)$errors] : [];
         }
 
         $messages = [];

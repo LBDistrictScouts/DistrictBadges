@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Model\Table;
 
 use App\Model\Enum\FulfilmentStatus;
+use App\Utility\Value;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -11,8 +12,13 @@ use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\Validation\Validator;
 
+/**
+ * @extends \App\Model\Table\StockTransactionsTable<\App\Model\Entity\FulfilmentLine>
+ */
 class FulfilmentLinesTable extends StockTransactionsTable
 {
+    use TypedTableLocatorTrait;
+
     /**
      * @param array<string, mixed> $config Config.
      * @return void
@@ -67,18 +73,24 @@ class FulfilmentLinesTable extends StockTransactionsTable
         $rules->add($rules->existsIn(['badge_id'], 'Badges'), ['errorField' => 'badge_id']);
         $rules->add($rules->existsIn(['order_line_id'], 'OrderLines'), ['errorField' => 'order_line_id']);
         $rules->add(
-            function ($entity): bool {
-                if (!$entity->get('order_line_id') || !$entity->get('badge_id')) {
+            function (EntityInterface $entity): bool {
+                if (
+                    Value::string($entity->get('order_line_id')) === ''
+                    || Value::string($entity->get('badge_id')) === ''
+                ) {
                     return false;
                 }
 
-                $orderLine = $this->OrderLines->find()
+                $orderLine = $this->associatedQuery(
+                    $this->OrderLines,
+                    $this->typedAssociation($this->OrderLines, OrderLinesTable::class),
+                )
                     ->select(['badge_id'])
                     ->where(['id' => $entity->get('order_line_id')])
                     ->first();
 
                 return $orderLine !== null
-                    && (string)$orderLine->get('badge_id') === (string)$entity->get('badge_id');
+                    && Value::string($orderLine->get('badge_id')) === Value::string($entity->get('badge_id'));
             },
             'orderLineBadgeMatches',
             [
@@ -87,14 +99,14 @@ class FulfilmentLinesTable extends StockTransactionsTable
             ],
         );
         $rules->add(
-            function ($entity): bool {
-                if (!$entity->get('order_line_id')) {
+            function (EntityInterface $entity): bool {
+                if (Value::string($entity->get('order_line_id')) === '') {
                     return false;
                 }
 
                 $orderLine = $this->OrderLines->get($entity->get('order_line_id'));
 
-                return (int)$entity->get('fulfilled_quantity_change')
+                return Value::int($entity->get('fulfilled_quantity_change'))
                     <= $orderLine->remaining_quantity;
             },
             'doesNotExceedRemainingQuantity',
@@ -108,9 +120,9 @@ class FulfilmentLinesTable extends StockTransactionsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
-     * @param \Cake\ORM\Query\SelectQuery $query Query.
-     * @param \ArrayObject $options Options.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \Cake\ORM\Query\SelectQuery<\Cake\Datasource\EntityInterface|array<string, mixed>> $query Query.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @param bool $primary Primary flag.
      * @return void
      */
@@ -124,9 +136,9 @@ class FulfilmentLinesTable extends StockTransactionsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
@@ -136,9 +148,9 @@ class FulfilmentLinesTable extends StockTransactionsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function afterDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
@@ -153,11 +165,14 @@ class FulfilmentLinesTable extends StockTransactionsTable
     private function refreshDispatchedOrderTotals(EntityInterface $entity): void
     {
         $orderLineId = $entity->get('order_line_id') ?? $entity->getOriginal('order_line_id');
-        if (!$orderLineId) {
+        if ($orderLineId === null || $orderLineId === '') {
             return;
         }
 
-        $orderLine = $this->OrderLines->find()
+        $orderLine = $this->associatedQuery(
+            $this->OrderLines,
+            $this->typedAssociation($this->OrderLines, OrderLinesTable::class),
+        )
             ->select(['id', 'order_id'])
             ->where(['id' => $orderLineId])
             ->first();
@@ -183,8 +198,8 @@ class FulfilmentLinesTable extends StockTransactionsTable
             ->first();
 
         $orders->updateAll([
-            'total_fulfilled_amount' => number_format((float)($totals['total_amount'] ?? 0), 2, '.', ''),
-            'total_fulfilled_quantity' => (int)($totals['total_quantity'] ?? 0),
+            'total_fulfilled_amount' => number_format(Value::float($totals['total_amount'] ?? 0), 2, '.', ''),
+            'total_fulfilled_quantity' => Value::int($totals['total_quantity'] ?? 0),
         ], ['id' => $orderLine->order_id]);
     }
 }

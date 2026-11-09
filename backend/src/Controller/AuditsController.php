@@ -3,10 +3,16 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\AuditLinesTable;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Model\Table\UsersTable;
+use App\Utility\Value;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\MethodNotAllowedException;
 use Cake\Http\Response;
 use Cake\I18n\DateTime;
+use LogicException;
 
 /**
  * Audits Controller
@@ -15,6 +21,8 @@ use Cake\I18n\DateTime;
  */
 class AuditsController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -25,11 +33,11 @@ class AuditsController extends AppController
         $query = $this->Audits->find()
             ->contain(['Users', 'AuditLines']);
         $filters = [
-            'number' => trim((string)$this->request->getQuery('number')),
-            'user_id' => (string)$this->request->getQuery('user_id'),
-            'completed' => (string)$this->request->getQuery('completed'),
-            'audited_from' => (string)$this->request->getQuery('audited_from'),
-            'audited_to' => (string)$this->request->getQuery('audited_to'),
+            'number' => trim(Value::string($this->request->getQuery('number'))),
+            'user_id' => Value::string($this->request->getQuery('user_id')),
+            'completed' => Value::string($this->request->getQuery('completed')),
+            'audited_from' => Value::string($this->request->getQuery('audited_from')),
+            'audited_to' => Value::string($this->request->getQuery('audited_to')),
         ];
 
         if ($filters['number'] !== '') {
@@ -47,11 +55,15 @@ class AuditsController extends AppController
         }
         $auditedTo = $this->validDateFilter($filters['audited_to']);
         if ($auditedTo !== null) {
-            $query->where(['Audits.audit_timestamp <' => date('Y-m-d', strtotime($auditedTo . ' +1 day'))]);
+            $query->where(['Audits.audit_timestamp <' => $this->dateFilter($auditedTo . ' +1 day', 'Y-m-d')]);
         }
 
         $audits = $this->paginate($query);
-        $userOptions = $this->Audits->Users->find('list')
+        $userOptions = $this->associatedQuery(
+            $this->Audits->Users,
+            $this->typedAssociation($this->Audits->Users, UsersTable::class),
+            'list',
+        )
             ->orderByAsc('last_name')
             ->orderByAsc('first_name')
             ->all();
@@ -90,8 +102,14 @@ class AuditsController extends AppController
         });
         $audit->audit_lines = $auditLines;
 
-        $search = trim((string)$this->request->getQuery('q'));
-        $badgesQuery = $this->Audits->AuditLines->Badges->find()
+        $search = trim(Value::string($this->request->getQuery('q')));
+        $badgesQuery = $this->associatedQuery(
+            $this->Audits->AuditLines->Badges,
+            $this->typedAssociation(
+                $this->Audits->AuditLines->Badges,
+                BadgesTable::class,
+            ),
+        )
             ->where(['stocked' => true]);
         if ($search !== '') {
             $badgesQuery->where(['badge_name LIKE' => '%' . $search . '%']);
@@ -113,7 +131,14 @@ class AuditsController extends AppController
         }
 
         $badges = $badgesQuery->all()->toList();
-        $unstockedBadges = $this->Audits->AuditLines->Badges->find('list')
+        $unstockedBadges = $this->associatedQuery(
+            $this->Audits->AuditLines->Badges,
+            $this->typedAssociation(
+                $this->Audits->AuditLines->Badges,
+                BadgesTable::class,
+            ),
+            'list',
+        )
             ->where(['stocked' => false])
             ->orderBy(['badge_name' => 'ASC'])
             ->all();
@@ -126,7 +151,9 @@ class AuditsController extends AppController
                     : ($leftTime === null ? -1 : 1);
             }
 
-            return $leftTime <=> $rightTime ?: strcasecmp($left->badge_name, $right->badge_name);
+            $timeOrder = $leftTime <=> $rightTime;
+
+            return $timeOrder !== 0 ? $timeOrder : strcasecmp($left->badge_name, $right->badge_name);
         });
 
         $this->set(compact('audit', 'badges', 'unstockedBadges', 'lastAudited', 'search'));
@@ -151,69 +178,96 @@ class AuditsController extends AppController
 
         $audit = $this->Audits->newEmptyEntity();
         if ($this->request->is('post')) {
-            $audit = $this->Audits->patchEntity($audit, $this->request->getData(), [
+            $audit = $this->Audits->patchEntity($audit, $this->requestData(), [
                 'fields' => ['user_id'],
             ]);
             $audit->audit_completed = false;
-            if ($this->Audits->save($audit)) {
+            if ($this->Audits->save($audit) !== false) {
                 $this->Flash->success(__('The audit has started.'));
 
                 return $this->redirect(['action' => 'view', $audit->id]);
             }
             $this->Flash->error(__('The audit could not be saved. Please, try again.'));
         }
-        $users = $this->Audits->Users->find('list', limit: 200)->all();
+        $users = $this->associatedQuery(
+            $this->Audits->Users,
+            $this->typedAssociation($this->Audits->Users, UsersTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('audit', 'users'));
     }
 
     /** Save or revise one physical badge count without changing live stock. */
-    public function count(?string $id = null): Response
+    public function count(?string $id = null): ?Response
     {
         $this->request->allowMethod(['post', 'put', 'patch']);
-        $audit = $this->Audits->get($id);
-        if ($audit->audit_completed) {
-            throw new MethodNotAllowedException('Completed audits cannot be edited.');
-        }
-
-        $badgeId = (string)$this->request->getData('badge_id');
+        $badgeId = Value::string($this->request->getData('badge_id'));
         $actual = filter_var($this->request->getData('actual_quantity'), FILTER_VALIDATE_INT);
         if ($badgeId === '' || $actual === false || $actual < 0) {
             throw new BadRequestException('Choose a badge and enter a non-negative actual quantity.');
         }
 
-        $badge = $this->Audits->AuditLines->Badges->get($badgeId);
-        $line = $this->Audits->AuditLines->find()
-            ->where(['audit_id' => $audit->id, 'badge_id' => $badgeId])
-            ->first();
-        $expected = $line === null
-            ? (int)$badge->on_hand_quantity
-            : (int)$line->audit_expected_quantity;
-        $line ??= $this->Audits->AuditLines->newEmptyEntity();
-        $line = $this->Audits->AuditLines->patchEntity($line, [
-            'audit_id' => $audit->id,
-            'badge_id' => $badgeId,
-            'audit_expected_quantity' => $expected,
-            'audit_actual_quantity' => $actual,
-            'on_hand_quantity_change' => $actual - $expected,
-            'receipted_quantity_change' => 0,
-            'pending_quantity_change' => 0,
-            'fulfilled_quantity_change' => 0,
-        ]);
-        // These snapshot fields are audit-only metadata on the shared transaction entity.
-        $line->set('audit_expected_quantity', $expected);
-        $line->set('audit_actual_quantity', $actual);
+        $saved = $this->Audits->getConnection()->transactional(function () use ($id, $badgeId, $actual): bool {
+            $audit = $this->Audits->find()
+                ->where(['id' => $id])
+                ->epilog('FOR UPDATE')
+                ->firstOrFail();
+            if ($audit->audit_completed) {
+                throw new MethodNotAllowedException('Completed audits cannot be edited.');
+            }
 
-        if ($this->Audits->AuditLines->save($line)) {
+            $auditLines = $this->Audits->AuditLines->getTarget();
+            if (!$auditLines instanceof AuditLinesTable) {
+                throw new LogicException('The AuditLines association must use AuditLinesTable.');
+            }
+            $badge = $auditLines->Badges->get($badgeId);
+            $lines = $auditLines->find()
+                ->where(['audit_id' => $audit->id, 'badge_id' => $badgeId])
+                ->orderByAsc('transaction_timestamp')
+                ->orderByAsc('id')
+                ->all()
+                ->toList();
+            $line = $lines[0] ?? $auditLines->newEmptyEntity();
+            $expected = $line->isNew()
+                ? (int)$badge->on_hand_quantity
+                : (int)$line->audit_expected_quantity;
+            $line = $auditLines->patchEntity($line, [
+                'audit_id' => $audit->id,
+                'badge_id' => $badgeId,
+                'audit_expected_quantity' => $expected,
+                'audit_actual_quantity' => $actual,
+                'on_hand_quantity_change' => $actual - $expected,
+                'receipted_quantity_change' => 0,
+                'pending_quantity_change' => 0,
+                'fulfilled_quantity_change' => 0,
+            ]);
+            // Rebuild the draft line hash after changing its quantities.
+            $line->set('audit_hash', null, ['guard' => false]);
+            $line->set('audit_expected_quantity', $expected, ['guard' => false]);
+            $line->set('audit_actual_quantity', $actual, ['guard' => false]);
+            if ($auditLines->save($line) === false) {
+                return false;
+            }
+
+            foreach (array_slice($lines, 1) as $duplicateLine) {
+                $auditLines->deleteOrFail($duplicateLine);
+            }
+
+            return true;
+        });
+
+        if ($saved === true) {
             $this->Flash->success(__('The badge count has been saved.'));
         } else {
             $this->Flash->error(__('The badge count could not be saved.'));
         }
 
-        return $this->redirect(['action' => 'view', $audit->id]);
+        return $this->redirect(['action' => 'view', $id]);
     }
 
     /** Lock an audit and make all of its stock adjustments effective together. */
-    public function complete(?string $id = null): Response
+    public function complete(?string $id = null): ?Response
     {
         $this->request->allowMethod(['post']);
         $connection = $this->Audits->getConnection();
@@ -222,14 +276,15 @@ class AuditsController extends AppController
             if ($audit->audit_completed) {
                 throw new MethodNotAllowedException('This audit is already completed.');
             }
-            if (empty($audit->audit_lines)) {
+            if ($audit->audit_lines === []) {
                 throw new BadRequestException('Count at least one badge before completing the audit.');
             }
 
+            $auditLines = $this->consolidateAuditLines($audit->audit_lines);
             $audit->audit_completed = true;
             $audit->set('audit_completed_date', DateTime::now(), ['guard' => false]);
             $this->Audits->saveOrFail($audit);
-            foreach ($audit->audit_lines as $line) {
+            foreach ($auditLines as $line) {
                 $this->Audits->AuditLines->refreshBadgeStockForBadge((string)$line->badge_id);
             }
         });
@@ -239,8 +294,51 @@ class AuditsController extends AppController
         return $this->redirect(['action' => 'view', $id]);
     }
 
+    /**
+     * Consolidate duplicate draft counts for each badge before applying stock adjustments.
+     *
+     * @param iterable<\App\Model\Entity\AuditLine> $lines Draft audit lines.
+     * @return array<int, \App\Model\Entity\AuditLine>
+     */
+    private function consolidateAuditLines(iterable $lines): array
+    {
+        $byBadge = [];
+        foreach ($lines as $line) {
+            $byBadge[(string)$line->badge_id][] = $line;
+        }
+
+        $consolidated = [];
+        foreach ($byBadge as $badgeLines) {
+            usort($badgeLines, static function ($left, $right): int {
+                $timestampOrder = $left->transaction_timestamp <=> $right->transaction_timestamp;
+
+                return $timestampOrder !== 0 ? $timestampOrder : strcmp((string)$left->id, (string)$right->id);
+            });
+            $line = $badgeLines[0];
+            if (count($badgeLines) > 1) {
+                $expected = (int)$line->audit_expected_quantity;
+                $actual = array_sum(array_map(
+                    static fn($badgeLine): int => (int)$badgeLine->audit_actual_quantity,
+                    $badgeLines,
+                ));
+                $line->set('audit_expected_quantity', $expected, ['guard' => false]);
+                $line->set('audit_actual_quantity', $actual, ['guard' => false]);
+                $line->set('on_hand_quantity_change', $actual - $expected, ['guard' => false]);
+                $line->set('audit_hash', null, ['guard' => false]);
+                $this->Audits->AuditLines->saveOrFail($line);
+
+                foreach (array_slice($badgeLines, 1) as $duplicateLine) {
+                    $this->Audits->AuditLines->deleteOrFail($duplicateLine);
+                }
+            }
+            $consolidated[] = $line;
+        }
+
+        return $consolidated;
+    }
+
     /** Make an existing catalogue badge stock-managed from within an open audit. */
-    public function stockBadge(?string $id = null): Response
+    public function stockBadge(?string $id = null): ?Response
     {
         $this->request->allowMethod(['post']);
         $audit = $this->Audits->get($id);
@@ -248,7 +346,7 @@ class AuditsController extends AppController
             throw new MethodNotAllowedException('Completed audits cannot be edited.');
         }
 
-        $badgeId = (string)$this->request->getData('badge_id');
+        $badgeId = Value::string($this->request->getData('badge_id'));
         if ($badgeId === '') {
             throw new BadRequestException('Choose a badge to stock.');
         }
@@ -280,7 +378,7 @@ class AuditsController extends AppController
         if ($this->Audits->AuditLines->exists(['audit_id' => $audit->id])) {
             throw new MethodNotAllowedException('Audits with counted badges cannot be deleted.');
         }
-        if ($this->Audits->delete($audit)) {
+        if ($this->Audits->delete($audit) !== false) {
             $this->Flash->success(__('The audit has been deleted.'));
         } else {
             $this->Flash->error(__('The audit could not be deleted. Please, try again.'));

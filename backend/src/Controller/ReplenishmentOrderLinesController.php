@@ -3,6 +3,12 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\AuditsTable;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\FulfilmentsTable;
+use App\Model\Table\ReplenishmentsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+
 /**
  * ReplenishmentOrderLines Controller
  *
@@ -10,6 +16,8 @@ namespace App\Controller;
  */
 class ReplenishmentOrderLinesController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -51,19 +59,51 @@ class ReplenishmentOrderLinesController extends AppController
         if ($this->request->is('post')) {
             $replenishmentOrderLine = $this->ReplenishmentOrderLines->patchEntity(
                 $replenishmentOrderLine,
-                $this->request->getData(),
+                $this->requestData(),
             );
-            if ($this->ReplenishmentOrderLines->save($replenishmentOrderLine)) {
+            if ($this->ReplenishmentOrderLines->save($replenishmentOrderLine) !== false) {
                 $this->Flash->success(__('The replenishment order line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The replenishment order line could not be saved. Please, try again.'));
         }
-        $badges = $this->ReplenishmentOrderLines->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->ReplenishmentOrderLines->Fulfilments->find('list', limit: 200)->all();
-        $audits = $this->ReplenishmentOrderLines->Audits->find('list', limit: 200)->all();
-        $replenishments = $this->ReplenishmentOrderLines->Replenishments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Badges,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Badges,
+                BadgesTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Fulfilments,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $audits = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Audits,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Audits,
+                AuditsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $replenishments = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Replenishments,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Replenishments,
+                ReplenishmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact(
             'replenishmentOrderLine',
             'badges',
@@ -86,19 +126,51 @@ class ReplenishmentOrderLinesController extends AppController
         if ($this->request->is(['patch', 'post', 'put'])) {
             $replenishmentOrderLine = $this->ReplenishmentOrderLines->patchEntity(
                 $replenishmentOrderLine,
-                $this->request->getData(),
+                $this->requestData(),
             );
-            if ($this->ReplenishmentOrderLines->save($replenishmentOrderLine)) {
+            if ($this->ReplenishmentOrderLines->save($replenishmentOrderLine) !== false) {
                 $this->Flash->success(__('The replenishment order line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The replenishment order line could not be saved. Please, try again.'));
         }
-        $badges = $this->ReplenishmentOrderLines->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->ReplenishmentOrderLines->Fulfilments->find('list', limit: 200)->all();
-        $audits = $this->ReplenishmentOrderLines->Audits->find('list', limit: 200)->all();
-        $replenishments = $this->ReplenishmentOrderLines->Replenishments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Badges,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Badges,
+                BadgesTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Fulfilments,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $audits = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Audits,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Audits,
+                AuditsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $replenishments = $this->associatedQuery(
+            $this->ReplenishmentOrderLines->Replenishments,
+            $this->typedAssociation(
+                $this->ReplenishmentOrderLines->Replenishments,
+                ReplenishmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact(
             'replenishmentOrderLine',
             'badges',
@@ -119,7 +191,7 @@ class ReplenishmentOrderLinesController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $replenishmentOrderLine = $this->ReplenishmentOrderLines->get($id);
-        if ($this->ReplenishmentOrderLines->delete($replenishmentOrderLine)) {
+        if ($this->ReplenishmentOrderLines->delete($replenishmentOrderLine) !== false) {
             $this->Flash->success(__('The replenishment order line has been deleted.'));
         } else {
             $this->Flash->error(__('The replenishment order line could not be deleted. Please, try again.'));

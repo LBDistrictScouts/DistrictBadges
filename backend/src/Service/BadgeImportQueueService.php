@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Queue\Processor\BadgeImportProcessor;
+use App\Utility\Value;
 use Aws\Sqs\SqsClient;
 use Cake\Core\Configure;
 use Cake\Log\Log;
@@ -20,8 +21,8 @@ class BadgeImportQueueService
      */
     public function __construct(?SqsClient $client = null)
     {
-        $config = (array)Configure::read('Sqs');
-        $this->queueUrl = (string)($config['badgeImportQueueUrl'] ?? '');
+        $config = Value::map(Configure::read('Sqs'));
+        $this->queueUrl = Value::string($config['badgeImportQueueUrl'] ?? '');
         if ($this->queueUrl === '') {
             throw new RuntimeException('SQS badge import queue URL is not configured.');
         }
@@ -39,7 +40,7 @@ class BadgeImportQueueService
 
         $clientConfig = [
             'version' => '2012-11-05',
-            'region' => (string)($config['region'] ?? 'us-east-1'),
+            'region' => Value::string($config['region'] ?? 'us-east-1'),
         ];
         $profile = $config['profile'] ?? null;
         if (is_string($profile) && $profile !== '') {
@@ -68,30 +69,31 @@ class BadgeImportQueueService
             'QueueUrl' => $this->queueUrl,
             'MaxNumberOfMessages' => 10,
             'WaitTimeSeconds' => max(0, min(20, $waitTimeSeconds)),
-            'AttributeNames' => ['ApproximateReceiveCount'],
+            'MessageSystemAttributeNames' => ['ApproximateReceiveCount'],
         ]);
-        $messages = $result->get('Messages') ?? [];
+        $messages = Value::maps($result->get('Messages') ?? []);
 
         foreach ($messages as $message) {
+            $receiptHandle = Value::string($message['ReceiptHandle'] ?? '');
             if ($heartbeat !== null) {
                 $heartbeat();
             }
 
             try {
-                $result = $processor->process((string)($message['Body'] ?? ''));
+                $result = $processor->process(Value::string($message['Body'] ?? ''));
                 if (
                     in_array($result, [BadgeImportProcessor::ACK, BadgeImportProcessor::REJECT], true)
-                    && !empty($message['ReceiptHandle'])
+                    && $receiptHandle !== ''
                 ) {
                     $this->client->deleteMessage([
                         'QueueUrl' => $this->queueUrl,
-                        'ReceiptHandle' => (string)$message['ReceiptHandle'],
+                        'ReceiptHandle' => $receiptHandle,
                     ]);
                 }
             } catch (Throwable $exception) {
                 Log::error('Unhandled badge import message error: {message}', [
                     'message' => $exception->getMessage(),
-                    'receiveCount' => $message['Attributes']['ApproximateReceiveCount'] ?? null,
+                    'receiveCount' => Value::map($message['Attributes'] ?? [])['ApproximateReceiveCount'] ?? null,
                     'scope' => ['badge_import'],
                 ]);
             } finally {

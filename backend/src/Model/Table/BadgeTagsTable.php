@@ -11,16 +11,9 @@ use Cake\Validation\Validator;
 /**
  * Badge Tags Model
  *
- * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsToMany $Badges
- * @method \App\Model\Entity\BadgeTag newEmptyEntity()
- * @method \App\Model\Entity\BadgeTag newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\BadgeTag> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\BadgeTag get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\BadgeTag findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\BadgeTag patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\BadgeTag> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\BadgeTag|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\BadgeTag saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
+ * @property \Cake\ORM\Association\BelongsToMany<\App\Model\Table\BadgesTable> $Badges
+ * @template TEntity of \App\Model\Entity\BadgeTag = \App\Model\Entity\BadgeTag
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, TEntity>
  */
 class BadgeTagsTable extends Table
 {

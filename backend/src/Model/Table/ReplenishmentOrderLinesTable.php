@@ -9,6 +9,9 @@ use Cake\Event\EventInterface;
 use Cake\ORM\Query\SelectQuery;
 use Cake\Validation\Validator;
 
+/**
+ * @extends \App\Model\Table\StockTransactionsTable<\App\Model\Entity\ReplenishmentOrderLine>
+ */
 class ReplenishmentOrderLinesTable extends StockTransactionsTable
 {
     /**
@@ -46,9 +49,9 @@ class ReplenishmentOrderLinesTable extends StockTransactionsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
-     * @param \Cake\ORM\Query\SelectQuery $query Query.
-     * @param \ArrayObject $options Options.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \Cake\ORM\Query\SelectQuery<\Cake\Datasource\EntityInterface|array<string, mixed>> $query Query.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @param bool $primary Primary flag.
      * @return void
      */

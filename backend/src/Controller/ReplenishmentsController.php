@@ -6,17 +6,30 @@ namespace App\Controller;
 use App\Model\Entity\Replenishment;
 use App\Model\Enum\ReplenishmentStatus;
 use App\Model\Enum\TransactionType;
+use App\Model\Table\ReplenishmentOrderLinesTable;
+use App\Model\Table\StockTransactionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Utility\Value;
+use Cake\Event\Event;
 use Cake\I18n\DateTime;
 use Cake\Utility\Text;
+use LogicException;
 
 /**
  * Replenishments Controller
  *
  * @property \App\Model\Table\ReplenishmentsTable $Replenishments
  * @property \App\Controller\Component\StockTransactionLinesComponent $StockTransactionLines
+ * @phpstan-type ReceiptRow array{
+ *   badge_id: string, badge_name: string, expected_quantity: int, unit_price: string,
+ *   order_line_ids: list<string>, expected_by_order_line: array<string, int>
+ * }
+ * @phpstan-import-type LineConfig from \App\Controller\Component\StockTransactionLinesComponent
  */
 class ReplenishmentsController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -26,10 +39,10 @@ class ReplenishmentsController extends AppController
     {
         $query = $this->Replenishments->find();
         $filters = [
-            'number' => trim((string)$this->request->getQuery('number')),
-            'status' => (string)$this->request->getQuery('status'),
-            'created_from' => (string)$this->request->getQuery('created_from'),
-            'created_to' => (string)$this->request->getQuery('created_to'),
+            'number' => trim(Value::string($this->request->getQuery('number'))),
+            'status' => Value::string($this->request->getQuery('status')),
+            'created_from' => Value::string($this->request->getQuery('created_from')),
+            'created_to' => Value::string($this->request->getQuery('created_to')),
         ];
 
         if ($filters['number'] !== '') {
@@ -50,7 +63,7 @@ class ReplenishmentsController extends AppController
 
         $createdTo = $this->validDateFilter($filters['created_to']);
         if ($createdTo !== null) {
-            $query->where(['created_date <' => date('Y-m-d', strtotime($createdTo . ' +1 day'))]);
+            $query->where(['created_date <' => $this->dateFilter($createdTo . ' +1 day', 'Y-m-d')]);
         }
 
         $replenishments = $this->paginate($query, [
@@ -98,14 +111,14 @@ class ReplenishmentsController extends AppController
         if ($this->request->is(['patch', 'post', 'put'])) {
             $replenishment = $this->Replenishments->patchEntity(
                 $replenishment,
-                $this->request->getData(),
+                $this->requestData(),
                 [
                     'fields' => $isReceived
                         ? ['actual_postage_cost']
                         : ['wholesaler_order_number', 'actual_postage_cost'],
                 ],
             );
-            if ($this->Replenishments->save($replenishment)) {
+            if ($this->Replenishments->save($replenishment) !== false) {
                 $this->Flash->success($isReceived
                     ? __('The actual postage cost has been saved.')
                     : __('The replenishment details have been saved.'));
@@ -132,7 +145,7 @@ class ReplenishmentsController extends AppController
             $replenishment->set('id', Text::uuid());
             $config = $this->replenishmentOrderLineConfig();
             $data = $this->StockTransactionLines->normalise(
-                $this->request->getData(),
+                $this->requestData(),
                 (string)$replenishment->id,
                 $config,
             );
@@ -154,7 +167,7 @@ class ReplenishmentsController extends AppController
                 && $this->Replenishments->save(
                     $replenishment,
                     ['associated' => ['ReplenishmentOrderLines']],
-                )
+                ) !== false
             ) {
                 $this->Flash->success(__('The replenishment has been saved.'));
 
@@ -181,14 +194,17 @@ class ReplenishmentsController extends AppController
      */
     private function defaultReplenishmentOrderLines(): array
     {
-        $linesTable = $this->Replenishments->ReplenishmentOrderLines->getTarget();
+        $linesTable = $this->typedAssociation(
+            $this->Replenishments->ReplenishmentOrderLines,
+            ReplenishmentOrderLinesTable::class,
+        );
         $requirements = $linesTable->Badges->getReplenishmentRequirements();
         $lines = [];
 
         foreach ($requirements as $badgeId => $requirement) {
             $badge = $requirement['badge'];
             $quantity = $requirement['quantity'];
-            $unitPrice = number_format((float)$badge->replenishment_price, 2, '.', '');
+            $unitPrice = number_format(Value::float($badge->replenishment_price), 2, '.', '');
             $lines[] = $linesTable->newEntity([
                 'badge_id' => $badgeId,
                 'pending_quantity_change' => $quantity,
@@ -259,11 +275,12 @@ class ReplenishmentsController extends AppController
 
                 $receiptRows = $this->receiptRows($replenishment);
                 $data = $this->normaliseReceiptData(
-                    $this->request->getData(),
+                    $this->requestData(),
                     (string)$replenishment->id,
                     $receiptRows,
                 );
-                $hasReceiptLines = !empty($data['replenishment_receipt_lines']);
+                $hasReceiptLines = is_array($data['replenishment_receipt_lines'] ?? null)
+                    && $data['replenishment_receipt_lines'] !== [];
                 $replenishment = $this->Replenishments->patchEntity(
                     $replenishment,
                     $data,
@@ -277,13 +294,11 @@ class ReplenishmentsController extends AppController
                     && $this->Replenishments->save(
                         $replenishment,
                         ['associated' => ['ReplenishmentReceiptLines']],
-                    )
+                    ) !== false
                 ) {
                     if ($hasReceiptLines) {
-                        $this->Replenishments->dispatchEvent(
-                            'Replenishment.afterReceive',
-                            [],
-                            $replenishment,
+                        $this->Replenishments->getEventManager()->dispatch(
+                            new Event('Replenishment.afterReceive', $replenishment, []),
                         );
                     }
 
@@ -301,6 +316,9 @@ class ReplenishmentsController extends AppController
                 ];
             });
 
+            if (!is_array($result) || !($result['replenishment'] ?? null) instanceof Replenishment) {
+                throw new LogicException('The receipt transaction did not return a replenishment.');
+            }
             $replenishment = $result['replenishment'];
             if ($result['status'] === 'closed') {
                 $this->Flash->error(__('Received or cancelled replenishments cannot receive more items.'));
@@ -313,7 +331,10 @@ class ReplenishmentsController extends AppController
                 return $this->redirect(['action' => 'view', $replenishment->id]);
             }
 
-            $receiptRows = $result['receipt_rows'];
+            $receiptRows = $result['receipt_rows'] ?? [];
+            if (!is_array($receiptRows)) {
+                throw new LogicException('Receipt rows must be an array.');
+            }
             $this->Flash->error(__('The replenishment receipt could not be recorded. Please, try again.'));
         } else {
             $replenishment = $this->Replenishments->get($id, contain: [
@@ -346,7 +367,7 @@ class ReplenishmentsController extends AppController
     public function acceptIncomplete(?string $id = null)
     {
         $this->request->allowMethod(['post']);
-        $stockTransactions = $this->fetchTable('StockTransactions');
+        $stockTransactions = $this->typedTable('StockTransactions', StockTransactionsTable::class);
         $closed = $this->Replenishments->getConnection()->transactional(function () use (
             $id,
             $stockTransactions,
@@ -378,13 +399,13 @@ class ReplenishmentsController extends AppController
                 ->all();
 
             foreach ($remainingByBadge as $row) {
-                $remaining = max(0, (int)$row['remaining_quantity']);
+                $remaining = max(0, Value::int($row['remaining_quantity']));
                 if ($remaining === 0) {
                     continue;
                 }
 
                 $closeout = $stockTransactions->newEntity([
-                    'badge_id' => (string)$row['badge_id'],
+                    'badge_id' => Value::string($row['badge_id']),
                     'replenishment_id' => (string)$replenishment->id,
                     'on_hand_quantity_change' => 0,
                     'receipted_quantity_change' => 0,
@@ -393,7 +414,7 @@ class ReplenishmentsController extends AppController
                     'unit_price' => $row['unit_price'],
                     'monetary_amount' => $row['unit_price'] === null
                         ? null
-                        : number_format($remaining * (float)$row['unit_price'], 2, '.', ''),
+                        : number_format($remaining * Value::float($row['unit_price']), 2, '.', ''),
                     'transaction_type' => TransactionType::ReplenishmentCloseout->value,
                 ]);
                 $stockTransactions->saveOrFail($closeout);
@@ -410,7 +431,7 @@ class ReplenishmentsController extends AppController
             return true;
         });
 
-        if (!$closed) {
+        if ($closed !== true) {
             $this->Flash->error(__('Only partially received replenishments can be closed this way.'));
 
             return $this->redirect(['action' => 'view', $id]);
@@ -431,13 +452,49 @@ class ReplenishmentsController extends AppController
     public function delete(?string $id = null)
     {
         $this->request->allowMethod(['post', 'delete']);
-        $replenishment = $this->Replenishments->get($id);
-        if ($replenishment->received) {
+        $stockTransactions = $this->typedTable('StockTransactions', StockTransactionsTable::class);
+        $result = $this->Replenishments->getConnection()->transactional(function () use (
+            $id,
+            $stockTransactions,
+        ): string {
+            $replenishment = $this->Replenishments->find()
+                ->where(['id' => $id])
+                ->epilog('FOR UPDATE')
+                ->firstOrFail();
+
+            if ($replenishment->received) {
+                return 'received';
+            }
+            if ($replenishment->status === ReplenishmentStatus::Cancelled) {
+                return 'alreadyCancelled';
+            }
+
+            if ($stockTransactions->exists(['replenishment_id' => $replenishment->id])) {
+                $this->closePendingReplenishmentStock($stockTransactions, (string)$replenishment->id);
+                $this->Replenishments->updateAll(
+                    ['status' => ReplenishmentStatus::Cancelled->value],
+                    ['id' => $replenishment->id],
+                );
+
+                return 'cancelled';
+            }
+
+            return $this->Replenishments->delete($replenishment) ? 'deleted' : 'failed';
+        });
+
+        if ($result === 'received') {
             $this->Flash->error(__('Received replenishments cannot be deleted.'));
 
             return $this->redirect(['action' => 'index']);
         }
-        if ($this->Replenishments->delete($replenishment)) {
+
+        if ($result === 'cancelled') {
+            $this->Flash->success(__(
+                'This replenishment has stock transactions, so it was cancelled and its pending stock was released.',
+            ));
+        } elseif ($result === 'alreadyCancelled') {
+            $this->Flash->success(__('This replenishment has already been cancelled.'));
+        } elseif ($result === 'deleted') {
             $this->Flash->success(__('The replenishment has been deleted.'));
         } else {
             $this->Flash->error(__('The replenishment could not be deleted. Please, try again.'));
@@ -447,7 +504,60 @@ class ReplenishmentsController extends AppController
     }
 
     /**
-     * @return array<string, mixed>
+     * Release any pending quantity while retaining the replenishment ledger.
+     *
+     * @param \App\Model\Table\StockTransactionsTable $stockTransactions Stock transactions table.
+     * @param string $replenishmentId Replenishment id.
+     * @return void
+     */
+    private function closePendingReplenishmentStock(
+        StockTransactionsTable $stockTransactions,
+        string $replenishmentId,
+    ): void {
+        $query = $stockTransactions->find();
+        $remainingByBadge = $query
+            ->select([
+                'badge_id',
+                'unit_price',
+                'remaining_quantity' => $query->func()->sum('pending_quantity_change'),
+            ])
+            ->where([
+                'replenishment_id' => $replenishmentId,
+                'transaction_type IN' => [
+                    TransactionType::ReplenishmentOrder->value,
+                    TransactionType::ReplenishmentReceipt->value,
+                    TransactionType::ReplenishmentCloseout->value,
+                ],
+            ])
+            ->groupBy(['badge_id', 'unit_price'])
+            ->disableHydration()
+            ->all();
+
+        foreach ($remainingByBadge as $row) {
+            $remaining = max(0, Value::int($row['remaining_quantity']));
+            if ($remaining === 0) {
+                continue;
+            }
+
+            $closeout = $stockTransactions->newEntity([
+                'badge_id' => Value::string($row['badge_id']),
+                'replenishment_id' => $replenishmentId,
+                'on_hand_quantity_change' => 0,
+                'receipted_quantity_change' => 0,
+                'pending_quantity_change' => -$remaining,
+                'fulfilled_quantity_change' => 0,
+                'unit_price' => $row['unit_price'],
+                'monetary_amount' => $row['unit_price'] === null
+                    ? null
+                    : number_format($remaining * Value::float($row['unit_price']), 2, '.', ''),
+                'transaction_type' => TransactionType::ReplenishmentCloseout->value,
+            ]);
+            $stockTransactions->saveOrFail($closeout);
+        }
+    }
+
+    /**
+     * @return LineConfig
      */
     private function replenishmentOrderLineConfig(): array
     {
@@ -460,6 +570,17 @@ class ReplenishmentsController extends AppController
             'rowUrl' => ['action' => 'lineRow'],
             'priceUrl' => ['action' => 'badgePrice'],
             'badgePriceField' => 'replenishment_price',
+            'deduplicate' => [
+                'sum' => [
+                    'pending_quantity_change' => 'quantity',
+                    'monetary_amount' => 'money',
+                ],
+                'weightedPrice' => [
+                    'field' => 'unit_price',
+                    'quantity' => 'pending_quantity_change',
+                    'amount' => 'monetary_amount',
+                ],
+            ],
             'requiredMessage' => __('Add at least one replenishment order line.'),
             'invalidMessage' => __('Select a badge and enter a valid quantity and unit price.'),
             'ajaxError' => __('Unable to add the replenishment order line.'),
@@ -503,7 +624,7 @@ class ReplenishmentsController extends AppController
 
     /**
      * @param \App\Model\Entity\Replenishment $replenishment Replenishment.
-     * @return array<string, array<string, mixed>>
+     * @return array<string, ReceiptRow>
      */
     private function receiptRows(Replenishment $replenishment): array
     {
@@ -521,14 +642,43 @@ class ReplenishmentsController extends AppController
             $received = min($ordered, (int)($receivedByBadge[$badgeId] ?? 0));
             $receivedByBadge[$badgeId] = max(0, (int)($receivedByBadge[$badgeId] ?? 0) - $received);
             $remaining = max(0, $ordered - $received);
-            $rows[(string)$orderLine->id] = [
-                'order_line_id' => (string)$orderLine->id,
+            $rows[$badgeId] ??= [
                 'badge_id' => $badgeId,
                 'badge_name' => (string)$orderLine->badge->badge_name,
-                'expected_quantity' => $remaining,
-                'unit_price' => number_format((float)$orderLine->unit_price, 2, '.', ''),
+                'expected_quantity' => 0,
+                'amount_cents' => 0,
+                'ordered_quantity' => 0,
+                'ordered_amount_cents' => 0,
+                'order_line_ids' => [],
+                'expected_by_order_line' => [],
             ];
+            $rows[$badgeId]['expected_quantity'] += $remaining;
+            $rows[$badgeId]['amount_cents'] += (int)round(
+                $remaining * (float)$orderLine->unit_price * 100,
+            );
+            $rows[$badgeId]['ordered_quantity'] += $ordered;
+            $rows[$badgeId]['ordered_amount_cents'] += (int)round(
+                $ordered * (float)$orderLine->unit_price * 100,
+            );
+            $rows[$badgeId]['order_line_ids'][] = (string)$orderLine->id;
+            $rows[$badgeId]['expected_by_order_line'][(string)$orderLine->id] = $remaining;
         }
+
+        foreach ($rows as &$row) {
+            $row['unit_price'] = $row['expected_quantity'] > 0
+                ? number_format($row['amount_cents'] / $row['expected_quantity'] / 100, 2, '.', '')
+                : ($row['ordered_quantity'] > 0
+                    ? number_format(
+                        $row['ordered_amount_cents'] / $row['ordered_quantity'] / 100,
+                        2,
+                        '.',
+                    )
+                    : '0.00');
+            unset($row['amount_cents']);
+            unset($row['ordered_quantity']);
+            unset($row['ordered_amount_cents']);
+        }
+        unset($row);
 
         return $rows;
     }
@@ -536,7 +686,7 @@ class ReplenishmentsController extends AppController
     /**
      * @param array<string, mixed> $data Request data.
      * @param string $replenishmentId Replenishment id.
-     * @param array<string, array<string, mixed>> $receiptRows Receipt rows.
+     * @param array<string, ReceiptRow> $receiptRows Receipt rows.
      * @return array<string, mixed>
      */
     private function normaliseReceiptData(
@@ -550,16 +700,47 @@ class ReplenishmentsController extends AppController
             return $data;
         }
 
-        foreach ($receiptRows as $orderLineId => $row) {
-            $rawQuantity = $input[$orderLineId]['quantity'] ?? 0;
-            $quantity = $rawQuantity === '' || $rawQuantity === null
-                ? 0
-                : filter_var($rawQuantity, FILTER_VALIDATE_INT);
-            if (
-                $quantity === false
-                || $quantity < 0
-            ) {
-                $data['replenishment_receipt_lines'][] = [
+        $groupedLines = [];
+        $invalidLines = [];
+        foreach ($receiptRows as $badgeId => $row) {
+            $quantity = 0;
+            $pendingReduction = 0;
+            $rawQuantities = [];
+            if (array_key_exists($badgeId, $input)) {
+                $badgeInput = is_array($input[$badgeId]) ? $input[$badgeId] : [];
+                $rawQuantities[] = [
+                    'quantity' => $badgeInput['quantity'] ?? 0,
+                    'expected_quantity' => $row['expected_quantity'],
+                ];
+            } else {
+                // Accept legacy line-keyed posts while rendering a single badge input.
+                foreach ($row['order_line_ids'] as $orderLineId) {
+                    if (array_key_exists($orderLineId, $input)) {
+                        $lineInput = is_array($input[$orderLineId]) ? $input[$orderLineId] : [];
+                        $rawQuantities[] = [
+                            'quantity' => $lineInput['quantity'] ?? 0,
+                            'expected_quantity' => $row['expected_by_order_line'][$orderLineId],
+                        ];
+                    }
+                }
+            }
+
+            $invalid = false;
+            foreach ($rawQuantities as $rawRow) {
+                $rawQuantity = $rawRow['quantity'];
+                $lineQuantity = $rawQuantity === ''
+                    ? 0
+                    : filter_var($rawQuantity, FILTER_VALIDATE_INT);
+                if ($lineQuantity === false || $lineQuantity < 0) {
+                    $invalid = true;
+                    break;
+                }
+                $quantity += $lineQuantity;
+                $pendingReduction += min($lineQuantity, $rawRow['expected_quantity']);
+            }
+
+            if ($invalid) {
+                $invalidLines[] = [
                     'receipted_quantity_change' => null,
                 ];
                 continue;
@@ -569,18 +750,33 @@ class ReplenishmentsController extends AppController
             }
 
             $unitPrice = (string)$row['unit_price'];
-            $pendingReduction = min($quantity, (int)$row['expected_quantity']);
-            $data['replenishment_receipt_lines'][] = [
-                'badge_id' => $row['badge_id'],
+            if (count($rawQuantities) === 1 && array_key_exists($badgeId, $input)) {
+                $pendingReduction = min($quantity, $row['expected_quantity']);
+            }
+            $groupedLines[$badgeId] ??= [
+                'badge_id' => $badgeId,
                 'replenishment_id' => $replenishmentId,
-                'on_hand_quantity_change' => $quantity,
-                'receipted_quantity_change' => $quantity,
-                'pending_quantity_change' => -$pendingReduction,
+                'on_hand_quantity_change' => 0,
+                'receipted_quantity_change' => 0,
+                'pending_quantity_change' => 0,
                 'fulfilled_quantity_change' => 0,
                 'unit_price' => $unitPrice,
-                'monetary_amount' => number_format($quantity * (float)$unitPrice, 2, '.', ''),
+                'monetary_amount' => '0.00',
             ];
+            $groupedLines[$badgeId]['on_hand_quantity_change'] += $quantity;
+            $groupedLines[$badgeId]['receipted_quantity_change'] += $quantity;
+            $groupedLines[$badgeId]['pending_quantity_change'] -= $pendingReduction;
+            $amountCents = (int)round((float)$groupedLines[$badgeId]['monetary_amount'] * 100)
+                + (int)round($quantity * (float)$unitPrice * 100);
+            $groupedLines[$badgeId]['monetary_amount'] = number_format($amountCents / 100, 2, '.', '');
+            $groupedLines[$badgeId]['unit_price'] = number_format(
+                $amountCents / $groupedLines[$badgeId]['receipted_quantity_change'] / 100,
+                2,
+                '.',
+            );
         }
+
+        $data['replenishment_receipt_lines'] = array_merge(array_values($groupedLines), $invalidLines);
 
         return $data;
     }

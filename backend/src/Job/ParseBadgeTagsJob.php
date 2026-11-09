@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Job;
 
+use App\Model\Table\BadgesTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\Queue\Job\JobInterface;
 use Cake\Queue\Job\Message;
@@ -10,6 +12,7 @@ use Interop\Queue\Processor;
 
 class ParseBadgeTagsJob implements JobInterface
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
 
     public static int $maxAttempts = 3;
@@ -22,8 +25,7 @@ class ParseBadgeTagsJob implements JobInterface
      */
     public function execute(Message $message): string
     {
-        /** @var \App\Model\Table\BadgesTable $badges */
-        $badges = $this->getTableLocator()->get('Badges');
+        $badges = $this->typedTable('Badges', BadgesTable::class);
         $badges->associateTagsForAllBadges();
 
         return Processor::ACK;

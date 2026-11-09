@@ -140,6 +140,7 @@
       <path value="$PROJECT_DIR$/backend/vendor/psr/link" />
       <path value="$PROJECT_DIR$/backend/vendor/dereuromark/cakephp-ide-helper" />
       <path value="$PROJECT_DIR$/backend/vendor/phpstan/phpstan" />
+      <path value="$PROJECT_DIR$/backend/vendor/phpstan/phpstan-strict-rules" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration">

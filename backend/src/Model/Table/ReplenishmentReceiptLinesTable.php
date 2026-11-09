@@ -6,10 +6,14 @@ namespace App\Model\Table;
 use App\Model\Enum\TransactionType;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
+use Cake\Event\Event;
 use Cake\Event\EventInterface;
 use Cake\ORM\Query\SelectQuery;
 use Cake\Validation\Validator;
 
+/**
+ * @extends \App\Model\Table\StockTransactionsTable<\App\Model\Entity\ReplenishmentReceiptLine>
+ */
 class ReplenishmentReceiptLinesTable extends StockTransactionsTable
 {
     /**
@@ -47,9 +51,9 @@ class ReplenishmentReceiptLinesTable extends StockTransactionsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
-     * @param \Cake\ORM\Query\SelectQuery $query Query.
-     * @param \ArrayObject $options Options.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \Cake\ORM\Query\SelectQuery<\Cake\Datasource\EntityInterface|array<string, mixed>> $query Query.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @param bool $primary Primary flag.
      * @return void
      */
@@ -66,9 +70,9 @@ class ReplenishmentReceiptLinesTable extends StockTransactionsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Receipt line.
-     * @param \ArrayObject $options Save options.
+     * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
      */
     public function afterSaveCommit(
@@ -77,11 +81,11 @@ class ReplenishmentReceiptLinesTable extends StockTransactionsTable
         ArrayObject $options,
     ): void {
         $replenishmentId = $entity->get('replenishment_id');
-        if (!$replenishmentId) {
+        if ($replenishmentId === null || $replenishmentId === '') {
             return;
         }
 
         $replenishment = $this->Replenishments->get($replenishmentId);
-        $this->dispatchEvent('Replenishment.afterReceive', [], $replenishment);
+        $this->getEventManager()->dispatch(new Event('Replenishment.afterReceive', $replenishment, []));
     }
 }

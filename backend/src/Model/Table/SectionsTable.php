@@ -8,6 +8,10 @@ use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
+/**
+ * @property \Cake\ORM\Association\HasOne<\App\Model\Table\AccountsTable> $Accounts
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\Section>
+ */
 class SectionsTable extends Table
 {
     /**

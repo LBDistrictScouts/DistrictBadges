@@ -5,6 +5,15 @@
         <exclude-pattern>*/src/Controller/*</exclude-pattern>
     </rule>
 
+    <!-- PHPStan aliases are local type names, not class references. -->
+    <rule ref="SlevomatCodingStandard.Namespaces.FullyQualifiedClassNameInAnnotation">
+        <properties>
+            <property name="ignoredAnnotationNames" type="array">
+                <element value="@phpstan-type"/>
+            </property>
+        </properties>
+    </rule>
+
     <file>src/</file>
     <file>tests/</file>
 </ruleset>

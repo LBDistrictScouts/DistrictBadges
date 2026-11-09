@@ -8,6 +8,7 @@ use ArrayObject;
 use Cake\Core\Configure;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
+use Cake\Event\Event;
 use Cake\Event\EventInterface;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -15,22 +16,10 @@ use Cake\Validation\Validator;
 /**
  * Replenishments Model
  *
- * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
- * @property \App\Model\Table\ReplenishmentOrderLinesTable&\Cake\ORM\Association\HasMany $ReplenishmentOrderLines
- * @property \App\Model\Table\ReplenishmentReceiptLinesTable&\Cake\ORM\Association\HasMany $ReplenishmentReceiptLines
- * @method \App\Model\Entity\Replenishment newEmptyEntity()
- * @method \App\Model\Entity\Replenishment newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\Replenishment> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Replenishment get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\Replenishment findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\Replenishment patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\Replenishment> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\Replenishment|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\Replenishment saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\Replenishment>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Replenishment>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Replenishment>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Replenishment> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Replenishment>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Replenishment>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Replenishment>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Replenishment> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\StockTransactionsTable> $StockTransactions
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\ReplenishmentOrderLinesTable> $ReplenishmentOrderLines
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\ReplenishmentReceiptLinesTable> $ReplenishmentReceiptLines
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\Replenishment>
  */
 class ReplenishmentsTable extends Table
 {
@@ -101,9 +90,9 @@ class ReplenishmentsTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Replenishment.
-     * @param \ArrayObject $options Save options.
+     * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
      */
     public function beforeSave(
@@ -120,9 +109,9 @@ class ReplenishmentsTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Replenishment.
-     * @param \ArrayObject $options Save options.
+     * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
      */
     public function afterSaveCommit(
@@ -130,10 +119,10 @@ class ReplenishmentsTable extends Table
         EntityInterface $entity,
         ArrayObject $options,
     ): void {
-        if (!($options['dispatchReplenishmentSubmitted'] ?? false)) {
+        if (($options['dispatchReplenishmentSubmitted'] ?? false) !== true) {
             return;
         }
 
-        $this->dispatchEvent('Replenishment.afterSubmit', [], $entity);
+        $this->getEventManager()->dispatch(new Event('Replenishment.afterSubmit', $entity, []));
     }
 }

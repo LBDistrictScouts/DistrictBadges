@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Model\Table\BadgesTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use App\Service\AlgoliaService;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
@@ -11,6 +13,7 @@ use Cake\ORM\Locator\LocatorAwareTrait;
 
 class RefreshAlgoliaCommand extends Command
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
 
     /**
@@ -35,8 +38,7 @@ class RefreshAlgoliaCommand extends Command
             return Command::CODE_ERROR;
         }
 
-        /** @var \App\Model\Table\BadgesTable $badges */
-        $badges = $this->getTableLocator()->get('Badges');
+        $badges = $this->typedTable('Badges', BadgesTable::class);
         $count = $badges->refreshAlgoliaIndex($service);
 
         $io->success(sprintf(

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\TypedTableLocatorTrait;
+
 /**
  * Groups Controller
  *
@@ -10,6 +12,8 @@ namespace App\Controller;
  */
 class GroupsController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -55,8 +59,8 @@ class GroupsController extends AppController
     {
         $group = $this->Groups->newEmptyEntity();
         if ($this->request->is('post')) {
-            $group = $this->Groups->patchEntity($group, $this->request->getData());
-            if ($this->Groups->save($group)) {
+            $group = $this->Groups->patchEntity($group, $this->requestData());
+            if ($this->Groups->save($group) !== false) {
                 $this->Flash->success(__('The group has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
@@ -77,8 +81,8 @@ class GroupsController extends AppController
     {
         $group = $this->Groups->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $group = $this->Groups->patchEntity($group, $this->request->getData());
-            if ($this->Groups->save($group)) {
+            $group = $this->Groups->patchEntity($group, $this->requestData());
+            if ($this->Groups->save($group) !== false) {
                 $this->Flash->success(__('The group has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
@@ -99,7 +103,7 @@ class GroupsController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $group = $this->Groups->get($id);
-        if ($this->Groups->delete($group)) {
+        if ($this->Groups->delete($group) !== false) {
             $this->Flash->success(__('The group has been deleted.'));
         } else {
             $this->Flash->error(__('The group could not be deleted. Please, try again.'));

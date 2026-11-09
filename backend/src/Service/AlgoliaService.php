@@ -6,6 +6,7 @@ namespace App\Service;
 use Algolia\AlgoliaSearch\Api\SearchClient;
 use App\Model\Entity\Badge;
 use App\Model\Enum\BadgeStatus;
+use App\Utility\Value;
 use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
@@ -29,9 +30,9 @@ class AlgoliaService
         $config = $config ?? (array)Configure::read('Algolia');
 
         $this->enabled = (bool)($config['enabled'] ?? false);
-        $this->appId = (string)($config['appId'] ?? '');
-        $this->apiKey = (string)($config['apiKey'] ?? '');
-        $this->indexName = (string)($config['indexName'] ?? '');
+        $this->appId = Value::string($config['appId'] ?? '');
+        $this->apiKey = Value::string($config['apiKey'] ?? '');
+        $this->indexName = Value::string($config['indexName'] ?? '');
 
         $clientOverride = $client ?? ($config['client'] ?? null);
 
@@ -50,7 +51,7 @@ class AlgoliaService
      */
     public function upsertBadge(EntityInterface $badge): void
     {
-        if (!$this->isEnabled()) {
+        if (!$this->enabled || $this->client === null) {
             return;
         }
 
@@ -69,7 +70,7 @@ class AlgoliaService
      */
     public function replaceBadges(iterable $badges): int
     {
-        if (!$this->isEnabled()) {
+        if (!$this->enabled || $this->client === null) {
             return 0;
         }
 
@@ -108,7 +109,7 @@ class AlgoliaService
      */
     public function deleteBadge(EntityInterface $badge): void
     {
-        if (!$this->isEnabled()) {
+        if (!$this->enabled || $this->client === null) {
             return;
         }
 
@@ -130,7 +131,12 @@ class AlgoliaService
         }
 
         try {
-            return SearchClient::create($this->appId, $this->apiKey);
+            $client = SearchClient::create($this->appId, $this->apiKey);
+            if (!$client instanceof SearchClient) {
+                throw new RuntimeException('Algolia did not return a search client.');
+            }
+
+            return $client;
         } catch (Throwable $exception) {
             throw new RuntimeException(
                 'Algolia badge sync failed: unable to initialize client.',
@@ -159,7 +165,7 @@ class AlgoliaService
      */
     private function requireObjectId(EntityInterface $badge): string
     {
-        $objectId = (string)$badge->get('id');
+        $objectId = Value::string($badge->get('id'));
         if ($objectId === '') {
             throw new RuntimeException('Algolia badge sync failed: badge id missing.');
         }

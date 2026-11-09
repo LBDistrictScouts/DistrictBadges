@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\BadgesTable;
+use App\Model\Table\FulfilmentsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+
 /**
  * StockTransactions Controller
  *
@@ -10,6 +14,8 @@ namespace App\Controller;
  */
 class StockTransactionsController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -51,16 +57,32 @@ class StockTransactionsController extends AppController
     {
         $stockTransaction = $this->StockTransactions->newEmptyEntity();
         if ($this->request->is('post')) {
-            $stockTransaction = $this->StockTransactions->patchEntity($stockTransaction, $this->request->getData());
-            if ($this->StockTransactions->save($stockTransaction)) {
+            $stockTransaction = $this->StockTransactions->patchEntity($stockTransaction, $this->requestData());
+            if ($this->StockTransactions->save($stockTransaction) !== false) {
                 $this->Flash->success(__('The stock transaction has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The stock transaction could not be saved. Please, try again.'));
         }
-        $badges = $this->StockTransactions->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->StockTransactions->Fulfilments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->StockTransactions->Badges,
+            $this->typedAssociation(
+                $this->StockTransactions->Badges,
+                BadgesTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->StockTransactions->Fulfilments,
+            $this->typedAssociation(
+                $this->StockTransactions->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('stockTransaction', 'badges', 'fulfilments'));
     }
 
@@ -75,16 +97,32 @@ class StockTransactionsController extends AppController
     {
         $stockTransaction = $this->StockTransactions->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $stockTransaction = $this->StockTransactions->patchEntity($stockTransaction, $this->request->getData());
-            if ($this->StockTransactions->save($stockTransaction)) {
+            $stockTransaction = $this->StockTransactions->patchEntity($stockTransaction, $this->requestData());
+            if ($this->StockTransactions->save($stockTransaction) !== false) {
                 $this->Flash->success(__('The stock transaction has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The stock transaction could not be saved. Please, try again.'));
         }
-        $badges = $this->StockTransactions->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->StockTransactions->Fulfilments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->StockTransactions->Badges,
+            $this->typedAssociation(
+                $this->StockTransactions->Badges,
+                BadgesTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->StockTransactions->Fulfilments,
+            $this->typedAssociation(
+                $this->StockTransactions->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('stockTransaction', 'badges', 'fulfilments'));
     }
 }

@@ -8,8 +8,9 @@ use Cake\ORM\Table;
 /**
  * Badges Badge Tags Model
  *
- * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsTo $Badges
- * @property \App\Model\Table\BadgeTagsTable&\Cake\ORM\Association\BelongsTo $BadgeTags
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\BadgesTable> $Badges
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\BadgeTagsTable> $BadgeTags
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \Cake\ORM\Entity>
  */
 class BadgesBadgeTagsTable extends Table
 {

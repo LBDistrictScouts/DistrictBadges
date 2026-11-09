@@ -9,6 +9,9 @@ use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\ORM\Query\SelectQuery;
 
+/**
+ * @extends \App\Model\Table\BadgeTagsTable<\App\Model\Entity\BadgeType>
+ */
 class BadgeTypesTable extends BadgeTagsTable
 {
     /**
@@ -23,9 +26,9 @@ class BadgeTypesTable extends BadgeTagsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
-     * @param \Cake\ORM\Query\SelectQuery $query Query.
-     * @param \ArrayObject $options Options.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \Cake\ORM\Query\SelectQuery<\Cake\Datasource\EntityInterface|array<string, mixed>> $query Query.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @param bool $primary Primary query.
      * @return void
      */
@@ -39,9 +42,9 @@ class BadgeTypesTable extends BadgeTagsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
-     * @param \ArrayObject $data Marshalled data.
-     * @param \ArrayObject $options Options.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \ArrayObject<string, mixed> $data Marshalled data.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function beforeMarshal(
@@ -53,9 +56,9 @@ class BadgeTypesTable extends BadgeTagsTable
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function beforeSave(

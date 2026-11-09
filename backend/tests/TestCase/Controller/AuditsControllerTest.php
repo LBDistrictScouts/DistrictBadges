@@ -207,6 +207,47 @@ class AuditsControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame(7, (int)$lines->get($line->id)->audit_actual_quantity);
     }
 
+    public function testCompletingAuditConsolidatesDuplicateBadgeLinesAndSumsActualCounts(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $lines = $this->getTableLocator()->get('AuditLines');
+        $badges = $this->getTableLocator()->get('Badges');
+        $badgeId = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+        $audit = $audits->newEntity([
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'audit_completed' => false,
+        ]);
+        $audits->saveOrFail($audit);
+        $stockBefore = (int)$badges->get($badgeId)->on_hand_quantity;
+
+        foreach ([4, 3] as $actual) {
+            $line = $lines->newEntity([
+                'audit_id' => $audit->id,
+                'badge_id' => $badgeId,
+                'audit_expected_quantity' => 0,
+                'audit_actual_quantity' => $actual,
+                'on_hand_quantity_change' => $actual,
+                'receipted_quantity_change' => 0,
+                'pending_quantity_change' => 0,
+                'fulfilled_quantity_change' => 0,
+            ]);
+            $lines->saveOrFail($line);
+        }
+
+        $this->enableCsrfToken();
+        $this->post('/audits/complete/' . $audit->id);
+
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $audit->id]);
+        $consolidated = $lines->find()
+            ->where(['audit_id' => $audit->id, 'badge_id' => $badgeId])
+            ->all()
+            ->toList();
+        $this->assertCount(1, $consolidated);
+        $this->assertSame(7, (int)$consolidated[0]->audit_actual_quantity);
+        $this->assertSame(7, (int)$consolidated[0]->on_hand_quantity_change);
+        $this->assertSame($stockBefore + 7, (int)$badges->get($badgeId)->on_hand_quantity);
+    }
+
     public function testOpenAuditCanStockAnUnstockedBadge(): void
     {
         $audits = $this->getTableLocator()->get('Audits');

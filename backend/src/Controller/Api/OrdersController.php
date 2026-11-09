@@ -4,11 +4,17 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Exception\OrderValidationException;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\GroupsTable;
+use App\Model\Table\SectionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use App\Service\OrderPlacementService;
-use Cake\Datasource\Exception\PersistenceFailedException;
+use Cake\ORM\Exception\PersistenceFailedException;
 
 class OrdersController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * @return void
      */
@@ -16,21 +22,21 @@ class OrdersController extends AppController
     {
         $this->request->allowMethod(['get']);
 
-        $groups = $this->fetchTable('Groups')
+        $groups = $this->typedTable('Groups', GroupsTable::class)
             ->find()
             ->select(['id', 'group_name', 'sort_order', 'domains', 'type'])
             ->orderBy(['sort_order' => 'ASC', 'group_name' => 'ASC'])
             ->enableHydration(false)
             ->toArray();
 
-        $sections = $this->fetchTable('Sections')
+        $sections = $this->typedTable('Sections', SectionsTable::class)
             ->find()
             ->select(['id', 'group_id', 'section_name', 'section_type'])
             ->orderBy(['section_name' => 'ASC'])
             ->enableHydration(false)
             ->toArray();
 
-        $badges = $this->fetchTable('Badges')
+        $badges = $this->typedTable('Badges', BadgesTable::class)
             ->find()
             ->select(['id', 'badge_name', 'national_product_code', 'stocked'])
             ->orderBy(['badge_name' => 'ASC'])
@@ -55,7 +61,7 @@ class OrdersController extends AppController
         $service = new OrderPlacementService();
         $service->setTableLocator($this->getTableLocator());
         try {
-            $order = $service->place((array)$this->request->getData());
+            $order = $service->place((array)$this->requestData());
         } catch (OrderValidationException $exception) {
             $this->setResponse($this->response->withStatus(422));
             $this->set(['errors' => $exception->getErrors()]);

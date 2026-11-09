@@ -8,6 +8,13 @@ use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 
+/**
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\InvoicesTable> $Invoices
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\OrdersTable> $Orders
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\FulfilmentsTable> $Fulfilments
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\InvoiceLinesTable> $InvoiceLines
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\InvoiceSummary>
+ */
 class InvoiceSummariesTable extends Table
 {
     /**
@@ -42,8 +49,8 @@ class InvoiceSummariesTable extends Table
     /**
      * Order summaries by their displayed order and fulfilment numbers.
      *
-     * @param \Cake\ORM\Query\SelectQuery $query Query.
-     * @return \Cake\ORM\Query\SelectQuery
+     * @param \Cake\ORM\Query\SelectQuery<\App\Model\Entity\InvoiceSummary> $query Query.
+     * @return \Cake\ORM\Query\SelectQuery<\App\Model\Entity\InvoiceSummary>
      */
     public function findOrdered(SelectQuery $query): SelectQuery
     {

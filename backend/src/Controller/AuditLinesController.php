@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\AuditsTable;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\FulfilmentsTable;
+use App\Model\Table\ReplenishmentsTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use Cake\Http\Exception\MethodNotAllowedException;
 
 /**
@@ -12,6 +17,8 @@ use Cake\Http\Exception\MethodNotAllowedException;
  */
 class AuditLinesController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -52,18 +59,44 @@ class AuditLinesController extends AppController
             if ($audit->audit_completed) {
                 throw new MethodNotAllowedException('Completed audits cannot be edited.');
             }
-            $auditLine = $this->AuditLines->patchEntity($auditLine, $this->request->getData());
-            if ($this->AuditLines->save($auditLine)) {
+            $auditLine = $this->AuditLines->patchEntity($auditLine, $this->requestData());
+            if ($this->AuditLines->save($auditLine) !== false) {
                 $this->Flash->success(__('The audit line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The audit line could not be saved. Please, try again.'));
         }
-        $badges = $this->AuditLines->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->AuditLines->Fulfilments->find('list', limit: 200)->all();
-        $audits = $this->AuditLines->Audits->find('list', limit: 200)->all();
-        $replenishments = $this->AuditLines->Replenishments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->AuditLines->Badges,
+            $this->typedAssociation($this->AuditLines->Badges, BadgesTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->AuditLines->Fulfilments,
+            $this->typedAssociation(
+                $this->AuditLines->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $audits = $this->associatedQuery(
+            $this->AuditLines->Audits,
+            $this->typedAssociation($this->AuditLines->Audits, AuditsTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $replenishments = $this->associatedQuery(
+            $this->AuditLines->Replenishments,
+            $this->typedAssociation(
+                $this->AuditLines->Replenishments,
+                ReplenishmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('auditLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
     }
 
@@ -82,18 +115,44 @@ class AuditLinesController extends AppController
             throw new MethodNotAllowedException('Completed audits cannot be edited.');
         }
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $auditLine = $this->AuditLines->patchEntity($auditLine, $this->request->getData());
-            if ($this->AuditLines->save($auditLine)) {
+            $auditLine = $this->AuditLines->patchEntity($auditLine, $this->requestData());
+            if ($this->AuditLines->save($auditLine) !== false) {
                 $this->Flash->success(__('The audit line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The audit line could not be saved. Please, try again.'));
         }
-        $badges = $this->AuditLines->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->AuditLines->Fulfilments->find('list', limit: 200)->all();
-        $audits = $this->AuditLines->Audits->find('list', limit: 200)->all();
-        $replenishments = $this->AuditLines->Replenishments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->AuditLines->Badges,
+            $this->typedAssociation($this->AuditLines->Badges, BadgesTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->AuditLines->Fulfilments,
+            $this->typedAssociation(
+                $this->AuditLines->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $audits = $this->associatedQuery(
+            $this->AuditLines->Audits,
+            $this->typedAssociation($this->AuditLines->Audits, AuditsTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $replenishments = $this->associatedQuery(
+            $this->AuditLines->Replenishments,
+            $this->typedAssociation(
+                $this->AuditLines->Replenishments,
+                ReplenishmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('auditLine', 'badges', 'fulfilments', 'audits', 'replenishments'));
     }
 
@@ -112,7 +171,7 @@ class AuditLinesController extends AppController
         if ($audit->audit_completed) {
             throw new MethodNotAllowedException('Completed audits cannot be edited.');
         }
-        if ($this->AuditLines->delete($auditLine)) {
+        if ($this->AuditLines->delete($auditLine) !== false) {
             $this->Flash->success(__('The audit line has been deleted.'));
         } else {
             $this->Flash->error(__('The audit line could not be deleted. Please, try again.'));

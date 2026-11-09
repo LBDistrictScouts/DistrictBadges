@@ -6,14 +6,21 @@ namespace App\Event;
 use App\Model\Entity\OrderLine;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\TransactionType;
+use App\Model\Table\OrderLinesTable;
+use App\Model\Table\StockTransactionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Utility\Value;
 use Cake\Datasource\ModelAwareTrait;
 use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
+use Cake\ORM\Locator\LocatorAwareTrait;
 use UnexpectedValueException;
 
 class OrderLineFulfilmentListener implements EventListenerInterface
 {
+    use TypedTableLocatorTrait;
     use ModelAwareTrait;
+    use LocatorAwareTrait;
 
     /**
      * @inheritDoc
@@ -26,7 +33,7 @@ class OrderLineFulfilmentListener implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<object> $event Event.
      * @return void
      */
     public function orderLineFulfilled(EventInterface $event): void
@@ -40,7 +47,7 @@ class OrderLineFulfilmentListener implements EventListenerInterface
             ));
         }
 
-        $stockTransactions = $this->fetchModel('StockTransactions');
+        $stockTransactions = $this->typedTable('StockTransactions', StockTransactionsTable::class);
         $result = $stockTransactions->find()
             ->select([
                 'fulfilled_quantity' => $stockTransactions->find()
@@ -59,11 +66,11 @@ class OrderLineFulfilmentListener implements EventListenerInterface
 
         $fulfilledQuantity = min(
             (int)$orderLine->quantity,
-            max(0, (int)($result['fulfilled_quantity'] ?? 0)),
+            max(0, Value::int($result['fulfilled_quantity'] ?? 0)),
         );
         $fulfilled = (int)$orderLine->quantity > 0
             && $fulfilledQuantity >= (int)$orderLine->quantity;
-        $orderLines = $this->fetchModel('OrderLines');
+        $orderLines = $this->typedTable('OrderLines', OrderLinesTable::class);
         $orderLines->updateAll([
             'fulfilled_quantity' => $fulfilledQuantity,
             'fulfilled' => $fulfilled,

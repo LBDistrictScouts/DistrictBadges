@@ -58,7 +58,7 @@ class ConsumeOrderQueueCommand extends Command
                     'message' => $exception->getMessage(),
                     'scope' => ['orders'],
                 ]);
-                if ($args->getOption('once')) {
+                if ($args->getOption('once') === true) {
                     return self::CODE_ERROR;
                 }
 
@@ -70,7 +70,7 @@ class ConsumeOrderQueueCommand extends Command
             if ($count > 0) {
                 $io->verbose(sprintf('Processed %d order message(s).', $count));
             }
-        } while (!$args->getOption('once'));
+        } while ($args->getOption('once') !== true);
 
         return self::CODE_SUCCESS;
     }

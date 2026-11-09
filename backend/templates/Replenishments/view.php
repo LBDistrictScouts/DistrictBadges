@@ -3,10 +3,13 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Replenishment $replenishment
  */
+use App\Model\Enum\ReplenishmentStatus;
+use App\Model\Enum\TransactionType;
+
 $closeoutLines = array_filter(
     $replenishment->stock_transactions ?? [],
     static fn($line): bool => $line->transaction_type
-        === \App\Model\Enum\TransactionType::ReplenishmentCloseout,
+        === TransactionType::ReplenishmentCloseout,
 );
 ?>
 <div class="row">
@@ -18,33 +21,39 @@ $closeoutLines = array_filter(
                 ['action' => 'edit', $replenishment->id],
                 ['class' => 'side-nav-item'],
             ) ?>
-            <?php if (!in_array(
+            <?php if (
+            !in_array(
                 $replenishment->status,
                 [
-                    \App\Model\Enum\ReplenishmentStatus::Received,
-                    \App\Model\Enum\ReplenishmentStatus::Cancelled,
+                    ReplenishmentStatus::Received,
+                    ReplenishmentStatus::Cancelled,
                 ],
                 true,
-            )) : ?>
+            )
+) : ?>
             <?= $this->Html->link(
                 __('Receive Replenishment'),
                 ['action' => 'receive', $replenishment->id],
                 ['class' => 'side-nav-item'],
             ) ?>
             <?php endif; ?>
-            <?php if ($replenishment->status === \App\Model\Enum\ReplenishmentStatus::PartiallyReceived) : ?>
-            <?= $this->Form->postLink(
-                __('Accept Incomplete Receipt'),
-                ['action' => 'acceptIncomplete', $replenishment->id],
-                [
+            <?php if ($replenishment->status === ReplenishmentStatus::PartiallyReceived) : ?>
+                <?= $this->Form->postLink(
+                    __('Accept Incomplete Receipt'),
+                    ['action' => 'acceptIncomplete', $replenishment->id],
+                    [
                     'confirm' => __(
-                        'Accept this partial receipt and close the order? Remaining quantities will be removed from pending stock.',
+                        'Accept this partial receipt and close the order? '
+                        . 'Remaining quantities will be removed from pending stock.',
                     ),
                     'class' => 'side-nav-item',
-                ],
-            ) ?>
+                    ],
+                ) ?>
             <?php endif; ?>
-            <?php if (!$replenishment->received) : ?>
+            <?php if (
+                !$replenishment->received
+                && $replenishment->status !== ReplenishmentStatus::Cancelled
+) : ?>
                 <?= $this->Form->postLink(
                     __('Delete Replenishment'),
                     ['action' => 'delete', $replenishment->id],

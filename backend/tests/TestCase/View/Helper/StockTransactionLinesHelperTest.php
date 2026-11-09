@@ -6,7 +6,9 @@ namespace App\Test\TestCase\View\Helper;
 use App\Model\Entity\Fulfilment;
 use App\Model\Entity\FulfilmentLine;
 use App\View\AppView;
+use Cake\ORM\Entity;
 use Cake\TestSuite\TestCase;
+use InvalidArgumentException;
 
 class StockTransactionLinesHelperTest extends TestCase
 {
@@ -160,5 +162,81 @@ class StockTransactionLinesHelperTest extends TestCase
             '<select name="line_badge_id"',
             $html,
         );
+    }
+
+    public function testGridPreservesInvalidScalarInputAndEscapesValidationFeedback(): void
+    {
+        $view = new AppView();
+        $view->initialize();
+        $entity = new Fulfilment([
+            'fulfilment_lines' => [new Entity([
+                'badge_id' => 'badge-id',
+                'quantity' => '<invalid>',
+            ])],
+        ]);
+        $entity->setError('fulfilment_lines', ['quantity' => ['Enter a quantity < 10.']]);
+
+        $html = $view->StockTransactionLines->grid($entity, ['badge-id' => '<Badge>'], [
+            'inputKey' => 'fulfilment_lines',
+            'legend' => '<Lines>',
+            'rowUrl' => '/fulfilments/line-row',
+            'fields' => ['quantity' => ['label' => 'Quantity', 'editable' => true]],
+        ]);
+
+        $this->assertStringContainsString('value="&lt;invalid&gt;"', $html);
+        $this->assertStringContainsString('&lt;Badge&gt;', $html);
+        $this->assertStringContainsString('&lt;Lines&gt;', $html);
+        $this->assertStringContainsString('Enter a quantity &lt; 10.', $html);
+        $this->assertStringNotContainsString('<invalid>', $html);
+    }
+
+    public function testGridRejectsNonIterableLines(): void
+    {
+        $view = new AppView();
+        $view->initialize();
+        $entity = new Fulfilment(['fulfilment_lines' => 'invalid']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Stock transaction lines must be iterable.');
+        $view->StockTransactionLines->grid($entity, [], [
+            'inputKey' => 'fulfilment_lines',
+            'legend' => 'Lines',
+            'rowUrl' => '/fulfilments/line-row',
+            'fields' => [],
+        ]);
+    }
+
+    public function testGridRejectsNonEntityLines(): void
+    {
+        $view = new AppView();
+        $view->initialize();
+        $entity = new Fulfilment(['fulfilment_lines' => [['quantity' => 1]]]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Stock transaction lines must be indexed entities.');
+        $view->StockTransactionLines->grid($entity, [], [
+            'inputKey' => 'fulfilment_lines',
+            'legend' => 'Lines',
+            'rowUrl' => '/fulfilments/line-row',
+            'fields' => [],
+        ]);
+    }
+
+    public function testGridRejectsStructuredFieldValues(): void
+    {
+        $view = new AppView();
+        $view->initialize();
+        $entity = new Fulfilment([
+            'fulfilment_lines' => [new Entity(['quantity' => ['invalid']])],
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Stock transaction values must be numbers, strings or null.');
+        $view->StockTransactionLines->grid($entity, [], [
+            'inputKey' => 'fulfilment_lines',
+            'legend' => 'Lines',
+            'rowUrl' => '/fulfilments/line-row',
+            'fields' => ['quantity' => ['label' => 'Quantity']],
+        ]);
     }
 }

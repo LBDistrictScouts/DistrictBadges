@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Queue\Processor\OrderProcessor;
+use App\Utility\Value;
 use Aws\Sqs\SqsClient;
 use Cake\Core\Configure;
 use RuntimeException;
@@ -18,8 +19,8 @@ class OrderQueueService
      */
     public function __construct(?SqsClient $client = null)
     {
-        $config = (array)Configure::read('Sqs');
-        $queueUrl = (string)($config['queueUrl'] ?? '');
+        $config = Value::map(Configure::read('Sqs'));
+        $queueUrl = Value::string($config['queueUrl'] ?? '');
 
         if ($queueUrl === '') {
             throw new RuntimeException('SQS queue URL is not configured.');
@@ -51,7 +52,7 @@ class OrderQueueService
             'MessageBody' => json_encode($payload, JSON_THROW_ON_ERROR),
         ]);
 
-        return (string)$result->get('MessageId');
+        return Value::string($result->get('MessageId'));
     }
 
     /**
@@ -66,25 +67,26 @@ class OrderQueueService
             'QueueUrl' => $this->queueUrl,
             'MaxNumberOfMessages' => 10,
             'WaitTimeSeconds' => max(0, min(20, $waitTimeSeconds)),
-            'AttributeNames' => ['ApproximateReceiveCount'],
+            'MessageSystemAttributeNames' => ['ApproximateReceiveCount'],
         ]);
-        $messages = $result->get('Messages') ?? [];
+        $messages = Value::maps($result->get('Messages') ?? []);
         foreach ($messages as $message) {
+            $receiptHandle = Value::string($message['ReceiptHandle'] ?? '');
             if ($heartbeat !== null) {
                 $heartbeat();
             }
 
             try {
-                $outcome = $processor->process((string)($message['Body'] ?? ''));
+                $outcome = $processor->process(Value::string($message['Body'] ?? ''));
             } finally {
                 if ($heartbeat !== null) {
                     $heartbeat();
                 }
             }
-            if ($outcome === OrderProcessor::ACK && !empty($message['ReceiptHandle'])) {
+            if ($outcome === OrderProcessor::ACK && $receiptHandle !== '') {
                 $this->client->deleteMessage([
                     'QueueUrl' => $this->queueUrl,
-                    'ReceiptHandle' => (string)$message['ReceiptHandle'],
+                    'ReceiptHandle' => $receiptHandle,
                 ]);
             }
         }
@@ -100,7 +102,7 @@ class OrderQueueService
     {
         $clientConfig = [
             'version' => '2012-11-05',
-            'region' => (string)($config['region'] ?? 'us-east-1'),
+            'region' => Value::string($config['region'] ?? 'us-east-1'),
         ];
 
         $profile = $config['profile'] ?? null;

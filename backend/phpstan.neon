@@ -1,7 +1,13 @@
+includes:
+	- vendor/phpstan/phpstan-strict-rules/rules.neon
+
 parameters:
-	level: 8
+	level: 10
 	treatPhpDocTypesAsCertain: false
 	bootstrapFiles:
 		- config/bootstrap.php
+	tmpDir: tmp/phpstan
+	stubFiles:
+		- phpstan/stubs/cakephp-functions.stub
 	paths:
 		- src/

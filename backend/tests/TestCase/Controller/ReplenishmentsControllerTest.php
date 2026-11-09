@@ -168,7 +168,13 @@ class ReplenishmentsControllerTest extends AuthenticatedControllerTestCase
             'replenishment_order_lines' => [
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
-                    'quantity' => 5,
+                    'quantity' => 3,
+                    'unit_price' => '2.50',
+                    'monetary_amount' => '999.99',
+                ],
+                [
+                    'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                    'quantity' => 2,
                     'unit_price' => '2.50',
                     'monetary_amount' => '999.99',
                 ],
@@ -199,6 +205,9 @@ class ReplenishmentsControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame(5, $line->pending_quantity_change);
         $this->assertSame(12.5, (float)$line->monetary_amount);
         $this->assertSame(2.5, (float)$line->unit_price);
+        $this->assertSame(1, $replenishments->ReplenishmentOrderLines->find()
+            ->where(['replenishment_id' => $saved->id])
+            ->count());
     }
 
     public function testEditOnlyChangesWholesalerOrderNumberWhenUnreceived(): void
@@ -427,6 +436,47 @@ class ReplenishmentsControllerTest extends AuthenticatedControllerTestCase
             2 * (float)$orderLine->unit_price,
             (float)$receiptLine->monetary_amount,
         );
+    }
+
+    public function testReceiveShowsOneRowAndRecordsOneLineForDuplicateBadgeOrderLines(): void
+    {
+        $replenishments = $this->getTableLocator()->get('Replenishments');
+        $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+        $this->makeReplenishmentReceivable($id);
+        $orderLines = $replenishments->ReplenishmentOrderLines->getTarget();
+        $original = $orderLines->find()->where(['replenishment_id' => $id])->firstOrFail();
+        $duplicate = $orderLines->newEntity([
+            'badge_id' => $original->badge_id,
+            'replenishment_id' => $id,
+            'on_hand_quantity_change' => 0,
+            'receipted_quantity_change' => 0,
+            'pending_quantity_change' => 3,
+            'fulfilled_quantity_change' => 0,
+            'unit_price' => '3.00',
+            'monetary_amount' => '9.00',
+        ]);
+        $orderLines->saveOrFail($duplicate);
+        $this->get("/replenishments/receive/{$id}");
+
+        $this->assertResponseOk();
+        $this->assertSame(1, substr_count((string)$this->_response->getBody(), "receipt_lines[{$original->badge_id}][quantity]"));
+        $this->assertStringNotContainsString("receipt_lines[{$original->id}][quantity]", (string)$this->_response->getBody());
+        $receipts = $replenishments->ReplenishmentReceiptLines->getTarget();
+        $before = $receipts->find()->where(['replenishment_id' => $id])->count();
+        $this->enableCsrfToken();
+        $this->post("/replenishments/receive/{$id}", [
+            'receipt_lines' => [
+                $original->badge_id => ['quantity' => 4],
+            ],
+        ]);
+
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
+        $this->assertSame($before + 1, $receipts->find()->where(['replenishment_id' => $id])->count());
+        $receipt = $receipts->find()
+            ->where(['replenishment_id' => $id, 'receipted_quantity_change' => 4])
+            ->firstOrFail();
+        $this->assertSame(4, $receipt->on_hand_quantity_change);
+        $this->assertSame(-4, $receipt->pending_quantity_change);
     }
 
     public function testReceiveUpdatesReplenishmentToPartiallyReceived(): void
@@ -690,6 +740,129 @@ class ReplenishmentsControllerTest extends AuthenticatedControllerTestCase
         $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'index']);
         $this->assertFlashMessage('Received replenishments cannot be deleted.');
         $this->assertTrue($this->getTableLocator()->get('Replenishments')->exists(['id' => $id]));
+    }
+
+    public function testDeleteCancelsReplenishmentWithLedgerTransactionsAndClosesPendingStock(): void
+    {
+        $replenishments = $this->getTableLocator()->get('Replenishments');
+        $replenishment = $replenishments->newEntity([
+            'replenishment_number' => 'REP-LEDGER',
+        ]);
+        $replenishments->saveOrFail($replenishment);
+
+        $orderLines = $replenishments->ReplenishmentOrderLines->getTarget();
+        $orderLine = $orderLines->newEntity([
+            'replenishment_id' => $replenishment->id,
+            'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+            'on_hand_quantity_change' => 0,
+            'receipted_quantity_change' => 0,
+            'pending_quantity_change' => 3,
+            'fulfilled_quantity_change' => 0,
+            'monetary_amount' => 4.5,
+            'unit_price' => 1.5,
+        ]);
+        $orderLines->saveOrFail($orderLine);
+        $replenishments->updateAll(
+            ['status' => ReplenishmentStatus::Submitted->value],
+            ['id' => $replenishment->id],
+        );
+
+        $this->enableCsrfToken();
+        $this->post("/replenishments/delete/{$replenishment->id}");
+
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'index']);
+        $this->assertFlashMessage(
+            'This replenishment has stock transactions, so it was cancelled and its pending stock was released.',
+        );
+        $savedReplenishment = $replenishments->get($replenishment->id);
+        $this->assertSame(ReplenishmentStatus::Cancelled, $savedReplenishment->status);
+        $this->assertFalse($savedReplenishment->received);
+        $this->assertTrue($orderLines->exists(['id' => $orderLine->id]));
+
+        $this->get("/replenishments/view/{$replenishment->id}");
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('Delete Replenishment');
+
+        $transactions = $this->getTableLocator()->get('StockTransactions');
+        $this->assertSame(2, $transactions->find()
+            ->where(['replenishment_id' => $replenishment->id])
+            ->count());
+        $closeout = $transactions->find()
+            ->where([
+                'replenishment_id' => $replenishment->id,
+                'transaction_type' => TransactionType::ReplenishmentCloseout,
+            ])
+            ->firstOrFail();
+        $this->assertSame(-3, $closeout->pending_quantity_change);
+        $this->assertSame(0, (int)$transactions->find()
+            ->where(['replenishment_id' => $replenishment->id])
+            ->select(['pending' => $transactions->find()->func()->sum('pending_quantity_change')])
+            ->enableHydration(false)
+            ->first()['pending']);
+
+        $this->enableCsrfToken();
+        $this->post("/replenishments/delete/{$replenishment->id}");
+        $this->assertFlashMessage('This replenishment has already been cancelled.');
+        $this->assertSame(2, $transactions->find()
+            ->where(['replenishment_id' => $replenishment->id])
+            ->count());
+    }
+
+    public function testDeleteKeepsDraftReplenishmentTransactionsThatAffectStock(): void
+    {
+        $badgeId = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+        $badges = $this->getTableLocator()->get('Badges');
+        $transactions = $this->getTableLocator()->get('StockTransactions');
+        $pendingBefore = (int)$transactions->find()
+            ->where(['badge_id' => $badgeId])
+            ->select(['pending' => $transactions->find()->func()->sum('pending_quantity_change')])
+            ->enableHydration(false)
+            ->first()['pending'];
+        $replenishments = $this->getTableLocator()->get('Replenishments');
+        $replenishment = $replenishments->newEntity([
+            'replenishment_number' => 'REP-DRAFT-LEDGER',
+        ]);
+        $replenishments->saveOrFail($replenishment);
+
+        $orderLines = $replenishments->ReplenishmentOrderLines->getTarget();
+        $orderLine = $orderLines->newEntity([
+            'replenishment_id' => $replenishment->id,
+            'badge_id' => $badgeId,
+            'on_hand_quantity_change' => 0,
+            'receipted_quantity_change' => 0,
+            'pending_quantity_change' => 3,
+            'fulfilled_quantity_change' => 0,
+            'monetary_amount' => 4.5,
+            'unit_price' => 1.5,
+        ]);
+        $orderLines->saveOrFail($orderLine);
+        $this->assertSame(TransactionType::ReplenishmentOrder, $orderLine->transaction_type);
+        $replenishments->updateAll(
+            ['status' => ReplenishmentStatus::Draft->value],
+            ['id' => $replenishment->id],
+        );
+
+        $this->enableCsrfToken();
+        $this->post("/replenishments/delete/{$replenishment->id}");
+
+        $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'index']);
+        $this->assertFlashMessage(
+            'This replenishment has stock transactions, so it was cancelled and its pending stock was released.',
+        );
+        $this->assertSame(ReplenishmentStatus::Cancelled, $replenishments->get($replenishment->id)->status);
+        $this->assertTrue($orderLines->exists(['id' => $orderLine->id]));
+
+        $this->assertSame(2, $transactions->find()
+            ->where(['replenishment_id' => $replenishment->id])
+            ->count());
+        $closeout = $transactions->find()
+            ->where([
+                'replenishment_id' => $replenishment->id,
+                'transaction_type' => TransactionType::ReplenishmentCloseout,
+            ])
+            ->firstOrFail();
+        $this->assertSame(-3, $closeout->pending_quantity_change);
+        $this->assertSame($pendingBefore, (int)$badges->get($badgeId)->pending_quantity);
     }
 
     private function makeReplenishmentReceivable(string $id): void

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Utility\Value;
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Http\Client;
@@ -26,7 +27,7 @@ class CognitoService
      */
     public function __construct(?Client $http = null)
     {
-        $this->config = (array)Configure::read('Cognito');
+        $this->config = Value::map(Configure::read('Cognito'));
         $this->http = $http ?? new Client(['timeout' => 8]);
     }
 
@@ -45,16 +46,16 @@ class CognitoService
             'requiredGroup',
             ] as $key
         ) {
-            if (trim((string)($this->config[$key] ?? '')) === '') {
+            if (trim(Value::string($this->config[$key] ?? '')) === '') {
                 return false;
             }
         }
 
-        $domain = parse_url((string)$this->config['hostedUiDomain']);
+        $domain = parse_url(Value::string($this->config['hostedUiDomain']));
 
         return is_array($domain)
             && ($domain['scheme'] ?? null) === 'https'
-            && !empty($domain['host']);
+            && is_string($domain['host'] ?? null) && $domain['host'] !== '';
     }
 
     /**
@@ -62,12 +63,12 @@ class CognitoService
      */
     public function redirectUri(): string
     {
-        $redirectUri = trim((string)($this->config['redirectUri'] ?? ''));
+        $redirectUri = trim(Value::string($this->config['redirectUri'] ?? ''));
         if ($redirectUri !== '') {
             return $redirectUri;
         }
 
-        return rtrim((string)Configure::read('App.fullBaseUrl'), '/') . '/auth/callback';
+        return rtrim(Value::string(Configure::read('App.fullBaseUrl')), '/') . '/auth/callback';
     }
 
     /**
@@ -76,7 +77,7 @@ class CognitoService
     public function authorizationUrl(string $state, string $nonce, string $codeChallenge): string
     {
         $query = http_build_query([
-            'client_id' => (string)$this->config['clientId'],
+            'client_id' => Value::string($this->config['clientId']),
             'response_type' => 'code',
             'scope' => 'openid email',
             'redirect_uri' => $this->redirectUri(),
@@ -86,7 +87,7 @@ class CognitoService
             'code_challenge_method' => 'S256',
         ], '', '&', PHP_QUERY_RFC3986);
 
-        return rtrim((string)$this->config['hostedUiDomain'], '/') . '/oauth2/authorize?' . $query;
+        return rtrim(Value::string($this->config['hostedUiDomain']), '/') . '/oauth2/authorize?' . $query;
     }
 
     /**
@@ -96,10 +97,10 @@ class CognitoService
      */
     public function exchangeAndValidate(string $code, string $codeVerifier, string $expectedNonce): array
     {
-        $clientId = (string)$this->config['clientId'];
-        $clientSecret = (string)$this->config['clientSecret'];
+        $clientId = Value::string($this->config['clientId']);
+        $clientSecret = Value::string($this->config['clientSecret']);
         $response = $this->http->post(
-            rtrim((string)$this->config['hostedUiDomain'], '/') . '/oauth2/token',
+            rtrim(Value::string($this->config['hostedUiDomain']), '/') . '/oauth2/token',
             [
                 'grant_type' => 'authorization_code',
                 'client_id' => $clientId,
@@ -142,9 +143,9 @@ class CognitoService
      */
     public function refreshIdToken(string $refreshToken): array
     {
-        $clientId = (string)$this->config['clientId'];
+        $clientId = Value::string($this->config['clientId']);
         $response = $this->http->post(
-            rtrim((string)$this->config['hostedUiDomain'], '/') . '/oauth2/token',
+            rtrim(Value::string($this->config['hostedUiDomain']), '/') . '/oauth2/token',
             [
                 'grant_type' => 'refresh_token',
                 'client_id' => $clientId,
@@ -153,7 +154,7 @@ class CognitoService
             [
                 'headers' => [
                     'Authorization' => 'Basic ' . base64_encode(
-                        $clientId . ':' . (string)$this->config['clientSecret'],
+                        $clientId . ':' . Value::string($this->config['clientSecret']),
                     ),
                 ],
             ],
@@ -194,7 +195,7 @@ class CognitoService
             throw new RuntimeException('Invalid Cognito ID token.', previous: $exception);
         }
 
-        if (!is_array($header) || !is_array($claims) || ($header['alg'] ?? null) !== 'RS256') {
+        if (!is_array($header) || !Value::isMap($claims) || ($header['alg'] ?? null) !== 'RS256') {
             throw new RuntimeException('Invalid Cognito ID token.');
         }
 
@@ -223,10 +224,10 @@ class CognitoService
         if (($claims['token_use'] ?? null) !== 'id') {
             throw new RuntimeException('Cognito ID token use was not id.');
         }
-        if ($audience !== (string)$this->config['clientId']) {
+        if ($audience !== Value::string($this->config['clientId'])) {
             throw new RuntimeException('Cognito ID token audience did not match this app client.');
         }
-        if (isset($claims['azp']) && $claims['azp'] !== (string)$this->config['clientId']) {
+        if (isset($claims['azp']) && $claims['azp'] !== Value::string($this->config['clientId'])) {
             throw new RuntimeException('Cognito ID token authorized party did not match this app client.');
         }
         if (!is_int($claims['exp'] ?? null) || $claims['exp'] <= $now) {
@@ -247,7 +248,7 @@ class CognitoService
         $groups = $claims['cognito:groups'] ?? [];
         if (
             !is_array($groups)
-            || !in_array((string)$this->config['requiredGroup'], $groups, true)
+            || !in_array(Value::string($this->config['requiredGroup']), $groups, true)
         ) {
             throw new RuntimeException('Cognito ID token does not contain the required group.');
         }
@@ -279,7 +280,7 @@ class CognitoService
     private function publicKeyFor(string $keyId): string
     {
         $keys = Cache::read($this->issuer(), 'cognito_jwks');
-        if (!is_array($keys)) {
+        if (!Value::isMap($keys)) {
             $keys = $this->downloadKeys();
         }
 
@@ -302,7 +303,7 @@ class CognitoService
     {
         $response = $this->http->get($this->issuer() . '/.well-known/jwks.json');
         $result = $response->getJson();
-        if (!$response->isOk() || !is_array($result) || !is_array($result['keys'] ?? null)) {
+        if (!$response->isOk() || !Value::isMap($result) || !is_array($result['keys'] ?? null)) {
             throw new RuntimeException('Could not load Cognito signing keys.');
         }
 
@@ -317,7 +318,7 @@ class CognitoService
      */
     private function findKey(array $keys, string $keyId): ?array
     {
-        foreach ($keys['keys'] ?? [] as $key) {
+        foreach (Value::maps($keys['keys'] ?? []) as $key) {
             if (
                 is_array($key)
                 && ($key['kid'] ?? null) === $keyId
@@ -357,8 +358,8 @@ class CognitoService
     /** Return this User Pool's canonical OIDC issuer URL. */
     private function issuer(): string
     {
-        return 'https://cognito-idp.' . (string)$this->config['region']
-            . '.amazonaws.com/' . (string)$this->config['userPoolId'];
+        return 'https://cognito-idp.' . Value::string($this->config['region'])
+            . '.amazonaws.com/' . Value::string($this->config['userPoolId']);
     }
 
     /** Decode an unpadded Base64URL value. */
