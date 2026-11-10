@@ -21,7 +21,7 @@ use LogicException;
  * @property \App\Model\Table\ReplenishmentsTable $Replenishments
  * @property \App\Controller\Component\StockTransactionLinesComponent $StockTransactionLines
  * @phpstan-type ReceiptRow array{
- *   badge_id: string, badge_name: string, expected_quantity: int, unit_price: string,
+ *   badge_id: string, badge_name: string, expected_quantity: int, unit_price: string, remaining_amount_cents: int,
  *   order_line_ids: list<string>, expected_by_order_line: array<string, int>
  * }
  * @phpstan-import-type LineConfig from \App\Controller\Component\StockTransactionLinesComponent
@@ -380,45 +380,7 @@ class ReplenishmentsController extends AppController
                 return false;
             }
 
-            $query = $stockTransactions->find();
-            $remainingByBadge = $query
-                ->select([
-                    'badge_id',
-                    'unit_price',
-                    'remaining_quantity' => $query->func()->sum('pending_quantity_change'),
-                ])
-                ->where([
-                    'replenishment_id' => $replenishment->id,
-                    'transaction_type IN' => [
-                        TransactionType::ReplenishmentOrder->value,
-                        TransactionType::ReplenishmentReceipt->value,
-                    ],
-                ])
-                ->groupBy(['badge_id', 'unit_price'])
-                ->enableHydration(false)
-                ->all();
-
-            foreach ($remainingByBadge as $row) {
-                $remaining = max(0, Value::int($row['remaining_quantity']));
-                if ($remaining === 0) {
-                    continue;
-                }
-
-                $closeout = $stockTransactions->newEntity([
-                    'badge_id' => Value::string($row['badge_id']),
-                    'replenishment_id' => (string)$replenishment->id,
-                    'on_hand_quantity_change' => 0,
-                    'receipted_quantity_change' => 0,
-                    'pending_quantity_change' => -$remaining,
-                    'fulfilled_quantity_change' => 0,
-                    'unit_price' => $row['unit_price'],
-                    'monetary_amount' => $row['unit_price'] === null
-                        ? null
-                        : number_format($remaining * Value::float($row['unit_price']), 2, '.', ''),
-                    'transaction_type' => TransactionType::ReplenishmentCloseout->value,
-                ]);
-                $stockTransactions->saveOrFail($closeout);
-            }
+            $this->closePendingReplenishmentStock($stockTransactions, (string)$replenishment->id);
 
             $replenishment->patch([
                 'status' => ReplenishmentStatus::Received,
@@ -518,7 +480,7 @@ class ReplenishmentsController extends AppController
         $remainingByBadge = $query
             ->select([
                 'badge_id',
-                'unit_price',
+                'remaining_value' => $query->func()->sum('pending_quantity_change * unit_price'),
                 'remaining_quantity' => $query->func()->sum('pending_quantity_change'),
             ])
             ->where([
@@ -529,7 +491,7 @@ class ReplenishmentsController extends AppController
                     TransactionType::ReplenishmentCloseout->value,
                 ],
             ])
-            ->groupBy(['badge_id', 'unit_price'])
+            ->groupBy(['badge_id'])
             ->disableHydration()
             ->all();
 
@@ -546,10 +508,12 @@ class ReplenishmentsController extends AppController
                 'receipted_quantity_change' => 0,
                 'pending_quantity_change' => -$remaining,
                 'fulfilled_quantity_change' => 0,
-                'unit_price' => $row['unit_price'],
-                'monetary_amount' => $row['unit_price'] === null
+                'unit_price' => $row['remaining_value'] === null
                     ? null
-                    : number_format($remaining * Value::float($row['unit_price']), 2, '.', ''),
+                    : number_format(Value::float($row['remaining_value']) / $remaining, 2, '.', ''),
+                'monetary_amount' => $row['remaining_value'] === null
+                    ? null
+                    : number_format(Value::float($row['remaining_value']), 2, '.', ''),
                 'transaction_type' => TransactionType::ReplenishmentCloseout->value,
             ]);
             $stockTransactions->saveOrFail($closeout);
@@ -629,10 +593,13 @@ class ReplenishmentsController extends AppController
     private function receiptRows(Replenishment $replenishment): array
     {
         $receivedByBadge = [];
+        $receivedAmountsByBadge = [];
         foreach ($replenishment->replenishment_receipt_lines as $receiptLine) {
             $badgeId = (string)$receiptLine->badge_id;
             $receivedByBadge[$badgeId] = ($receivedByBadge[$badgeId] ?? 0)
                 + (int)$receiptLine->receipted_quantity_change;
+            $receivedAmountsByBadge[$badgeId] = ($receivedAmountsByBadge[$badgeId] ?? 0)
+                + (int)round((float)$receiptLine->monetary_amount * 100);
         }
 
         $rows = [];
@@ -646,16 +613,12 @@ class ReplenishmentsController extends AppController
                 'badge_id' => $badgeId,
                 'badge_name' => (string)$orderLine->badge->badge_name,
                 'expected_quantity' => 0,
-                'amount_cents' => 0,
                 'ordered_quantity' => 0,
                 'ordered_amount_cents' => 0,
                 'order_line_ids' => [],
                 'expected_by_order_line' => [],
             ];
             $rows[$badgeId]['expected_quantity'] += $remaining;
-            $rows[$badgeId]['amount_cents'] += (int)round(
-                $remaining * (float)$orderLine->unit_price * 100,
-            );
             $rows[$badgeId]['ordered_quantity'] += $ordered;
             $rows[$badgeId]['ordered_amount_cents'] += (int)round(
                 $ordered * (float)$orderLine->unit_price * 100,
@@ -664,9 +627,13 @@ class ReplenishmentsController extends AppController
             $rows[$badgeId]['expected_by_order_line'][(string)$orderLine->id] = $remaining;
         }
 
-        foreach ($rows as &$row) {
+        foreach ($rows as $badgeId => &$row) {
+            $row['remaining_amount_cents'] = max(
+                0,
+                $row['ordered_amount_cents'] - ($receivedAmountsByBadge[$badgeId] ?? 0),
+            );
             $row['unit_price'] = $row['expected_quantity'] > 0
-                ? number_format($row['amount_cents'] / $row['expected_quantity'] / 100, 2, '.', '')
+                ? number_format($row['remaining_amount_cents'] / $row['expected_quantity'] / 100, 2, '.', '')
                 : ($row['ordered_quantity'] > 0
                     ? number_format(
                         $row['ordered_amount_cents'] / $row['ordered_quantity'] / 100,
@@ -674,7 +641,6 @@ class ReplenishmentsController extends AppController
                         '.',
                     )
                     : '0.00');
-            unset($row['amount_cents']);
             unset($row['ordered_quantity']);
             unset($row['ordered_amount_cents']);
         }
@@ -766,8 +732,13 @@ class ReplenishmentsController extends AppController
             $groupedLines[$badgeId]['on_hand_quantity_change'] += $quantity;
             $groupedLines[$badgeId]['receipted_quantity_change'] += $quantity;
             $groupedLines[$badgeId]['pending_quantity_change'] -= $pendingReduction;
-            $amountCents = (int)round((float)$groupedLines[$badgeId]['monetary_amount'] * 100)
-                + (int)round($quantity * (float)$unitPrice * 100);
+            // Allocate the remaining value before rounding so the final batch retains any remainder.
+            $amountCents = $row['expected_quantity'] > 0
+                ? (int)round(
+                    min($quantity, $row['expected_quantity']) * $row['remaining_amount_cents']
+                    / $row['expected_quantity'],
+                ) + (int)round(max(0, $quantity - $row['expected_quantity']) * (float)$unitPrice * 100)
+                : (int)round($quantity * (float)$unitPrice * 100);
             $groupedLines[$badgeId]['monetary_amount'] = number_format($amountCents / 100, 2, '.', '');
             $groupedLines[$badgeId]['unit_price'] = number_format(
                 $amountCents / $groupedLines[$badgeId]['receipted_quantity_change'] / 100,

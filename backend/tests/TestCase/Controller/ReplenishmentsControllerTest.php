@@ -479,6 +479,83 @@ class ReplenishmentsControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame(-4, $receipt->pending_quantity_change);
     }
 
+    public function testMixedPriceReceiptsReconcileAcrossBatches(): void
+    {
+        [$id, $badgeId] = $this->createMixedPriceReplenishment();
+        $this->enableCsrfToken();
+        foreach ([5, 15] as $quantity) {
+            $this->post("/replenishments/receive/{$id}", [
+                'receipt_lines' => [$badgeId => ['quantity' => $quantity]],
+            ]);
+            $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
+        }
+
+        $receipts = $this->getTableLocator()->get('StockTransactions')->find()->where([
+            'replenishment_id' => $id,
+            'transaction_type' => TransactionType::ReplenishmentReceipt->value,
+        ])->all();
+        $amounts = [];
+        foreach ($receipts as $receipt) {
+            $amounts[$receipt->receipted_quantity_change] = (float)$receipt->monetary_amount;
+        }
+        $this->assertSame(7.5, $amounts[5]);
+        $this->assertSame(22.5, $amounts[15]);
+    }
+
+    public function testMixedPriceCloseoutsReleaseOnlyRemainingPendingStock(): void
+    {
+        foreach (['accept-incomplete', 'delete'] as $action) {
+            [$id, $badgeId] = $this->createMixedPriceReplenishment();
+            $this->enableCsrfToken();
+            $this->post("/replenishments/receive/{$id}", [
+                'receipt_lines' => [$badgeId => ['quantity' => 5]],
+            ]);
+            $this->assertRedirect(['controller' => 'Replenishments', 'action' => 'view', $id]);
+            $this->post("/replenishments/{$action}/{$id}");
+            $this->assertResponseCode(302);
+            $transactions = $this->getTableLocator()->get('StockTransactions');
+            $closeouts = $transactions->find()->where([
+                'replenishment_id' => $id,
+                'transaction_type' => TransactionType::ReplenishmentCloseout->value,
+            ])->all();
+            $this->assertCount(1, $closeouts);
+            $this->assertSame(-15, $closeouts->first()->pending_quantity_change);
+            $this->assertSame(22.5, (float)$closeouts->first()->monetary_amount);
+            $pending = 0;
+            foreach ($transactions->find()->where(['replenishment_id' => $id])->all() as $line) {
+                $pending += $line->pending_quantity_change;
+            }
+            $this->assertSame(0, $pending);
+        }
+    }
+
+    /**
+     * @return array{string, string}
+     */
+    private function createMixedPriceReplenishment(): array
+    {
+        $id = 'f6d1f429-877b-4d92-83a0-cb305d853da7';
+        $badgeId = 'f525eb6d-021c-4ef2-811f-feac8db8d35d';
+        $transactions = $this->getTableLocator()->get('StockTransactions');
+        $transactions->deleteAll(['replenishment_id' => $id]);
+        $this->makeReplenishmentReceivable($id);
+        foreach (['1.00', '2.00'] as $price) {
+            $transactions->saveOrFail($transactions->newEntity([
+                'badge_id' => $badgeId,
+                'replenishment_id' => $id,
+                'transaction_type' => TransactionType::ReplenishmentOrder->value,
+                'on_hand_quantity_change' => 0,
+                'receipted_quantity_change' => 0,
+                'pending_quantity_change' => 10,
+                'fulfilled_quantity_change' => 0,
+                'unit_price' => $price,
+                'monetary_amount' => number_format(10 * (float)$price, 2, '.', ''),
+            ]));
+        }
+
+        return [$id, $badgeId];
+    }
+
     public function testReceiveUpdatesReplenishmentToPartiallyReceived(): void
     {
         $replenishments = $this->getTableLocator()->get('Replenishments');
