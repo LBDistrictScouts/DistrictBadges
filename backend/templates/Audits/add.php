@@ -2,7 +2,6 @@
 /**
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Audit $audit
- * @var \Cake\Collection\CollectionInterface|string[] $users
  */
 ?>
 <div class="row">
@@ -17,9 +16,7 @@
             <?= $this->Form->create($audit) ?>
             <fieldset>
                 <legend><?= __('Begin Audit') ?></legend>
-                <?php
-                    echo $this->Form->control('user_id', ['options' => $users]);
-                ?>
+                <p><?= __('This audit will be recorded against your logged-in user account.') ?></p>
             </fieldset>
             <?= $this->Form->button(__('Begin audit')) ?>
             <?= $this->Form->end() ?>

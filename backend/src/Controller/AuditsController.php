@@ -178,9 +178,7 @@ class AuditsController extends AppController
 
         $audit = $this->Audits->newEmptyEntity();
         if ($this->request->is('post')) {
-            $audit = $this->Audits->patchEntity($audit, $this->requestData(), [
-                'fields' => ['user_id'],
-            ]);
+            $audit->user_id = Value::string($this->request->getSession()->read('Auth.identity.user_id'));
             $audit->audit_completed = false;
             if ($this->Audits->save($audit) !== false) {
                 $this->Flash->success(__('The audit has started.'));
@@ -189,13 +187,7 @@ class AuditsController extends AppController
             }
             $this->Flash->error(__('The audit could not be saved. Please, try again.'));
         }
-        $users = $this->associatedQuery(
-            $this->Audits->Users,
-            $this->typedAssociation($this->Audits->Users, UsersTable::class),
-            'list',
-            limit: 200,
-        )->all();
-        $this->set(compact('audit', 'users'));
+        $this->set(compact('audit'));
     }
 
     /** Save or revise one physical badge count without changing live stock. */

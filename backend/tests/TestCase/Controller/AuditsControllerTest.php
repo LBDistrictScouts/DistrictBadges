@@ -88,7 +88,7 @@ class AuditsControllerTest extends AuthenticatedControllerTestCase
 
         $this->enableCsrfToken();
         $this->post('/audits/add', [
-            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'user_id' => '00000000-0000-4000-8000-000000000000',
             'audit_timestamp' => '2026-02-22 10:00:00',
             'audit_completed' => true,
         ]);
@@ -103,6 +103,26 @@ class AuditsControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
         $this->assertFalse($saved->audit_completed);
         $this->assertMatchesRegularExpression('/^AUD-\d{4}-\d{2}-\d+$/', $saved->audit_number);
+    }
+
+    public function testAddFormDoesNotOfferAuditorSelection(): void
+    {
+        $this->get('/audits/add');
+
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('name="user_id"');
+        $this->assertResponseContains('This audit will be recorded against your logged-in user account.');
+    }
+
+    public function testAddWithoutAuditorUsesLoggedInUser(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $this->enableCsrfToken();
+        $this->post('/audits/add');
+
+        $saved = $audits->find()->where(['audit_completed' => false])->firstOrFail();
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $saved->id]);
+        $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
     }
 
     public function testCannotBeginSecondAuditWhileOneIsOpen(): void
