@@ -256,6 +256,8 @@ The per-dispatch postage charge is configured with the backend `POSTAGE_PRICE` e
 
 The staff interface uses the Cognito Hosted UI authorization-code flow. The app validates the ID token signature and standard claims against the User Pool, requires membership in `COGNITO_REQUIRED_GROUP` (default `badge-admin`), and links the Cognito `sub` UUID to a pre-provisioned local user. The first link uses the Cognito email claim; subsequent sign-ins use the stored `sub`. Staff must also have a local Users record assigned to a badge system group. The public `/api` order endpoints remain available to the webstore without staff authentication.
 
+The backend keeps Cognito's refresh token in its server-side session and renews the ID token when it is within one minute of expiring. Configure the refresh token validity in the Cognito app client; staff remain signed in until Cognito expires or revokes that refresh token, or they sign out. Once refresh is no longer accepted, the next protected page request sends the staff member back through sign-in.
+
 Set `COGNITO_REGION`, `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, `COGNITO_CLIENT_SECRET`, and `COGNITO_HOSTED_UI_DOMAIN`. `COGNITO_REQUIRED_GROUP` defaults to `badge-admin`; override it only if the deployment uses a different Cognito group. Register `/auth/callback` and `/auth/login` as the app client's callback and sign-out URLs on the backend host. The callback flow requests `openid email` and uses PKCE. The SAML identity's `email_verified` claim may be false; access still requires the signed Cognito group claim and a matching pre-provisioned user.
 
 Run `bin/cake district_core_data:sync` whenever the canonical group or section data changes. Deploy and sync DistrictCoreData changes before deploying a webstore build that contains the new UUIDs.
@@ -286,11 +288,23 @@ Auto-fix fixable violations:
 composer cs-fix
 ```
 
-Static analysis (PHPStan at level 8):
+Run all backend checks (tests, coding standards and static analysis):
 
 ```bash
-vendor/bin/phpstan analyse
+composer check
 ```
+
+Static analysis (PHPStan at level 10 with `phpstan-strict-rules`):
+
+```bash
+composer phpstan
+```
+
+PHPStan checks `src/` without a baseline. Every finding fails `composer phpstan` and the backend CI workflow. Fix the underlying code or type contract when a new finding is reported.
+
+Checked conversions in `App\Utility\Value` validate untyped inputs. `TypedTableLocatorTrait` preserves registered aliases, association conditions and finders while checking table implementations.
+
+Table classes declare CakePHP's entity and association generics so queries and inherited CRUD methods retain their types. Keep these declarations accurate when adding models; avoid reintroducing generated `@method` overrides for inherited CRUD methods. The narrow stubs in `phpstan/stubs/` describe framework behavior that its upstream annotations do not express, such as `h()` returning a string for string input.
 
 ## Configuration Reference
 

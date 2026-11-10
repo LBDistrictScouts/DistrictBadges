@@ -342,7 +342,13 @@ class OrdersControllerTest extends AuthenticatedControllerTestCase
                 'order_lines' => [
                     [
                         'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
-                        'quantity' => 2,
+                        'quantity' => 10,
+                        'unit_price' => '1.50',
+                        'amount' => '999.99',
+                    ],
+                    [
+                        'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                        'quantity' => 5,
                         'unit_price' => '1.50',
                         'amount' => '999.99',
                     ],
@@ -364,8 +370,12 @@ class OrdersControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame('2026-06-01 10:00:00', $saved->placed_date->format('Y-m-d H:i:s'));
         $this->assertSame(OrderStatus::Placed, $saved->status);
         $this->assertFalse((bool)$saved->fulfilled);
-        $this->assertSame(3.0, (float)$saved->total_ordered_amount);
-        $this->assertSame(2, (int)$saved->total_ordered_quantity);
+        $this->assertSame(22.5, (float)$saved->total_ordered_amount);
+        $this->assertSame(15, (int)$saved->total_ordered_quantity);
+        $savedLines = $orders->OrderLines->find()->where(['order_id' => $saved->id])->all()->toList();
+        $this->assertCount(1, $savedLines);
+        $this->assertSame(15, $savedLines[0]->quantity);
+        $this->assertSame('22.50', $savedLines[0]->amount);
         $this->assertSame(0.0, (float)$saved->total_fulfilled_amount);
         $this->assertSame(0, (int)$saved->total_fulfilled_quantity);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $saved->account_id);
@@ -375,9 +385,9 @@ class OrdersControllerTest extends AuthenticatedControllerTestCase
         $line = $orders->OrderLines->find()
             ->where(['order_id' => $saved->id])
             ->firstOrFail();
-        $this->assertSame(2, $line->quantity);
+        $this->assertSame(15, $line->quantity);
         $this->assertSame(1.5, (float)$line->unit_price);
-        $this->assertSame(3.0, (float)$line->amount);
+        $this->assertSame(22.5, (float)$line->amount);
     }
 
     public function testLineRowReturnsCalculatedOrderLine(): void

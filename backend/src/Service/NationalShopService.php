@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Utility\Value;
 use Cake\Http\Client;
 use RuntimeException;
 
@@ -39,7 +40,7 @@ class NationalShopService
 
         $data = $response->getJson();
 
-        if (!is_array($data)) {
+        if (!Value::isMap($data)) {
             throw new RuntimeException('National Shop API returned invalid JSON.');
         }
 

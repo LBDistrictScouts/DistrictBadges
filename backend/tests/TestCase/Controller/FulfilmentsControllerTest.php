@@ -6,6 +6,7 @@ namespace App\Test\TestCase\Controller;
 use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
+use App\Model\Enum\TransactionType;
 use Cake\Core\Configure;
 
 /**
@@ -198,7 +199,14 @@ class FulfilmentsControllerTest extends AuthenticatedControllerTestCase
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
                     'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
-                    'quantity' => 2,
+                    'quantity' => 1,
+                    'unit_price' => '1.50',
+                    'monetary_amount' => '999.99',
+                ],
+                [
+                    'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                    'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+                    'quantity' => 1,
                     'unit_price' => '1.50',
                     'monetary_amount' => '999.99',
                 ],
@@ -232,6 +240,9 @@ class FulfilmentsControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame('be20de8c-eea8-4114-a98e-1d55e483e8db', $line->order_line_id);
         $this->assertSame(-2, $line->on_hand_quantity_change);
         $this->assertSame(2, $line->fulfilled_quantity_change);
+        $this->assertSame(1, $fulfilments->FulfilmentLines->find()
+            ->where(['fulfilment_id' => $saved->id])
+            ->count());
         $this->assertSame(2, $line->quantity);
         $this->assertSame(1.5, (float)$line->unit_price);
         $this->assertSame(3.0, (float)$line->monetary_amount);
@@ -984,6 +995,36 @@ class FulfilmentsControllerTest extends AuthenticatedControllerTestCase
         $this->assertRedirect(['controller' => 'Fulfilments', 'action' => 'index']);
         $this->assertFlashMessage('Dispatched fulfilments cannot be deleted.');
         $this->assertTrue($this->getTableLocator()->get('Fulfilments')->exists(['id' => $id]));
+    }
+
+    public function testDeleteRemovesDraftFulfilmentWithUncommittedLedgerTransactions(): void
+    {
+        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        $fulfilment = $fulfilments->newEntity(['fulfilment_number' => 'FUL-LEDGER']);
+        $fulfilments->saveOrFail($fulfilment);
+
+        $lines = $fulfilments->FulfilmentLines->getTarget();
+        $line = $lines->newEntity([
+            'fulfilment_id' => $fulfilment->id,
+            'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+            'order_line_id' => 'be20de8c-eea8-4114-a98e-1d55e483e8db',
+            'fulfilled_quantity_change' => 1,
+            'on_hand_quantity_change' => 0,
+            'receipted_quantity_change' => 0,
+            'pending_quantity_change' => 0,
+            'monetary_amount' => 1.5,
+            'unit_price' => 1.5,
+        ]);
+        $lines->saveOrFail($line);
+        $this->assertSame(TransactionType::Fulfilment, $line->transaction_type);
+
+        $this->enableCsrfToken();
+        $this->post("/fulfilments/delete/{$fulfilment->id}");
+
+        $this->assertRedirect(['controller' => 'Fulfilments', 'action' => 'index']);
+        $this->assertFlashMessage('The fulfilment has been deleted.');
+        $this->assertFalse($fulfilments->exists(['id' => $fulfilment->id]));
+        $this->assertFalse($lines->exists(['id' => $line->id]));
     }
 
     /**

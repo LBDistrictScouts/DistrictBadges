@@ -8,6 +8,7 @@ use ArrayObject;
 use Cake\Core\Configure;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
+use Cake\Event\Event;
 use Cake\Event\EventInterface;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -16,25 +17,13 @@ use Cake\Validation\Validator;
 /**
  * Orders Model
  *
- * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
- * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
- * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $CreatedByUser
- * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $UpdatedByUser
- * @property \App\Model\Table\SectionsTable&\Cake\ORM\Association\BelongsTo $Sections
- * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\HasMany $OrderLines
- * @method \App\Model\Entity\Order newEmptyEntity()
- * @method \App\Model\Entity\Order newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\Order> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Order get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\Order findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\Order patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\Order> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\Order|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\Order saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\Order>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Order>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Order>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Order> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Order>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Order>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Order>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Order> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\AccountsTable> $Accounts
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\UsersTable> $Users
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\UsersTable> $CreatedByUser
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\UsersTable> $UpdatedByUser
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\SectionsTable> $Sections
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\OrderLinesTable> $OrderLines
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\Order>
  */
 class OrdersTable extends Table
 {
@@ -184,9 +173,9 @@ class OrdersTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Order.
-     * @param \ArrayObject $options Save options.
+     * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
      */
     public function beforeSave(
@@ -207,9 +196,9 @@ class OrdersTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Order.
-     * @param \ArrayObject $options Save options.
+     * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
      */
     public function afterSaveCommit(
@@ -217,11 +206,11 @@ class OrdersTable extends Table
         EntityInterface $entity,
         ArrayObject $options,
     ): void {
-        if (!($options['dispatchOrderPlaced'] ?? false)) {
+        if (($options['dispatchOrderPlaced'] ?? false) !== true) {
             return;
         }
 
-        $this->dispatchEvent('Order.afterPlace', [], $entity);
+        $this->getEventManager()->dispatch(new Event('Order.afterPlace', $entity, []));
 
         $notificationEvent = match ($options['orderNotificationSource'] ?? null) {
             'webstore' => 'Order.afterWebstorePlace',
@@ -229,7 +218,7 @@ class OrdersTable extends Table
             default => null,
         };
         if ($notificationEvent !== null) {
-            $this->dispatchEvent($notificationEvent, [], $entity);
+            $this->getEventManager()->dispatch(new Event($notificationEvent, $entity, []));
         }
     }
 }

@@ -27,7 +27,7 @@ class BackendOrderNotificationListener implements EventListenerInterface
     /**
      * Send the receipt for an order created by the district team.
      *
-     * @param \Cake\Event\EventInterface $event Order event.
+     * @param \Cake\Event\EventInterface<object> $event Order event.
      * @return void
      */
     public function orderPlaced(EventInterface $event): void

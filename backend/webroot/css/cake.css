@@ -27,6 +27,30 @@
   --color-message-info-border: #6cb2eb;
 }
 
+/* District visual system — shared with the customer-facing badge shop. */
+:root {
+  --district-ink: #172329;
+  --district-muted: #66747b;
+  --district-teal: #088486;
+  --district-teal-dark: #05696c;
+  --district-purple: #7413dc;
+  --district-green: #25b755;
+  --district-surface: #fff;
+  --district-surface-alt: #f5f8f8;
+  --district-border: #dfe7e7;
+  --district-shadow: 0 1.6rem 4.5rem rgba(19, 54, 56, 0.1);
+  --color-main-bg: var(--district-surface);
+  --color-links: var(--district-teal);
+  --color-links-active: var(--district-teal-dark);
+  --color-headings: var(--district-ink);
+}
+
+body {
+  color: var(--district-ink);
+  background: var(--district-surface);
+  font-family: "Raleway", "Segoe UI", sans-serif;
+}
+
 .button, button, input[type=button], input[type=reset], input[type=submit] {
   background-color: var(--color-cakephp-red);
   border-color: var(--color-cakephp-red);
@@ -156,77 +180,6 @@ th {
 .top-nav-title a,
 .top-nav-links a {
   font-weight: bold;
-}
-
-@media (max-width: 1050px) {
-  .top-nav {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1rem;
-  }
-  .top-nav-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: auto;
-  }
-  .top-nav-links {
-    display: none;
-    position: fixed;
-    inset: 0;
-    padding: 6rem 2rem 2rem;
-    margin: 0;
-    flex-direction: column;
-    gap: 1rem;
-    background: rgba(16, 20, 26, 0.96);
-    z-index: 999;
-    overflow-y: auto;
-  }
-  .top-nav-links a {
-    margin: 0;
-    padding: 0.5rem 0;
-    color: #f7f3ed;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .top-nav-links--open {
-    display: flex;
-  }
-  .top-nav-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-    z-index: 998;
-  }
-  .top-nav-overlay--open {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-/* District visual system — shared with the customer-facing badge shop. */
-:root {
-  --district-ink: #172329;
-  --district-muted: #66747b;
-  --district-teal: #088486;
-  --district-teal-dark: #05696c;
-  --district-purple: #7413dc;
-  --district-green: #25b755;
-  --district-surface: #fff;
-  --district-surface-alt: #f5f8f8;
-  --district-border: #dfe7e7;
-  --district-shadow: 0 1.6rem 4.5rem rgba(19, 54, 56, 0.1);
-  --color-main-bg: var(--district-surface);
-  --color-links: var(--district-teal);
-  --color-links-active: var(--district-teal-dark);
-  --color-headings: var(--district-ink);
-}
-
-body {
-  color: var(--district-ink);
-  background: var(--district-surface);
-  font-family: "Raleway", "Segoe UI", sans-serif;
 }
 
 .button, button, input[type=button], input[type=reset], input[type=submit] {
@@ -446,50 +399,76 @@ td, th {
 @media (max-width: 1050px) {
   .top-nav {
     min-height: 7.4rem;
-    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1.2rem 1.6rem;
   }
-  .district-brand__mark {
+  .top-nav-title {
+    min-width: 0;
+  }
+  .top-nav-title .district-brand__mark {
     width: 4.3rem;
     height: 4.3rem;
+    flex-shrink: 0;
+  }
+  .district-brand {
+    gap: 0.6rem;
   }
   .district-brand__copy small {
     display: none;
   }
+  .top-nav-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 4.4rem;
+    height: 4.4rem;
+    margin: 0 0 0 auto;
+    padding: 0.8rem;
+    gap: 0.4rem;
+    background: #fff;
+  }
+  .top-nav-toggle:hover, .top-nav-toggle:focus {
+    background: var(--district-surface-alt);
+  }
+  .top-nav-toggle__bar {
+    margin: 0;
+    flex-shrink: 0;
+  }
   .top-nav-links {
     display: none;
-    padding-top: 8rem;
-    background: rgba(12, 52, 54, 0.98);
+    flex: 0 0 100%;
+    min-width: 0;
+    max-height: calc(100dvh - 9rem);
+    overflow-y: auto;
+    margin: 0;
+    padding: 1rem 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    border-top: 1px solid var(--district-border);
   }
   .top-nav-links--open {
     display: flex;
   }
   .top-nav-links a {
-    color: #e7f2f2;
+    padding: 1.2rem 0.8rem;
   }
   .top-nav-links a + a {
     margin-left: 0;
   }
   .top-nav-account {
-    align-self: flex-start;
-    gap: 0.8rem;
+    flex-wrap: wrap;
     margin: 1rem 0 0;
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
   }
-  .top-nav-account__icon {
-    color: #e7f2f2;
+  .top-nav-user-details {
+    flex: 1;
   }
-  .top-nav-user {
-    max-width: 16rem;
-    color: #fff;
-  }
-  .top-nav-group {
-    max-width: 16rem;
-    color: #d1e1e1;
-  }
-  .top-nav-signout__button {
-    border-left-color: rgba(255, 255, 255, 0.22);
-    color: #e7f2f2;
+  .top-nav-user, .top-nav-group {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 .side-nav-item {

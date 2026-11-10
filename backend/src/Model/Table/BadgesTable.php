@@ -7,12 +7,14 @@ use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
 use App\Service\AlgoliaService;
 use App\Service\NationalShopService;
+use App\Utility\Value;
 use ArrayObject;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\Log\Log;
 use Cake\ORM\Exception\PersistenceFailedException;
+use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
 use RuntimeException;
@@ -20,28 +22,19 @@ use RuntimeException;
 /**
  * Badges Model
  *
- * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
- * @property \App\Model\Table\InvoiceLinesTable&\Cake\ORM\Association\HasMany $InvoiceLines
- * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\HasMany $OrderLines
- * @property \App\Model\Table\BadgeTagsTable&\Cake\ORM\Association\BelongsToMany $BadgeTags
- * @property \App\Model\Table\BadgeSectionsTable&\Cake\ORM\Association\BelongsToMany $BadgeSections
- * @property \App\Model\Table\BadgeTypesTable&\Cake\ORM\Association\BelongsToMany $BadgeTypes
- * @method \App\Model\Entity\Badge newEmptyEntity()
- * @method \App\Model\Entity\Badge newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\Badge> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Badge get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\Badge findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\Badge patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\Badge> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\Badge|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\Badge saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\Badge>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Badge>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Badge>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Badge> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Badge>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Badge>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Badge>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Badge> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\StockTransactionsTable> $StockTransactions
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\InvoiceLinesTable> $InvoiceLines
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\OrderLinesTable> $OrderLines
+ * @property \Cake\ORM\Association\BelongsToMany<\App\Model\Table\BadgeTagsTable> $BadgeTags
+ * @property \Cake\ORM\Association\BelongsToMany<\App\Model\Table\BadgeSectionsTable> $BadgeSections
+ * @property \Cake\ORM\Association\BelongsToMany<\App\Model\Table\BadgeTypesTable> $BadgeTypes
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\BadgesBadgeTagsTable> $BadgesBadgeTags
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\Badge>
  */
 class BadgesTable extends Table
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Associate every tag whose search text occurs in the badge name.
      *
@@ -58,30 +51,42 @@ class BadgesTable extends Table
         EntityInterface $badge,
         bool $syncAlgolia = true,
     ): int {
-        $badgeId = (string)$badge->get('id');
+        $badgeId = Value::string($badge->get('id'));
         if ($badgeId === '') {
             throw new PersistenceFailedException($badge, 'Badge must be saved before parsing tags.');
         }
 
-        $badgeName = (string)$badge->get('badge_name');
+        $badgeName = Value::string($badge->get('badge_name'));
         if ($badgeName === '') {
             return 0;
         }
 
-        $existingIds = $this->BadgesBadgeTags->find()
+        $existingIds = $this->associatedQuery(
+            $this->BadgesBadgeTags,
+            $this->typedAssociation($this->BadgesBadgeTags, BadgesBadgeTagsTable::class),
+        )
             ->select(['badge_tag_id'])
             ->where(['badge_id' => $badgeId])
             ->all()
             ->extract('badge_tag_id')
-            ->map(static fn($id): string => (string)$id)
+            ->map(static fn($id): string => Value::string($id))
             ->toList();
 
         $matchingTags = [];
-        foreach ($this->BadgeTags->find()->orderByAsc('tag_order')->orderByAsc('tag_name') as $tag) {
-            $searchText = trim((string)$tag->tag_search_text);
+        foreach (
+            $this->associatedQuery(
+                $this->BadgeTags,
+                $this->typedAssociation($this->BadgeTags, BadgeTagsTable::class),
+            )->orderByAsc(
+                'tag_order',
+            )->orderByAsc(
+                'tag_name',
+            ) as $tag
+        ) {
+            $searchText = trim(Value::string($tag->tag_search_text));
             if (
                 $this->badgeNameMatchesTagSearchText($badgeName, $searchText)
-                && !in_array((string)$tag->id, $existingIds, true)
+                && !in_array(Value::string($tag->id), $existingIds, true)
             ) {
                 $matchingTags[] = $tag;
             }
@@ -95,7 +100,7 @@ class BadgesTable extends Table
             return 0;
         }
 
-        $this->getAssociation('BadgeTags')->link($badge, $matchingTags);
+        $this->BadgeTags->link($badge, $matchingTags);
         if ($syncAlgolia) {
             $this->syncBadgeToAlgolia($badge);
         }
@@ -171,9 +176,12 @@ class BadgesTable extends Table
     public function getReplenishmentRequirements(): array
     {
         $outstandingByBadge = [];
-        $orderLines = $this->OrderLines->find()
+        $orderLines = $this->associatedQuery(
+            $this->OrderLines,
+            $this->typedAssociation($this->OrderLines, OrderLinesTable::class),
+        )
             ->select(['badge_id', 'quantity', 'fulfilled_quantity'])
-            ->innerJoinWith('Orders', function ($query) {
+            ->innerJoinWith('Orders', function (SelectQuery $query) {
                 return $query->where([
                     'Orders.status IN' => [
                         OrderStatus::Placed->value,
@@ -184,10 +192,10 @@ class BadgesTable extends Table
             ->all();
 
         foreach ($orderLines as $orderLine) {
-            $badgeId = (string)$orderLine->badge_id;
+            $badgeId = Value::string($orderLine->badge_id);
             $outstanding = max(
                 0,
-                (int)$orderLine->quantity - (int)$orderLine->fulfilled_quantity,
+                Value::int($orderLine->quantity) - Value::int($orderLine->fulfilled_quantity),
             );
             $outstandingByBadge[$badgeId] = ($outstandingByBadge[$badgeId] ?? 0) + $outstanding;
         }
@@ -321,9 +329,9 @@ class BadgesTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function beforeSave(
@@ -333,11 +341,11 @@ class BadgesTable extends Table
     ): void {
         $entity->set('status', $this->statusFromStock(
             (bool)$entity->get('stocked'),
-            (int)$entity->get('on_hand_quantity'),
-            (int)$entity->get('pending_quantity'),
+            Value::int($entity->get('on_hand_quantity')),
+            Value::int($entity->get('pending_quantity')),
         ));
 
-        if (!empty($options['skipNationalData'])) {
+        if (($options['skipNationalData'] ?? false) === true) {
             return;
         }
 
@@ -385,7 +393,7 @@ class BadgesTable extends Table
         }
 
         $service = new NationalShopService();
-        $entity->set('national_data', $service->fetchProductByExternalId((int)$productId));
+        $entity->set('national_data', $service->fetchProductByExternalId(Value::int($productId)));
     }
 
     /**
@@ -403,9 +411,9 @@ class BadgesTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function afterSaveCommit(
@@ -413,7 +421,7 @@ class BadgesTable extends Table
         EntityInterface $entity,
         ArrayObject $options,
     ): void {
-        if (!empty($options['skipAlgolia'])) {
+        if (($options['skipAlgolia'] ?? false) === true) {
             return;
         }
 

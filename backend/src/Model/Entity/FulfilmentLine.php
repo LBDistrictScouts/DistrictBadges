@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Model\Entity;
 
+use App\Utility\Value;
+
 /**
  * FulfilmentLine Entity
  *
@@ -16,6 +18,7 @@ namespace App\Model\Entity;
  * @property int $quantity
  * @property \App\Model\Enum\TransactionType $transaction_type
  *
+ * @property \App\Model\Entity\OrderLine $order_line
  * @property \App\Model\Entity\Badge $badge
  * @property \App\Model\Entity\Fulfilment $fulfilment
  */
@@ -33,7 +36,7 @@ class FulfilmentLine extends StockTransaction
      */
     protected function _getQuantity(): int
     {
-        return (int)$this->get('fulfilled_quantity_change');
+        return Value::int($this->get('fulfilled_quantity_change'));
     }
 
     /**

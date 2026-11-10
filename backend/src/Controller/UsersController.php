@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Model\Enum\OrderStatus;
+use App\Model\Table\GroupsTable;
+use App\Model\Table\TypedTableLocatorTrait;
 
 /**
  * Users Controller
@@ -12,6 +14,8 @@ use App\Model\Enum\OrderStatus;
  */
 class UsersController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -54,15 +58,20 @@ class UsersController extends AppController
     {
         $user = $this->Users->newEmptyEntity();
         if ($this->request->is('post')) {
-            $user = $this->Users->patchEntity($user, $this->request->getData());
-            if ($this->Users->save($user)) {
+            $user = $this->Users->patchEntity($user, $this->requestData());
+            if ($this->Users->save($user) !== false) {
                 $this->Flash->success(__('The user has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The user could not be saved. Please, try again.'));
         }
-        $groups = $this->Users->Groups->find('list', limit: 200)->all();
+        $groups = $this->associatedQuery(
+            $this->Users->Groups,
+            $this->typedAssociation($this->Users->Groups, GroupsTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('user', 'groups'));
     }
 
@@ -78,14 +87,14 @@ class UsersController extends AppController
         $user = $this->Users->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
             $previousEmail = mb_strtolower(trim((string)$user->email));
-            $user = $this->Users->patchEntity($user, $this->request->getData());
+            $user = $this->Users->patchEntity($user, $this->requestData());
             $updatedEmail = mb_strtolower(trim((string)$user->email));
             $emailChanged = $previousEmail !== $updatedEmail;
             $saved = $this->Users->getConnection()->transactional(function () use (
                 $user,
                 $emailChanged,
             ): bool {
-                if (!$this->Users->save($user)) {
+                if ($this->Users->save($user) === false) {
                     return false;
                 }
 
@@ -101,14 +110,19 @@ class UsersController extends AppController
 
                 return true;
             });
-            if ($saved) {
+            if ($saved === true) {
                 $this->Flash->success(__('The user has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The user could not be saved. Please, try again.'));
         }
-        $groups = $this->Users->Groups->find('list', limit: 200)->all();
+        $groups = $this->associatedQuery(
+            $this->Users->Groups,
+            $this->typedAssociation($this->Users->Groups, GroupsTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('user', 'groups'));
     }
 
@@ -123,7 +137,7 @@ class UsersController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $user = $this->Users->get($id);
-        if ($this->Users->delete($user)) {
+        if ($this->Users->delete($user) !== false) {
             $this->Flash->success(__('The user has been deleted.'));
         } else {
             $this->Flash->error(__('The user could not be deleted. Please, try again.'));

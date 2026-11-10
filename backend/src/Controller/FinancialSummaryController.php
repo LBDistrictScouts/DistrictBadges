@@ -6,9 +6,20 @@ namespace App\Controller;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\TransactionType;
+use App\Model\Table\AuditsTable;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\InvoicesTable;
+use App\Model\Table\InvoiceSummariesTable;
+use App\Model\Table\OrderLinesTable;
+use App\Model\Table\OrdersTable;
+use App\Model\Table\ReplenishmentsTable;
+use App\Model\Table\StockTransactionsTable;
 use Cake\I18n\Date;
+use Cake\ORM\Query\SelectQuery;
+use Cake\ORM\Table;
 use DateTimeImmutable;
 use DateTimeInterface;
+use LogicException;
 
 /**
  * Annual financial summary dashboard.
@@ -22,11 +33,11 @@ class FinancialSummaryController extends AppController
      */
     public function index(): void
     {
-        $invoices = $this->fetchTable('Invoices');
-        $replenishments = $this->fetchTable('Replenishments');
-        $stockTransactions = $this->fetchTable('StockTransactions');
-        $orders = $this->fetchTable('Orders');
-        $audits = $this->fetchTable('Audits');
+        $invoices = $this->summaryTable('Invoices', InvoicesTable::class);
+        $replenishments = $this->summaryTable('Replenishments', ReplenishmentsTable::class);
+        $stockTransactions = $this->summaryTable('StockTransactions', StockTransactionsTable::class);
+        $orders = $this->summaryTable('Orders', OrdersTable::class);
+        $audits = $this->summaryTable('Audits', AuditsTable::class);
         $currentYear = (int)(new DateTimeImmutable())->format('Y');
 
         $earliestYear = $currentYear;
@@ -46,7 +57,9 @@ class FinancialSummaryController extends AppController
                 ->disableHydration()
                 ->first();
             $firstDate = $firstRecord['first_date'] ?? null;
-            if ($firstDate !== null) {
+            if ($firstDate instanceof DateTimeInterface || $firstDate instanceof Date) {
+                $earliestYear = min($earliestYear, (int)$firstDate->format('Y'));
+            } elseif (is_string($firstDate) || is_int($firstDate) || is_float($firstDate)) {
                 $earliestYear = min($earliestYear, (int)substr((string)$firstDate, 0, 4));
             }
         }
@@ -59,16 +72,7 @@ class FinancialSummaryController extends AppController
 
         $yearStart = new DateTimeImmutable(sprintf('%04d-01-01 00:00:00', $year));
         $nextYearStart = $yearStart->modify('+1 year');
-        $months = [];
-        for ($month = 1; $month <= 12; $month++) {
-            $months[$month] = [
-                'name' => (new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month)))->format('F'),
-                'invoiced' => 0.0,
-                'stock_received' => 0.0,
-                'postage' => 0.0,
-                'invoice_count' => 0,
-            ];
-        }
+        $months = $this->initialMonths($year);
 
         $invoiceRows = $invoices->find()
             ->select(['invoice_date', 'period_end_date', 'total_amount'])
@@ -88,7 +92,7 @@ class FinancialSummaryController extends AppController
             ->all();
         foreach ($invoiceRows as $invoice) {
             $month = $this->monthNumber($invoice->period_end_date ?? $invoice->invoice_date);
-            if ($month === null) {
+            if ($month === null || !isset($months[$month])) {
                 continue;
             }
             $months[$month]['invoiced'] += (float)$invoice->total_amount;
@@ -104,7 +108,7 @@ class FinancialSummaryController extends AppController
             ->all();
         foreach ($replenishmentRows as $replenishment) {
             $month = $this->monthNumber($replenishment->received_date);
-            if ($month === null) {
+            if ($month === null || !isset($months[$month])) {
                 continue;
             }
             $months[$month]['postage'] += (float)($replenishment->actual_postage_cost ?? 0);
@@ -120,7 +124,7 @@ class FinancialSummaryController extends AppController
             ->all();
         foreach ($receiptRows as $receipt) {
             $month = $this->monthNumber($receipt->transaction_timestamp);
-            if ($month === null) {
+            if ($month === null || !isset($months[$month])) {
                 continue;
             }
             $receiptAmount = $receipt->monetary_amount === null
@@ -135,13 +139,14 @@ class FinancialSummaryController extends AppController
             'postage' => 0.0,
             'invoice_count' => 0,
         ];
-        foreach ($months as &$month) {
-            $month['net'] = $month['invoiced'] - $month['stock_received'] - $month['postage'];
+        foreach ($months as &$monthSummary) {
+            $monthSummary['net'] = $monthSummary['invoiced']
+                - $monthSummary['stock_received'] - $monthSummary['postage'];
             foreach (['invoiced', 'stock_received', 'postage', 'invoice_count'] as $field) {
-                $totals[$field] += $month[$field];
+                $totals[$field] += $monthSummary[$field];
             }
         }
-        unset($month);
+        unset($monthSummary);
         $totals['net'] = $totals['invoiced'] - $totals['stock_received'] - $totals['postage'];
 
         $stockAsOf = $year === $currentYear
@@ -149,28 +154,31 @@ class FinancialSummaryController extends AppController
             : new DateTimeImmutable(sprintf('%04d-12-31 23:59:59', $year));
         $stockCutoff = $stockAsOf->modify('+1 second');
         $invoicedFulfilments = [];
-        $invoiceSummaries = $this->fetchTable('InvoiceSummaries')->find()
+        $invoiceSummaries = $this->summaryTable('InvoiceSummaries', InvoiceSummariesTable::class)->find()
             ->innerJoinWith('Invoices')
             ->select(['fulfilment_id' => 'InvoiceSummaries.fulfilment_id'])
             ->where(['Invoices.invoice_date <' => $stockCutoff])
             ->disableHydration()
             ->all();
         foreach ($invoiceSummaries as $summary) {
-            $invoicedFulfilments[(string)$summary['fulfilment_id']] = true;
+            $fulfilmentId = $summary['fulfilment_id'];
+            if (is_string($fulfilmentId) && $fulfilmentId !== '') {
+                $invoicedFulfilments[$fulfilmentId] = true;
+            }
         }
 
         $stockQuantities = [];
         $lastReceiptPrices = [];
         $fulfilledByOrderLine = [];
         $fulfilledNotInvoicedInPence = 0;
-        $stockTransactions = $this->fetchTable('StockTransactions')->find()
+        $stockTransactions = $this->summaryTable('StockTransactions', StockTransactionsTable::class)->find()
             // Explicit fields keep these associations hydrated alongside the
             // narrow stock transaction selection below.
             ->contain([
-                'Fulfilments' => function ($query) {
+                'Fulfilments' => function (SelectQuery $query) {
                     return $query->select(['id', 'status', 'dispatched_date']);
                 },
-                'Audits' => function ($query) {
+                'Audits' => function (SelectQuery $query) {
                     return $query->select(['id', 'audit_completed', 'audit_completed_date']);
                 },
             ])
@@ -258,7 +266,7 @@ class FinancialSummaryController extends AppController
         }
         $salePrices = [];
         if ($badgeIds !== []) {
-            $badges = $this->fetchTable('Badges')->find()
+            $badges = $this->summaryTable('Badges', BadgesTable::class)->find()
                 ->select(['id', 'price'])
                 ->where(['id IN' => $badgeIds])
                 ->all();
@@ -274,7 +282,7 @@ class FinancialSummaryController extends AppController
                 continue;
             }
             $stockValue['units_on_hand'] += $quantity;
-            if (!isset($lastReceiptPrices[$badgeId]) || $lastReceiptPrices[$badgeId] === null) {
+            if (!isset($lastReceiptPrices[$badgeId])) {
                 $stockValue['unpriced_units'] += $quantity;
                 $stockValue['unpriced_badges']++;
                 continue;
@@ -291,7 +299,7 @@ class FinancialSummaryController extends AppController
         $stockValue['fulfilled_not_invoiced'] = $fulfilledNotInvoicedInPence / 100;
 
         $unfulfilledOrderValueInPence = 0;
-        $orderLines = $this->fetchTable('OrderLines')->find()
+        $orderLines = $this->summaryTable('OrderLines', OrderLinesTable::class)->find()
             ->contain(['Orders'])
             ->innerJoinWith('Orders')
             ->where([
@@ -306,7 +314,7 @@ class FinancialSummaryController extends AppController
         foreach ($orderLines as $orderLine) {
             $fulfilledQuantity = min(
                 (int)$orderLine->quantity,
-                max(0, (int)($fulfilledByOrderLine[(string)$orderLine->id] ?? 0)),
+                max(0, $fulfilledByOrderLine[$orderLine->id] ?? 0),
             );
             $remainingQuantity = max(0, (int)$orderLine->quantity - $fulfilledQuantity);
             $unitPriceInPence = (int)round((float)$orderLine->unit_price * 100);
@@ -315,6 +323,46 @@ class FinancialSummaryController extends AppController
         $stockValue['unfulfilled_value'] = $unfulfilledOrderValueInPence / 100;
 
         $this->set(compact('year', 'years', 'months', 'totals', 'stockValue'));
+    }
+
+    /**
+     * Keep the existing locator alias and connection while checking its concrete type.
+     *
+     * @template T of \Cake\ORM\Table
+     * @param string $alias Table alias.
+     * @param class-string<T> $expectedClass Expected table implementation.
+     * @return T
+     */
+    private function summaryTable(string $alias, string $expectedClass): Table
+    {
+        $table = $this->fetchTable($alias);
+        if (!$table instanceof $expectedClass) {
+            throw new LogicException(sprintf('The %s table must use %s.', $alias, $expectedClass));
+        }
+
+        return $table;
+    }
+
+    /**
+     * @param int $year Reporting year.
+     * @return array<int, array{
+     *   name: string, invoiced: float, stock_received: float, postage: float, invoice_count: int
+     * }>
+     */
+    private function initialMonths(int $year): array
+    {
+        $months = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $months[$month] = [
+                'name' => (new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month)))->format('F'),
+                'invoiced' => 0.0,
+                'stock_received' => 0.0,
+                'postage' => 0.0,
+                'invoice_count' => 0,
+            ];
+        }
+
+        return $months;
     }
 
     /**

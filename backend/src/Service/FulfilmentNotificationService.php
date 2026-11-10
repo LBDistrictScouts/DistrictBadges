@@ -7,6 +7,10 @@ use App\Model\Entity\Fulfilment;
 use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\TransactionType;
+use App\Model\Table\FulfilmentsTable;
+use App\Model\Table\OrderLinesTable;
+use App\Model\Table\StockTransactionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use Cake\Core\Configure;
 use Cake\I18n\DateTime;
 use Cake\Mailer\Mailer;
@@ -15,6 +19,7 @@ use RuntimeException;
 
 class FulfilmentNotificationService
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
 
     /**
@@ -22,11 +27,14 @@ class FulfilmentNotificationService
      */
     public function sendDispatched(Fulfilment $fulfilment): bool
     {
-        if (!Configure::read('OrderNotifications.enabled', true)) {
+        if (Configure::read('OrderNotifications.enabled', true) !== true) {
             return false;
         }
 
-        $fulfilments = $this->getTableLocator()->get('Fulfilments');
+        $fulfilments = $this->typedTable('Fulfilments', FulfilmentsTable::class);
+        if (!$fulfilments instanceof FulfilmentsTable) {
+            throw new RuntimeException('The Fulfilments table must use FulfilmentsTable.');
+        }
         $fulfilment = $fulfilments->get($fulfilment->id, contain: [
             'FulfilmentLines.Badges',
             'FulfilmentLines.OrderLines.Orders.Users',
@@ -47,7 +55,8 @@ class FulfilmentNotificationService
                 throw new RuntimeException('A fulfilment cannot notify more than one user.');
             }
             $user = $lineUser;
-            $lineEmail = trim((string)$lineOrder->contact_email) ?: (string)$lineUser->email;
+            $lineEmail = trim($lineOrder->contact_email ?? '');
+            $lineEmail = $lineEmail !== '' ? $lineEmail : $lineUser->email;
             if ($contactEmail !== null && mb_strtolower($contactEmail) !== mb_strtolower($lineEmail)) {
                 throw new RuntimeException('A fulfilment cannot notify more than one contact email.');
             }
@@ -59,7 +68,7 @@ class FulfilmentNotificationService
             ));
             $contactName = $snapshotName !== '' ? $snapshotName : $lineUser->full_name;
         }
-        if ($user === null || trim((string)$contactEmail) === '') {
+        if ($user === null || $contactEmail === null || trim($contactEmail) === '') {
             throw new RuntimeException('The fulfilment has no customer email address.');
         }
 
@@ -114,8 +123,17 @@ class FulfilmentNotificationService
             return [];
         }
 
-        $orderLines = $this->getTableLocator()->get('OrderLines');
-        $transactionQuery = $orderLines->StockTransactions->find();
+        $orderLines = $this->typedTable('OrderLines', OrderLinesTable::class);
+        if (!$orderLines instanceof OrderLinesTable) {
+            throw new RuntimeException('The OrderLines table must use OrderLinesTable.');
+        }
+        $transactionQuery = $this->associatedQuery(
+            $orderLines->StockTransactions,
+            $this->typedAssociation(
+                $orderLines->StockTransactions,
+                StockTransactionsTable::class,
+            ),
+        );
         $fulfilledQuery = $transactionQuery
             ->select([
                 'order_line_id' => 'StockTransactions.order_line_id',
@@ -140,7 +158,12 @@ class FulfilmentNotificationService
             ->all();
         $sentBeforeQuantities = [];
         foreach ($fulfilledRows as $row) {
-            $sentBeforeQuantities[(string)$row['order_line_id']] = (int)$row['fulfilled_quantity'];
+            $orderLineId = $row['order_line_id'];
+            $fulfilledQuantity = $row['fulfilled_quantity'];
+            if (!is_string($orderLineId) || !is_numeric($fulfilledQuantity)) {
+                throw new RuntimeException('Fulfilled quantities require an order line ID and numeric total.');
+            }
+            $sentBeforeQuantities[$orderLineId] = (int)$fulfilledQuantity;
         }
 
         $backorders = [];

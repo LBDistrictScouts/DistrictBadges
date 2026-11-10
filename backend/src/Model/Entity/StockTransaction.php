@@ -27,10 +27,10 @@ use Cake\ORM\Entity;
  * @property \App\Model\Enum\TransactionType $transaction_type
  *
  * @property \App\Model\Entity\Badge $badge
- * @property \App\Model\Entity\Fulfilment $fulfilment
- * @property \App\Model\Entity\Audit $audit
- * @property \App\Model\Entity\Replenishment $replenishment
- * @property \App\Model\Entity\OrderLine $order_line
+ * @property \App\Model\Entity\Fulfilment|null $fulfilment
+ * @property \App\Model\Entity\Audit|null $audit
+ * @property \App\Model\Entity\Replenishment|null $replenishment
+ * @property \App\Model\Entity\OrderLine|null $order_line
  */
 class StockTransaction extends Entity
 {

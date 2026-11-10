@@ -27,7 +27,7 @@ class FulfilmentDispatchNotificationListener implements EventListenerInterface
     /**
      * Send the customer notification after fulfilment dispatch.
      *
-     * @param \Cake\Event\EventInterface $event Fulfilment dispatch event.
+     * @param \Cake\Event\EventInterface<object> $event Fulfilment dispatch event.
      * @return void
      */
     public function fulfilmentDispatched(EventInterface $event): void

@@ -10,17 +10,26 @@ use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\ReplenishmentStatus;
 use App\Model\Enum\TransactionType;
+use App\Model\Table\FulfilmentsTable;
+use App\Model\Table\OrderLinesTable;
 use App\Model\Table\OrdersTable;
 use App\Model\Table\ReplenishmentsTable;
+use App\Model\Table\StockTransactionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use Cake\Datasource\ModelAwareTrait;
+use Cake\Event\Event;
 use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
 use Cake\I18n\DateTime;
+use Cake\ORM\Locator\LocatorAwareTrait;
+use Cake\ORM\Query\SelectQuery;
 use UnexpectedValueException;
 
 class LifecycleStatusListener implements EventListenerInterface
 {
+    use TypedTableLocatorTrait;
     use ModelAwareTrait;
+    use LocatorAwareTrait;
 
     /**
      * @inheritDoc
@@ -37,7 +46,7 @@ class LifecycleStatusListener implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<object> $event Event.
      * @return void
      */
     public function orderPlaced(EventInterface $event): void
@@ -61,7 +70,7 @@ class LifecycleStatusListener implements EventListenerInterface
     /**
      * Recalculate order status after an ordered line quantity changes.
      *
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<object> $event Event.
      * @return void
      */
     public function orderLineQuantityChanged(EventInterface $event): void
@@ -80,7 +89,7 @@ class LifecycleStatusListener implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<object> $event Event.
      * @return void
      */
     public function fulfilmentDispatched(EventInterface $event): void
@@ -105,8 +114,10 @@ class LifecycleStatusListener implements EventListenerInterface
         );
 
         $orders = $this->orders();
-        /** @var \App\Model\Table\StockTransactionsTable $stockTransactions */
-        $stockTransactions = $this->fetchModel('StockTransactions');
+        $stockTransactions = $this->typedTable('StockTransactions', StockTransactionsTable::class);
+        if (!$stockTransactions instanceof StockTransactionsTable) {
+            throw new UnexpectedValueException('StockTransactions must use StockTransactionsTable.');
+        }
         $badgeIds = $stockTransactions->find()
             ->select(['badge_id'])
             ->where([
@@ -118,11 +129,18 @@ class LifecycleStatusListener implements EventListenerInterface
             ->all()
             ->extract('badge_id');
         foreach ($badgeIds as $badgeId) {
-            $stockTransactions->refreshBadgeStockForBadge((string)$badgeId);
+            if (!is_string($badgeId)) {
+                throw new UnexpectedValueException('Dispatched badge IDs must be strings.');
+            }
+            $stockTransactions->refreshBadgeStockForBadge($badgeId);
         }
 
-        $orderLines = $orders->OrderLines->find()
-            ->innerJoinWith('StockTransactions', function ($query) use ($fulfilment) {
+        $orderLinesTable = $orders->OrderLines->getTarget();
+        if (!$orderLinesTable instanceof OrderLinesTable) {
+            throw new UnexpectedValueException('OrderLines must use OrderLinesTable.');
+        }
+        $orderLines = $orderLinesTable->find()
+            ->innerJoinWith('StockTransactions', function (SelectQuery $query) use ($fulfilment) {
                 return $query->where([
                     'StockTransactions.fulfilment_id' => $fulfilment->id,
                     'StockTransactions.transaction_type' => TransactionType::Fulfilment->value,
@@ -131,16 +149,18 @@ class LifecycleStatusListener implements EventListenerInterface
             ->distinct(['OrderLines.id'])
             ->all();
         foreach ($orderLines as $orderLine) {
-            $orders->OrderLines->dispatchEvent(
-                'OrderLine.afterFulfilment',
-                ['fulfilment' => $fulfilment],
-                $orderLine,
+            $orderLinesTable->getEventManager()->dispatch(
+                new Event(
+                    'OrderLine.afterFulfilment',
+                    $orderLine,
+                    ['fulfilment' => $fulfilment],
+                ),
             );
         }
 
         $orderIds = $orders->find()
             ->select(['Orders.id'])
-            ->innerJoinWith('OrderLines.StockTransactions', function ($query) use ($fulfilment) {
+            ->innerJoinWith('OrderLines.StockTransactions', function (SelectQuery $query) use ($fulfilment) {
                 return $query->where([
                     'StockTransactions.fulfilment_id' => $fulfilment->id,
                     'StockTransactions.transaction_type' => TransactionType::Fulfilment->value,
@@ -161,7 +181,7 @@ class LifecycleStatusListener implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<object> $event Event.
      * @return void
      */
     public function replenishmentSubmitted(EventInterface $event): void
@@ -175,7 +195,7 @@ class LifecycleStatusListener implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<object> $event Event.
      * @return void
      */
     public function replenishmentReceived(EventInterface $event): void
@@ -185,8 +205,10 @@ class LifecycleStatusListener implements EventListenerInterface
             return;
         }
 
-        /** @var \App\Model\Table\StockTransactionsTable $stockTransactions */
-        $stockTransactions = $this->fetchModel('StockTransactions');
+        $stockTransactions = $this->typedTable('StockTransactions', StockTransactionsTable::class);
+        if (!$stockTransactions instanceof StockTransactionsTable) {
+            throw new UnexpectedValueException('StockTransactions must use StockTransactionsTable.');
+        }
         $query = $stockTransactions->find()
             ->where([
                 'replenishment_id' => $replenishment->id,
@@ -202,8 +224,8 @@ class LifecycleStatusListener implements EventListenerInterface
             ])
             ->disableHydration()
             ->first();
-        $remaining = max(0, (int)($totals['remaining'] ?? 0));
-        $received = (int)($totals['received'] ?? 0);
+        $remaining = max(0, (int)$this->numericTotal($totals['remaining'] ?? 0));
+        $received = (int)$this->numericTotal($totals['received'] ?? 0);
         $status = match (true) {
             $received <= 0 => ReplenishmentStatus::Submitted,
             $remaining === 0 => ReplenishmentStatus::Received,
@@ -257,7 +279,13 @@ class LifecycleStatusListener implements EventListenerInterface
     private function refreshOrderFulfilmentTotals(Order $order): void
     {
         $orders = $this->orders();
-        $query = $orders->OrderLines->StockTransactions->find()
+        $query = $this->associatedQuery(
+            $orders->OrderLines->StockTransactions,
+            $this->typedAssociation(
+                $orders->OrderLines->StockTransactions,
+                StockTransactionsTable::class,
+            ),
+        )
             ->innerJoinWith('OrderLines')
             ->innerJoinWith('Fulfilments')
             ->where([
@@ -273,8 +301,13 @@ class LifecycleStatusListener implements EventListenerInterface
             ->disableHydration()
             ->first();
         $values = [
-            'total_fulfilled_amount' => number_format((float)($totals['total_amount'] ?? 0), 2, '.', ''),
-            'total_fulfilled_quantity' => (int)($totals['total_quantity'] ?? 0),
+            'total_fulfilled_amount' => number_format(
+                (float)$this->numericTotal($totals['total_amount'] ?? 0),
+                2,
+                '.',
+                '',
+            ),
+            'total_fulfilled_quantity' => (int)$this->numericTotal($totals['total_quantity'] ?? 0),
         ];
 
         $orders->updateAll($values, ['id' => $order->id]);
@@ -295,9 +328,9 @@ class LifecycleStatusListener implements EventListenerInterface
         FulfilmentStatus $status,
         ?DateTime $dispatchedDate = null,
     ): void {
-        $fulfilments = $this->fetchModel('Fulfilments');
+        $fulfilments = $this->typedTable('Fulfilments', FulfilmentsTable::class);
         $values = ['status' => $status->value];
-        if ($dispatchedDate !== null && !$fulfilment->dispatched_date) {
+        if ($dispatchedDate !== null && $fulfilment->dispatched_date === null) {
             $values['dispatched_date'] = $dispatchedDate;
         }
 
@@ -322,10 +355,10 @@ class LifecycleStatusListener implements EventListenerInterface
             'order_submitted' => $status !== ReplenishmentStatus::Draft,
             'received' => $status === ReplenishmentStatus::Received,
         ];
-        if ($status === ReplenishmentStatus::Submitted && !$replenishment->order_submitted_date) {
+        if ($status === ReplenishmentStatus::Submitted && $replenishment->order_submitted_date === null) {
             $values['order_submitted_date'] = DateTime::now();
         }
-        if ($status === ReplenishmentStatus::Received && !$replenishment->received_date) {
+        if ($status === ReplenishmentStatus::Received && $replenishment->received_date === null) {
             $values['received_date'] = DateTime::now();
         }
 
@@ -337,7 +370,7 @@ class LifecycleStatusListener implements EventListenerInterface
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<object> $event Event.
      * @return \App\Model\Entity\Replenishment
      */
     private function replenishmentFromEvent(EventInterface $event): Replenishment
@@ -359,8 +392,7 @@ class LifecycleStatusListener implements EventListenerInterface
      */
     private function orders(): OrdersTable
     {
-        /** @var \App\Model\Table\OrdersTable $orders */
-        $orders = $this->fetchModel('Orders');
+        $orders = $this->typedTable('Orders', OrdersTable::class);
 
         return $orders;
     }
@@ -370,9 +402,21 @@ class LifecycleStatusListener implements EventListenerInterface
      */
     private function replenishments(): ReplenishmentsTable
     {
-        /** @var \App\Model\Table\ReplenishmentsTable $replenishments */
-        $replenishments = $this->fetchModel('Replenishments');
+        $replenishments = $this->typedTable('Replenishments', ReplenishmentsTable::class);
 
         return $replenishments;
+    }
+
+    /**
+     * @param mixed $total Database aggregate value.
+     * @return string|float|int
+     */
+    private function numericTotal(mixed $total): string|float|int
+    {
+        if (!is_numeric($total)) {
+            throw new UnexpectedValueException('Lifecycle totals must be numeric.');
+        }
+
+        return $total;
     }
 }

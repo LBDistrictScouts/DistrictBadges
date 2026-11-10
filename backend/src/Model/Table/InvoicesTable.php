@@ -5,6 +5,7 @@ namespace App\Model\Table;
 
 use App\Model\Entity\Invoice;
 use App\Model\Enum\FulfilmentStatus;
+use App\Utility\Value;
 use ArrayObject;
 use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
@@ -12,7 +13,6 @@ use Cake\Event\EventInterface;
 use Cake\I18n\DateTime;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
-use Cake\ORM\TableRegistry;
 use Cake\Validation\Validator;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -22,24 +22,14 @@ use InvalidArgumentException;
 /**
  * Invoices Model
  *
- * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\BelongsTo $Accounts
- * @property \App\Model\Table\InvoiceSummariesTable&\Cake\ORM\Association\HasMany $InvoiceSummaries
- * @method \App\Model\Entity\Invoice newEmptyEntity()
- * @method \App\Model\Entity\Invoice newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\Invoice> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Invoice get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\Invoice findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\Invoice patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\Invoice> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\Invoice|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\Invoice saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\Invoice>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Invoice>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Invoice>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Invoice> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Invoice>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Invoice>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Invoice>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Invoice> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\AccountsTable> $Accounts
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\InvoiceSummariesTable> $InvoiceSummaries
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\Invoice>
  */
 class InvoicesTable extends Table
 {
+    use TypedTableLocatorTrait;
+
     private const PAYMENT_TERMS_DAYS = 30;
     private const FIRST_BILLING_DATE = '2026-01-01';
 
@@ -104,11 +94,11 @@ class InvoicesTable extends Table
                     if ($value === null || $value === '') {
                         return true;
                     }
-                    $end = $value instanceof DateTimeInterface ? $value->format('Y-m-d') : (string)$value;
-                    $startValue = $context['data']['period_start_date'] ?? null;
+                    $end = $value instanceof DateTimeInterface ? $value->format('Y-m-d') : Value::string($value);
+                    $startValue = Value::map($context['data'] ?? [])['period_start_date'] ?? null;
                     $start = $startValue instanceof DateTimeInterface
                         ? $startValue->format('Y-m-d')
-                        : (string)$startValue;
+                        : Value::string($startValue);
                     if (!self::isExactDate($end) || ($start !== '' && !self::isExactDate($start))) {
                         // The individual date rules provide the malformed-date errors.
                         return true;
@@ -198,7 +188,7 @@ class InvoicesTable extends Table
             $description .= sprintf(
                 '. Ordered by: %s. Section: %s.',
                 $summary->order->user->full_name,
-                $summary->order->section?->section_name ?? 'Not specified',
+                $summary->order->section->section_name ?? 'Not specified',
             );
             $items[] = [
                 'name' => sprintf(
@@ -214,10 +204,10 @@ class InvoicesTable extends Table
 
         return [
             'type' => 'invoice',
-            'from' => (string)Configure::read(
+            'from' => Value::string(Configure::read(
                 'InvoiceGenerator.from',
                 'LBA Scouts District Badge Shop',
-            ),
+            )),
             'to' => $invoice->account->account_name,
             'number' => $invoice->invoice_number,
             'date' => $invoice->invoice_date->format('Y-m-d'),
@@ -242,7 +232,12 @@ class InvoicesTable extends Table
         $skipped = 0;
         $messages = [];
 
-        foreach ($this->Accounts->find()->all() as $account) {
+        foreach (
+            $this->associatedQuery(
+                $this->Accounts,
+                $this->typedAssociation($this->Accounts, AccountsTable::class),
+            )->all() as $account
+        ) {
             $lastInvoice = $this->find()
                 ->where([
                     'account_id' => $account->id,
@@ -250,17 +245,18 @@ class InvoicesTable extends Table
                 ])
                 ->orderByDesc('period_end_date')
                 ->first();
-            if (
-                $lastInvoice !== null
-                && $lastInvoice->period_end_date->format('Y-m-d') >= $periodEnd->format('Y-m-d')
-            ) {
+            $lastEnd = $lastInvoice?->period_end_date;
+            if ($lastInvoice !== null && $lastEnd === null) {
+                throw new DomainException('The previous invoice period end is missing.');
+            }
+            if ($lastEnd !== null && $lastEnd->format('Y-m-d') >= $periodEnd->format('Y-m-d')) {
                 $skipped++;
                 continue;
             }
 
-            $periodStart = $lastInvoice === null
+            $periodStart = $lastEnd === null
                 ? new DateTimeImmutable(self::FIRST_BILLING_DATE)
-                : new DateTimeImmutable($lastInvoice->period_end_date->addDays(1)->format('Y-m-d'));
+                : new DateTimeImmutable($lastEnd->addDays(1)->format('Y-m-d'));
             if ($periodStart > $periodEnd) {
                 $skipped++;
                 continue;
@@ -317,8 +313,14 @@ class InvoicesTable extends Table
             throw new InvalidArgumentException('The selected account does not exist.');
         }
 
-        $fulfilmentLines = TableRegistry::getTableLocator()->get('FulfilmentLines');
-        $alreadyInvoiced = $this->InvoiceSummaries->find()
+        $fulfilmentLines = $this->typedTable('FulfilmentLines', FulfilmentLinesTable::class);
+        $alreadyInvoiced = $this->associatedQuery(
+            $this->InvoiceSummaries,
+            $this->typedAssociation(
+                $this->InvoiceSummaries,
+                InvoiceSummariesTable::class,
+            ),
+        )
             ->select(['fulfilment_id'])
             ->where(['fulfilment_id IS NOT' => null]);
         $billableLines = $fulfilmentLines->find()
@@ -336,15 +338,15 @@ class InvoicesTable extends Table
         $summaries = [];
         $fulfilmentPostage = [];
         foreach ($billableLines as $line) {
-            $unitPrice = number_format((float)$line->unit_price, 2, '.', '');
-            $orderId = (string)$line->order_line->order_id;
-            $fulfilmentId = (string)$line->fulfilment_id;
+            $unitPrice = number_format(Value::float($line->unit_price), 2, '.', '');
+            $orderId = Value::string($line->order_line->order_id);
+            $fulfilmentId = Value::string($line->fulfilment_id);
             $summaryKey = $orderId . ':' . $fulfilmentId;
-            $detailKey = (string)$line->badge_id . ':' . $unitPrice;
+            $detailKey = Value::string($line->badge_id) . ':' . $unitPrice;
             if (!isset($fulfilmentPostage[$fulfilmentId])) {
                 $fulfilmentPostage[$fulfilmentId] = [
                     'summary_key' => $summaryKey,
-                    'amount' => (float)$line->fulfilment->postage_charge,
+                    'amount' => Value::float($line->fulfilment->postage_charge),
                 ];
             }
             if (!isset($summaries[$summaryKey])) {
@@ -356,21 +358,18 @@ class InvoicesTable extends Table
                     'invoice_lines' => [],
                 ];
             }
-            if (!isset($summaries[$summaryKey]['invoice_lines'][$detailKey])) {
-                $summaries[$summaryKey]['invoice_lines'][$detailKey] = [
-                    'badge_id' => $line->badge_id,
-                    'description' => $line->badge->badge_name,
-                    'quantity' => 0,
-                    'unit_price' => $unitPrice,
-                    'line_amount' => 0.0,
-                ];
-            }
-            $quantity = (int)$line->fulfilled_quantity_change;
-            $amount = (float)$line->monetary_amount;
+            $quantity = Value::int($line->fulfilled_quantity_change);
+            $amount = Value::float($line->monetary_amount);
+            $previousLine = $summaries[$summaryKey]['invoice_lines'][$detailKey] ?? null;
+            $summaries[$summaryKey]['invoice_lines'][$detailKey] = [
+                'badge_id' => $line->badge_id,
+                'description' => $line->badge->badge_name,
+                'quantity' => ($previousLine['quantity'] ?? 0) + $quantity,
+                'unit_price' => $unitPrice,
+                'line_amount' => ($previousLine['line_amount'] ?? 0.0) + $amount,
+            ];
             $summaries[$summaryKey]['quantity'] += $quantity;
             $summaries[$summaryKey]['line_amount'] += $amount;
-            $summaries[$summaryKey]['invoice_lines'][$detailKey]['quantity'] += $quantity;
-            $summaries[$summaryKey]['invoice_lines'][$detailKey]['line_amount'] += $amount;
         }
         foreach ($fulfilmentPostage as $fulfilmentId => $postage) {
             if ($postage['amount'] <= 0) {
@@ -419,17 +418,35 @@ class InvoicesTable extends Table
             'invoice_summaries' => $summaryData,
         ], ['associated' => ['InvoiceSummaries.InvoiceLines']]);
 
-        return $this->getConnection()->transactional(function () use ($invoice): Invoice {
+        $saved = $this->getConnection()->transactional(function () use ($invoice): Invoice {
             return $this->saveOrFail($invoice, ['associated' => ['InvoiceSummaries']]);
         });
+        if (!$saved instanceof Invoice) {
+            throw new DomainException('The invoice transaction did not commit.');
+        }
+
+        return $saved;
     }
 
     /**
      * Capture badge ids before database cascades remove the invoice lines.
      */
+
+    /**
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Invoice.
+     * @param \ArrayObject<string, mixed> $options Persistence options.
+     * @return void
+     */
     public function beforeDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
-        $badgeIds = $this->InvoiceSummaries->InvoiceLines->find()
+        $badgeIds = $this->associatedQuery(
+            $this->InvoiceSummaries->InvoiceLines,
+            $this->typedAssociation(
+                $this->InvoiceSummaries->InvoiceLines,
+                InvoiceLinesTable::class,
+            ),
+        )
             ->select(['badge_id'])
             ->innerJoinWith('InvoiceSummaries')
             ->where([
@@ -447,10 +464,16 @@ class InvoicesTable extends Table
     /**
      * Refresh cached quantities after the invoice and its lines are gone.
      */
+    /**
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \Cake\Datasource\EntityInterface $entity Invoice.
+     * @param \ArrayObject<string, mixed> $options Persistence options.
+     * @return void
+     */
     public function afterDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
-        foreach ($options['affectedBadgeIds'] ?? [] as $badgeId) {
-            $this->InvoiceSummaries->InvoiceLines->refreshBadgeInvoicedQuantity((string)$badgeId);
+        foreach (Value::stringList($options['affectedBadgeIds'] ?? []) as $badgeId) {
+            $this->InvoiceSummaries->InvoiceLines->refreshBadgeInvoicedQuantity(Value::string($badgeId));
         }
     }
 }

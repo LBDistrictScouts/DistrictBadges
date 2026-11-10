@@ -82,7 +82,6 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/process" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/service-contracts" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/string" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/theseer/tokenizer" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig/markdown-extra" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig/twig" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/algolia/algoliasearch-client-php" />
@@ -139,7 +138,6 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/staabm" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/config" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/theseer" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/twig" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/dereuromark/cakephp-ide-helper" />
     </content>

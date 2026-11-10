@@ -5,6 +5,7 @@ namespace App\Queue\Processor;
 
 use App\Exception\OrderValidationException;
 use App\Service\OrderPlacementService;
+use App\Utility\Value;
 use Cake\Log\LogTrait;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use JsonException;
@@ -31,7 +32,7 @@ class OrderProcessor
 
             return self::REJECT;
         }
-        if (!is_array($payload)) {
+        if (!Value::isMap($payload)) {
             return self::REJECT;
         }
 

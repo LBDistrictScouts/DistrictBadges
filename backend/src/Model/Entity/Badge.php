@@ -4,7 +4,10 @@ declare(strict_types=1);
 namespace App\Model\Entity;
 
 use App\Model\Enum\BadgeStatus;
+use App\Utility\Value;
+use Cake\Datasource\EntityInterface;
 use Cake\ORM\Entity;
+use UnexpectedValueException;
 
 /**
  * Badge Entity
@@ -12,7 +15,7 @@ use Cake\ORM\Entity;
  * @property string $id
  * @property string $badge_name
  * @property int|null $national_product_code
- * @property array|null $national_data
+ * @property array<string, mixed>|null $national_data
  * @property bool $stocked
  * @property \App\Model\Enum\BadgeStatus $status
  * @property int $on_hand_quantity
@@ -39,7 +42,7 @@ use Cake\ORM\Entity;
  * @property ?string $image_medium_url
  * @property bool $unlisted_badge
  *
- * @property array $national_core_data
+ * @property array<string, mixed> $national_core_data
  */
 class Badge extends Entity
 {
@@ -78,7 +81,7 @@ class Badge extends Entity
     ];
 
     protected array $_hidden = [
-        'stock_transactions' => true,
+        'stock_transactions',
     ];
 
     protected array $_virtual = [
@@ -102,11 +105,14 @@ class Badge extends Entity
     }
 
     /**
-     * @return array
+     * @return array<string, mixed>
      */
     protected function _getNationalCoreData(): array
     {
-        return $this->national_data['result'][0] ?? [];
+        $results = $this->national_data['result'] ?? [];
+        $first = is_array($results) ? ($results[0] ?? []) : [];
+
+        return Value::isMap($first) ? $first : [];
     }
 
     /**
@@ -114,9 +120,9 @@ class Badge extends Entity
      */
     protected function _getImagePath(): ?string
     {
-        return $this->national_core_data['image']
-            ?? $this->national_core_data['ImageURL']
-            ?? null;
+        $path = $this->national_core_data['image'] ?? $this->national_core_data['ImageURL'] ?? null;
+
+        return is_string($path) ? $path : null;
     }
 
     /**
@@ -125,7 +131,9 @@ class Badge extends Entity
     protected function _getImageLargeUrl(): ?string
     {
         if (is_null($this->image_path)) {
-            return $this->get('image_url') ?: null;
+            $url = $this->image_url;
+
+            return $url !== '' ? $url : null;
         }
 
         $large = 'https://shop.scouts.org.uk/tco-images/o/2560x2560/'
@@ -140,7 +148,9 @@ class Badge extends Entity
     protected function _getImageMediumUrl(): ?string
     {
         if (is_null($this->image_path)) {
-            return $this->get('image_url') ?: null;
+            $url = $this->image_url;
+
+            return $url !== '' ? $url : null;
         }
 
         $medium = 'https://shop.scouts.org.uk/tco-images/o/1154x1443/'
@@ -157,15 +167,15 @@ class Badge extends Entity
         $status = $this->get('status');
 
         return [
-            'objectID' => (string)$this->get('id'),
-            'id' => (string)$this->get('id'),
+            'objectID' => Value::string($this->get('id')),
+            'id' => Value::string($this->get('id')),
             'badge_name' => $this->get('badge_name'),
             'national_product_code' => $this->get('national_product_code'),
             'status' => $status instanceof BadgeStatus ? $status->label() : null,
             'available' => $status === BadgeStatus::Available,
-            'price' => (float)$this->get('price'),
-            'reserve_quantity' => (int)$this->get('reserve_quantity'),
-            'on_hand_quantity' => (int)$this->get('on_hand_quantity'),
+            'price' => Value::float($this->get('price')),
+            'reserve_quantity' => Value::int($this->get('reserve_quantity')),
+            'on_hand_quantity' => Value::int($this->get('on_hand_quantity')),
             'image_large_url' => $this->get('image_large_url'),
             'image_medium_url' => $this->get('image_medium_url'),
             'section_tags' => $this->tagNames('badge_sections'),
@@ -186,7 +196,10 @@ class Badge extends Entity
 
         $names = [];
         foreach ($tags as $tag) {
-            $names[] = (string)$tag->get('tag_name');
+            if (!$tag instanceof EntityInterface) {
+                throw new UnexpectedValueException('Badge tags must be entities.');
+            }
+            $names[] = Value::string($tag->get('tag_name'));
         }
 
         return $names;

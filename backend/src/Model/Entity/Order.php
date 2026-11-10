@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Entity;
 
+use App\Utility\Value;
 use Cake\ORM\Entity;
 
 /**
@@ -90,7 +91,7 @@ class Order extends Entity
      */
     protected function _getCreatedVia(): string
     {
-        return (string)($this->get('idempotency_key') ?? '') !== ''
+        return Value::string($this->get('idempotency_key') ?? '') !== ''
             ? 'Webstore'
             : 'Admin backend';
     }

@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\TypedTableLocatorTrait;
 use App\Model\Table\UsersTable;
 use App\Service\CognitoService;
+use App\Utility\Value;
 use Cake\Controller\Controller;
 use Cake\Core\Configure;
 use Cake\Http\Response;
@@ -15,6 +17,8 @@ use Throwable;
 /** Cognito Hosted UI sign-in and local session management. */
 class AuthController extends Controller
 {
+    use TypedTableLocatorTrait;
+
     /** Set the sign-in layout. */
     public function initialize(): void
     {
@@ -96,20 +100,21 @@ class AuthController extends Controller
 
         $failureStage = 'Cognito token exchange and ID-token validation';
         try {
-            $claims = (new CognitoService())->exchangeAndValidate(
+            $tokens = (new CognitoService())->exchangeAndValidate(
                 $code,
                 $oauth['verifier'],
                 $oauth['nonce'],
             );
+            $claims = $tokens['claims'];
             $failureStage = 'local user lookup';
-            $users = $this->fetchTable('Users');
+            $users = $this->typedTable('Users', UsersTable::class);
             if (!$users instanceof UsersTable) {
                 return $this->signInFailed('The Users table was unavailable.');
             }
 
             $user = $users->findForCognitoIdentity(
-                (string)$claims['email'],
-                (string)$claims['sub'],
+                Value::string($claims['email']),
+                Value::string($claims['sub']),
             );
             if ($user === null) {
                 return $this->signInFailed('No unique local user matched the Cognito identity.');
@@ -119,7 +124,9 @@ class AuthController extends Controller
             $session->write('Auth.identity', [
                 'user_id' => (string)$user->id,
                 'group_id' => (string)$user->group_id,
-                'expires_at' => (int)$claims['exp'],
+                'cognito_sub' => Value::string($claims['sub']),
+                'expires_at' => Value::int($claims['exp']),
+                'refresh_token' => $tokens['refresh_token'],
             ]);
 
             $redirect = $session->read('Auth.redirect');
@@ -179,11 +186,11 @@ class AuthController extends Controller
             return $this->redirect(['action' => 'login']);
         }
 
-        $logoutUri = rtrim((string)Configure::read('App.fullBaseUrl'), '/') . '/auth/login';
-        $logoutUrl = rtrim((string)Configure::read('Cognito.hostedUiDomain'), '/')
+        $logoutUri = rtrim(Value::string(Configure::read('App.fullBaseUrl')), '/') . '/auth/login';
+        $logoutUrl = rtrim(Value::string(Configure::read('Cognito.hostedUiDomain')), '/')
             . '/logout?'
             . http_build_query([
-                'client_id' => (string)Configure::read('Cognito.clientId'),
+                'client_id' => Value::string(Configure::read('Cognito.clientId')),
                 'logout_uri' => $logoutUri,
             ], '', '&', PHP_QUERY_RFC3986);
 
@@ -193,6 +200,8 @@ class AuthController extends Controller
     /**
      * Store a generic sign-in error and return to the login page.
      */
+
+    /** @param array<string, mixed> $context Failure details. */
     private function signInFailed(
         string $reason = 'Unknown sign-in failure.',
         array $context = [],

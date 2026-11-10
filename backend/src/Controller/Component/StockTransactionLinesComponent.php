@@ -4,11 +4,37 @@ declare(strict_types=1);
 namespace App\Controller\Component;
 
 use App\Model\Enum\BadgeStatus;
+use App\Model\Table\BadgesTable;
+use App\View\Helper\StockTransactionLinesHelper;
 use Cake\Controller\Component;
 use Cake\Datasource\EntityInterface;
+use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Http\Response;
 use Cake\ORM\Table;
+use LogicException;
 
+/**
+ * @phpstan-type FieldConfig array{
+ *   label?: string, source?: string, type?: string, min?: int|float, max?: int|float,
+ *   step?: int|float|string, default?: int|float|string, editable?: bool, currency?: string,
+ *   target?: string, changes?: array<string, int>,
+ *   calculation?: array{operation: string, fields: list<string>}
+ * }
+ * @phpstan-type SelectorConfig array{
+ *   label?: string, options?: array<string, string>, empty?: string,
+ *   association?: string, matchBadgeField?: string
+ * }
+ * @phpstan-type DeduplicationConfig array{
+ *   sum?: array<string, 'money'|'quantity'>,
+ *   weightedPrice?: array{field: string, quantity: string, amount: string}
+ * }
+ * @phpstan-type LineConfig array{
+ *   inputKey: string, foreignKey?: string, fields: array<string, FieldConfig>,
+ *   selectors?: array<string, SelectorConfig>, stockTransaction?: bool,
+ *   defaults?: array<string, scalar|null>, deduplicate?: DeduplicationConfig,
+ *   requiredMessage?: string, invalidMessage?: string, badgePriceField?: string
+ * }
+ */
 class StockTransactionLinesComponent extends Component
 {
     /**
@@ -17,23 +43,31 @@ class StockTransactionLinesComponent extends Component
      */
     public function badgeOptions(Table $linesTable): array
     {
-        return $linesTable->Badges
-            ->find('list', valueField: 'badge_name')
+        $badges = $this->badgesTable($linesTable)->find()
+            ->select(['id', 'badge_name'])
             ->where(['status !=' => BadgeStatus::Unstocked->value])
-            ->orderBy(['badge_name' => 'ASC'])
-            ->toArray();
+            ->orderBy(['badge_name' => 'ASC']);
+        $options = [];
+        foreach ($badges as $badge) {
+            $options[$badge->id] = $badge->badge_name;
+        }
+
+        return $options;
     }
 
     /**
      * @param array<string, mixed> $data Request data.
      * @param string $parentId Parent entity id.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param LineConfig $config Grid configuration.
      * @return array<string, mixed>
      */
     public function normalise(array $data, string $parentId, array $config): array
     {
-        $inputKey = (string)$config['inputKey'];
-        $foreignKey = (string)$config['foreignKey'];
+        $inputKey = $config['inputKey'];
+        $foreignKey = $config['foreignKey'] ?? null;
+        if ($foreignKey === null) {
+            throw new LogicException('Normalising stock lines requires a foreignKey configuration.');
+        }
         $lines = $data[$inputKey] ?? [];
         $data[$inputKey] = [];
 
@@ -41,13 +75,16 @@ class StockTransactionLinesComponent extends Component
             return $data;
         }
 
+        $normalisedLines = [];
         foreach ($lines as $line) {
             if (!is_array($line)) {
                 continue;
             }
 
-            $data[$inputKey][] = $this->normaliseLine($line, $parentId, $foreignKey, $config);
+            $normalisedLines[] = $this->normaliseLine($line, $parentId, $foreignKey, $config);
         }
+
+        $data[$inputKey] = $this->deduplicateLines($normalisedLines, $config);
 
         return $data;
     }
@@ -55,23 +92,23 @@ class StockTransactionLinesComponent extends Component
     /**
      * @param \Cake\Datasource\EntityInterface $entity Parent entity.
      * @param array<string, mixed> $data Normalised data.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param array{inputKey: string, requiredMessage?: string} $config Grid configuration.
      * @return void
      */
     public function requireLines(EntityInterface $entity, array $data, array $config): void
     {
-        $inputKey = (string)$config['inputKey'];
-        if (empty($data[$inputKey])) {
+        $inputKey = $config['inputKey'];
+        if (!is_array($data[$inputKey] ?? null) || $data[$inputKey] === []) {
             $entity->setError(
                 $inputKey,
-                (string)($config['requiredMessage'] ?? __('Add at least one stock transaction line.')),
+                $config['requiredMessage'] ?? __('Add at least one stock transaction line.'),
             );
         }
     }
 
     /**
      * @param \Cake\ORM\Table $linesTable Stock transaction child table.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param LineConfig $config Grid configuration.
      * @return \Cake\Http\Response
      */
     public function rowResponse(Table $linesTable, array $config): Response
@@ -80,7 +117,7 @@ class StockTransactionLinesComponent extends Component
         $request = $controller->getRequest();
         $request->allowMethod(['post']);
 
-        $badgeId = (string)$request->getData('badge_id');
+        $badgeId = $this->inputIdentifier($request->getData('badge_id')) ?? '';
         $index = filter_var(
             $request->getData('index'),
             FILTER_VALIDATE_INT,
@@ -90,11 +127,11 @@ class StockTransactionLinesComponent extends Component
 
         if ($badgeId === '' || $index === false || $values === null) {
             return $this->errorResponse(
-                (string)($config['invalidMessage'] ?? __('Complete all line fields with valid values.')),
+                $config['invalidMessage'] ?? __('Complete all line fields with valid values.'),
             );
         }
 
-        $badge = $linesTable->Badges
+        $badge = $this->badgesTable($linesTable)
             ->find()
             ->select(['id', 'badge_name'])
             ->where([
@@ -115,29 +152,37 @@ class StockTransactionLinesComponent extends Component
         );
         if ($selectors === null) {
             return $this->errorResponse(
-                (string)($config['invalidMessage'] ?? __('Complete all line fields with valid values.')),
+                $config['invalidMessage'] ?? __('Complete all line fields with valid values.'),
             );
         }
 
         $view = $controller->createView();
-        $html = $view->StockTransactionLines->row([
+        $helper = $view->loadHelper('StockTransactionLines');
+        if (!$helper instanceof StockTransactionLinesHelper) {
+            throw new LogicException('StockTransactionLines must use StockTransactionLinesHelper.');
+        }
+        $fields = [];
+        foreach ($config['fields'] as $field => $fieldConfig) {
+            $fields[$field] = ['label' => $fieldConfig['label'] ?? $field] + $fieldConfig;
+        }
+        $html = $helper->row([
             'inputKey' => $config['inputKey'],
-            'badgeId' => (string)$badge->id,
-            'badgeName' => (string)$badge->badge_name,
+            'badgeId' => $badge->id,
+            'badgeName' => $badge->badge_name,
             'values' => $values,
-            'fields' => $config['fields'],
+            'fields' => $fields,
             'selectors' => $selectors,
             'index' => $index,
         ]);
 
         return $controller->getResponse()
             ->withType('application/json')
-            ->withStringBody((string)json_encode(['html' => $html]));
+            ->withStringBody(json_encode(['html' => $html], JSON_THROW_ON_ERROR));
     }
 
     /**
      * @param \Cake\ORM\Table $linesTable Line table with a Badges association.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param array{badgePriceField?: string} $config Grid configuration.
      * @return \Cake\Http\Response
      */
     public function badgePriceResponse(Table $linesTable, array $config): Response
@@ -146,9 +191,9 @@ class StockTransactionLinesComponent extends Component
         $request = $controller->getRequest();
         $request->allowMethod(['get']);
 
-        $badgeId = (string)$request->getQuery('badge_id');
-        $priceField = (string)($config['badgePriceField'] ?? '');
-        $badges = $linesTable->Badges;
+        $badgeId = $this->inputIdentifier($request->getQuery('badge_id')) ?? '';
+        $priceField = $config['badgePriceField'] ?? '';
+        $badges = $this->badgesTable($linesTable);
 
         if (
             $badgeId === ''
@@ -164,26 +209,30 @@ class StockTransactionLinesComponent extends Component
                 'id' => $badgeId,
                 'status !=' => BadgeStatus::Unstocked->value,
             ])
-            ->disableHydration()
             ->first();
 
         if ($badge === null) {
             return $this->errorResponse(__('The selected badge could not be found.'));
         }
 
+        $price = $badge->get($priceField);
+        if ($price !== null && !is_numeric($price)) {
+            return $this->errorResponse(__('A valid badge price could not be resolved.'));
+        }
+
         return $controller->getResponse()
             ->withType('application/json')
-            ->withStringBody((string)json_encode([
-                'unit_price' => number_format((float)$badge[$priceField], 2, '.', ''),
-            ]));
+            ->withStringBody(json_encode([
+                'unit_price' => number_format((float)$price, 2, '.', ''),
+            ], JSON_THROW_ON_ERROR));
     }
 
     /**
-     * @param array<string, mixed> $line Line input.
+     * @param array<array-key, mixed> $line Line input.
      * @param string $parentId Parent entity id.
      * @param string $foreignKey Parent foreign key.
-     * @param array<string, mixed> $config Grid configuration.
-     * @return array<string, mixed>
+     * @param LineConfig $config Grid configuration.
+     * @return array<string, scalar|null>
      */
     private function normaliseLine(
         array $line,
@@ -192,11 +241,11 @@ class StockTransactionLinesComponent extends Component
         array $config,
     ): array {
         $normalised = [
-            'badge_id' => $line['badge_id'] ?? null,
+            'badge_id' => $this->inputIdentifier($line['badge_id'] ?? null),
             $foreignKey => $parentId,
         ];
         foreach ($config['selectors'] ?? [] as $field => $selectorConfig) {
-            $normalised[$field] = $line[$field] ?? null;
+            $normalised[$field] = $this->inputIdentifier($line[$field] ?? null);
         }
         if ($config['stockTransaction'] ?? true) {
             $normalised += [
@@ -215,7 +264,7 @@ class StockTransactionLinesComponent extends Component
                 $normalised[$fieldConfig['target']] = $value;
             }
             foreach ($fieldConfig['changes'] ?? [] as $column => $multiplier) {
-                $normalised[$column] = $value === null ? null : (int)$value * (int)$multiplier;
+                $normalised[$column] = $value === null ? null : (int)$value * $multiplier;
             }
         }
 
@@ -223,44 +272,130 @@ class StockTransactionLinesComponent extends Component
     }
 
     /**
-     * @param array<string, mixed> $data Request data.
+     * Combine repeated badge rows while keeping selector-specific lines separate.
+     *
+     * @param list<array<string, scalar|null>> $lines Normalised lines.
+     * @param LineConfig $config Grid configuration.
+     * @return list<array<string, scalar|null>>
+     */
+    private function deduplicateLines(array $lines, array $config): array
+    {
+        $deduplication = $config['deduplicate'] ?? null;
+        if ($deduplication === null) {
+            return $lines;
+        }
+
+        $keyFields = array_values(array_unique([
+            'badge_id',
+            ...array_keys($config['selectors'] ?? []),
+        ]));
+        $grouped = [];
+        $unmergeable = [];
+        foreach ($lines as $line) {
+            $key = [];
+            foreach ($keyFields as $field) {
+                $value = $line[$field] ?? null;
+                if (!is_scalar($value) || (string)$value === '') {
+                    $key = [];
+                    break;
+                }
+                $key[$field] = (string)$value;
+            }
+            if ($key === [] || !$this->canAggregateLine($line, $deduplication)) {
+                $unmergeable[] = $line;
+                continue;
+            }
+
+            $groupKey = json_encode($key, JSON_THROW_ON_ERROR);
+            if (!isset($grouped[$groupKey])) {
+                $grouped[$groupKey] = $line;
+                continue;
+            }
+
+            foreach ($deduplication['sum'] ?? [] as $field => $type) {
+                if ($type === 'money') {
+                    $sumCents = (int)round((float)$grouped[$groupKey][$field] * 100)
+                        + (int)round((float)$line[$field] * 100);
+                    $grouped[$groupKey][$field] = number_format($sumCents / 100, 2, '.', '');
+                } else {
+                    $grouped[$groupKey][$field] = (int)$grouped[$groupKey][$field] + (int)$line[$field];
+                }
+            }
+        }
+
+        $weightedPrice = $deduplication['weightedPrice'] ?? null;
+        if ($weightedPrice !== null) {
+            foreach ($grouped as &$groupedLine) {
+                $quantity = (int)$groupedLine[$weightedPrice['quantity']];
+                if ($quantity > 0) {
+                    $amount = (int)round((float)$groupedLine[$weightedPrice['amount']] * 100);
+                    $groupedLine[$weightedPrice['field']] = number_format($amount / $quantity / 100, 2, '.', '');
+                }
+            }
+            unset($groupedLine);
+        }
+
+        return [...array_values($grouped), ...$unmergeable];
+    }
+
+    /**
+     * @param array<string, scalar|null> $line Normalised line.
+     * @param DeduplicationConfig $deduplication Deduplication rules.
+     * @return bool
+     */
+    private function canAggregateLine(array $line, array $deduplication): bool
+    {
+        foreach ($deduplication['sum'] ?? [] as $field => $type) {
+            if (!isset($line[$field]) || !is_numeric($line[$field])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param mixed $data Request data.
      * @param string $badgeId Selected badge id.
      * @param \Cake\ORM\Table $linesTable Stock transaction child table.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param LineConfig $config Grid configuration.
      * @return array<string, array{value: string, label: string}>|null
      */
     private function validateSelectors(
-        array $data,
+        mixed $data,
         string $badgeId,
         Table $linesTable,
         array $config,
     ): ?array {
+        if (!is_array($data)) {
+            return null;
+        }
+
         $selectors = [];
         foreach ($config['selectors'] ?? [] as $field => $selectorConfig) {
-            $value = (string)($data[$field] ?? '');
+            $value = $this->inputIdentifier($data[$field] ?? null) ?? '';
             $options = $selectorConfig['options'] ?? [];
-            if ($value === '' || !is_array($options) || !isset($options[$value])) {
+            if ($value === '' || !isset($options[$value])) {
                 return null;
             }
 
-            $associationName = (string)($selectorConfig['association'] ?? '');
+            $associationName = $selectorConfig['association'] ?? '';
             if ($associationName !== '') {
                 $target = $linesTable->getAssociation($associationName)->getTarget();
-                $record = $target->find()
-                    ->where([$target->getPrimaryKey() => $value])
-                    ->first();
-                if ($record === null) {
+                try {
+                    $record = $target->get($value);
+                } catch (RecordNotFoundException) {
                     return null;
                 }
-                $matchField = $selectorConfig['matchBadgeField'] ?? null;
-                if ($matchField !== null && (string)$record->get((string)$matchField) !== $badgeId) {
+                                $matchField = $selectorConfig['matchBadgeField'] ?? null;
+                if ($matchField !== null && $this->inputIdentifier($record->get($matchField)) !== $badgeId) {
                     return null;
                 }
             }
 
             $selectors[$field] = [
                 'value' => $value,
-                'label' => (string)$options[$value],
+                'label' => $options[$value],
             ];
         }
 
@@ -268,12 +403,16 @@ class StockTransactionLinesComponent extends Component
     }
 
     /**
-     * @param array<string, mixed> $data Request data.
-     * @param array<string, mixed> $config Grid configuration.
+     * @param mixed $data Request data.
+     * @param LineConfig $config Grid configuration.
      * @return array<string, int|string>|null
      */
-    private function validateInputValues(array $data, array $config): ?array
+    private function validateInputValues(mixed $data, array $config): ?array
     {
+        if (!is_array($data)) {
+            return null;
+        }
+
         $values = [];
         foreach ($config['fields'] as $field => $fieldConfig) {
             $value = isset($fieldConfig['calculation'])
@@ -290,17 +429,15 @@ class StockTransactionLinesComponent extends Component
 
     /**
      * @param array<string, int|string> $values Validated field values.
-     * @param array<string, mixed> $config Field configuration.
+     * @param FieldConfig $config Field configuration.
      * @return string|int|null
      */
     private function calculateValue(array $values, array $config): int|string|null
     {
-        $calculation = $config['calculation'];
+        $calculation = $config['calculation'] ?? null;
         if (
-            !is_array($calculation)
-            || ($calculation['operation'] ?? null) !== 'multiply'
-            || !isset($calculation['fields'])
-            || !is_array($calculation['fields'])
+            $calculation === null
+            || $calculation['operation'] !== 'multiply'
         ) {
             return null;
         }
@@ -318,7 +455,7 @@ class StockTransactionLinesComponent extends Component
 
     /**
      * @param mixed $value Input value.
-     * @param array<string, mixed> $config Field configuration.
+     * @param FieldConfig $config Field configuration.
      * @return string|int|null
      */
     private function validateValue(mixed $value, array $config): int|string|null
@@ -330,8 +467,8 @@ class StockTransactionLinesComponent extends Component
 
             $validated = (float)$value;
             if (
-                $validated < (float)($config['min'] ?? 0)
-                || $validated > (float)($config['max'] ?? PHP_INT_MAX)
+                $validated < ($config['min'] ?? 0)
+                || $validated > ($config['max'] ?? PHP_INT_MAX)
             ) {
                 return null;
             }
@@ -350,6 +487,29 @@ class StockTransactionLinesComponent extends Component
     }
 
     /**
+     * @param \Cake\ORM\Table $linesTable Child table with a Badges association.
+     * @return \App\Model\Table\BadgesTable
+     */
+    private function badgesTable(Table $linesTable): BadgesTable
+    {
+        $badges = $linesTable->getAssociation('Badges')->getTarget();
+        if (!$badges instanceof BadgesTable) {
+            throw new LogicException('The Badges association must use BadgesTable.');
+        }
+
+        return $badges;
+    }
+
+    /**
+     * @param mixed $value Submitted identifier.
+     * @return string|null
+     */
+    private function inputIdentifier(mixed $value): ?string
+    {
+        return is_string($value) || is_int($value) ? (string)$value : null;
+    }
+
+    /**
      * @param string $message Error message.
      * @return \Cake\Http\Response
      */
@@ -358,6 +518,6 @@ class StockTransactionLinesComponent extends Component
         return $this->getController()->getResponse()
             ->withStatus(422)
             ->withType('application/json')
-            ->withStringBody((string)json_encode(['error' => $message]));
+            ->withStringBody(json_encode(['error' => $message], JSON_THROW_ON_ERROR));
     }
 }

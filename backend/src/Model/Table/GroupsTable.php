@@ -11,21 +11,9 @@ use Cake\Validation\Validator;
 /**
  * Groups Model
  *
- * @property \App\Model\Table\AccountsTable&\Cake\ORM\Association\HasMany $Accounts
- * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\HasMany $Users
- * @method \App\Model\Entity\Group newEmptyEntity()
- * @method \App\Model\Entity\Group newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\Group> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Group get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\Group findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\Group patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\Group> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\Group|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\Group saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\Group>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Group>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Group>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Group> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Group>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Group>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Group>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Group> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\AccountsTable> $Accounts
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\UsersTable> $Users
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\Group>
  */
 class GroupsTable extends Table
 {

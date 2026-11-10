@@ -9,12 +9,23 @@ use App\Model\Entity\Order;
 use App\Model\Entity\User;
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\OrderStatus;
+use App\Model\Table\AccountsTable;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\GroupsTable;
+use App\Model\Table\OrdersTable;
+use App\Model\Table\SectionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Model\Table\UsersTable;
+use App\Utility\Value;
 use Cake\Database\Exception\QueryException;
+use Cake\Event\Event;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\Validation\Validation;
+use RuntimeException;
 
 class OrderPlacementService
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
 
     private const MAX_QUANTITY = 1000000;
@@ -29,7 +40,7 @@ class OrderPlacementService
      */
     public function place(array $data): Order
     {
-        $orders = $this->getTableLocator()->get('Orders');
+        $orders = $this->typedTable('Orders', OrdersTable::class);
         $validKey = isset($data['idempotency_key'])
             && is_string($data['idempotency_key'])
             && Validation::uuid($data['idempotency_key']);
@@ -76,9 +87,9 @@ class OrderPlacementService
                 ], ['associated' => ['OrderLines']]);
                 $order->set('idempotency_key', $data['idempotency_key']);
                 $order->set('request_fingerprint', $requestFingerprint);
-                $order->set('contact_first_name', trim((string)$data['first_name']));
-                $order->set('contact_last_name', trim((string)$data['last_name']));
-                $order->set('contact_email', mb_strtolower(trim((string)$data['email'])));
+                $order->set('contact_first_name', trim(Value::string($data['first_name'])));
+                $order->set('contact_last_name', trim(Value::string($data['last_name'])));
+                $order->set('contact_email', mb_strtolower(trim(Value::string($data['email']))));
                 $order->set('postage', $data['postage'] ?? null);
                 $order->set('dispatch_address_line_1', $this->addressValue($dispatchAddress, 'address_line_1'));
                 $order->set('dispatch_address_line_2', $this->addressValue($dispatchAddress, 'address_line_2'));
@@ -93,11 +104,15 @@ class OrderPlacementService
                 return $order;
             });
 
+            if (!$order instanceof Order) {
+                throw new RuntimeException('The order transaction did not commit.');
+            }
+
             // The save is nested inside the transaction above, so CakePHP does
             // not emit Model.afterSaveCommit for it. Dispatch placement events
             // only after the outer transaction has committed successfully.
-            $orders->dispatchEvent('Order.afterPlace', [], $order);
-            $orders->dispatchEvent('Order.afterWebstorePlace', [], $order);
+            $orders->getEventManager()->dispatch(new Event('Order.afterPlace', $order, []));
+            $orders->getEventManager()->dispatch(new Event('Order.afterWebstorePlace', $order, []));
 
             return $order;
         } catch (QueryException $exception) {
@@ -146,36 +161,28 @@ class OrderPlacementService
             $errors['dispatch_address'] = 'Dispatch address is required when postage is selected.';
         }
         if (array_key_exists('dispatch_address', $data)) {
-            if (!is_array($data['dispatch_address'])) {
+            $address = $data['dispatch_address'];
+            if (!Value::isMap($address)) {
                 $errors['dispatch_address'] = 'Dispatch address must be an object.';
             } else {
-                foreach (
-                    [
-                        'address_line_1' => 'Address line 1',
-                        'town' => 'Town',
-                    ] as $field => $label
-                ) {
-                    $this->validateAddressField($data['dispatch_address'], $field, $label, $errors, true);
+                $addressErrors = [];
+                foreach (['address_line_1' => 'Address line 1', 'town' => 'Town'] as $field => $label) {
+                    $this->validateAddressField($address, $field, $label, $addressErrors, true);
                 }
-                $this->validateAddressField(
-                    $data['dispatch_address'],
-                    'postcode',
-                    'Postcode',
-                    $errors,
-                    true,
-                    10,
-                );
+                $this->validateAddressField($address, 'postcode', 'Postcode', $addressErrors, true, 10);
+                $postcode = $address['postcode'] ?? null;
                 if (
-                    !isset($errors['dispatch_address']['postcode'])
-                    && preg_match(
-                        '/^(GIR ?0AA|[A-Z]{1,2}[0-9][0-9A-Z]? ?[0-9][A-Z]{2})$/i',
-                        $data['dispatch_address']['postcode'],
-                    ) !== 1
+                    !isset($addressErrors['postcode'])
+                    && is_string($postcode)
+                    && preg_match('/^(GIR ?0AA|[A-Z]{1,2}[0-9][0-9A-Z]? ?[0-9][A-Z]{2})$/i', $postcode) !== 1
                 ) {
-                    $errors['dispatch_address']['postcode'] = 'Postcode must be a valid UK postcode.';
+                    $addressErrors['postcode'] = 'Postcode must be a valid UK postcode.';
                 }
                 foreach (['address_line_2' => 'Address line 2', 'county' => 'County'] as $field => $label) {
-                    $this->validateAddressField($data['dispatch_address'], $field, $label, $errors);
+                    $this->validateAddressField($address, $field, $label, $addressErrors);
+                }
+                if ($addressErrors !== []) {
+                    $errors['dispatch_address'] = $addressErrors;
                 }
             }
         }
@@ -193,7 +200,7 @@ class OrderPlacementService
         if (
             $validGroupId
             && $validSectionId
-            && !$this->getTableLocator()->get('Sections')->exists([
+            && !$this->typedTable('Sections', SectionsTable::class)->exists([
                 'id' => $data['section_id'],
                 'group_id' => $data['group_id'],
             ])
@@ -208,38 +215,44 @@ class OrderPlacementService
         }
 
         $badgeIds = [];
+        $lineErrors = [];
+        $validatedLines = [];
         foreach ($data['lines'] as $index => $line) {
-            if (!is_array($line)) {
-                $errors['lines'][$index] = 'Order line must be an object.';
+            if (!Value::isMap($line)) {
+                $lineErrors[$index] = 'Order line must be an object.';
                 continue;
             }
-            if (!isset($line['badge_id']) || !is_string($line['badge_id']) || !Validation::uuid($line['badge_id'])) {
-                $errors['lines'][$index]['badge_id'] = 'Badge ID must be a valid UUID.';
+            $fieldErrors = [];
+            $badgeId = is_string($line['badge_id'] ?? null) ? $line['badge_id'] : null;
+            if ($badgeId === null || !Validation::uuid($badgeId)) {
+                $fieldErrors['badge_id'] = 'Badge ID must be a valid UUID.';
             } else {
-                $badgeIds[] = $line['badge_id'];
+                $badgeIds[] = $badgeId;
             }
-            if (
-                !isset($line['quantity'])
-                || filter_var($line['quantity'], FILTER_VALIDATE_INT) === false
-                || (int)$line['quantity'] <= 0
-                || (int)$line['quantity'] > self::MAX_QUANTITY
-            ) {
-                $errors['lines'][$index]['quantity'] = sprintf(
+            $quantity = filter_var($line['quantity'] ?? null, FILTER_VALIDATE_INT);
+            if ($quantity === false || $quantity <= 0 || $quantity > self::MAX_QUANTITY) {
+                $fieldErrors['quantity'] = sprintf(
                     'Quantity must be a positive integer no greater than %d.',
                     self::MAX_QUANTITY,
                 );
             }
-            if (
-                !isset($line['unit_price'])
-                || !is_numeric($line['unit_price'])
-                || (float)$line['unit_price'] < 0
-            ) {
-                $errors['lines'][$index]['unit_price'] = 'Unit price must be a non-negative number.';
+            $unitPrice = is_numeric($line['unit_price'] ?? null) ? (float)$line['unit_price'] : null;
+            if ($unitPrice === null || $unitPrice < 0) {
+                $fieldErrors['unit_price'] = 'Unit price must be a non-negative number.';
             }
+            if ($fieldErrors !== []) {
+                $lineErrors[$index] = $fieldErrors;
+            }
+            if ($badgeId !== null && $quantity !== false && $unitPrice !== null) {
+                $validatedLines[$index] = ['badge_id' => $badgeId, 'quantity' => $quantity, 'unit_price' => $unitPrice];
+            }
+        }
+        if ($lineErrors !== []) {
+            $errors['lines'] = $lineErrors;
         }
         if ($validateCatalogue && !isset($errors['lines'])) {
             $uniqueBadgeIds = array_values(array_unique($badgeIds));
-            $badges = $this->getTableLocator()->get('Badges')->find()
+            $badges = $this->typedTable('Badges', BadgesTable::class)->find()
                 ->select(['id', 'price'])
                 ->where([
                     'id IN' => $uniqueBadgeIds,
@@ -252,14 +265,30 @@ class OrderPlacementService
             if (count($badges) !== count($uniqueBadgeIds)) {
                 $errors['lines'] = 'One or more selected badges are no longer available.';
             } else {
-                foreach ($data['lines'] as $index => $line) {
-                    $serverPrice = round((float)$badges[$line['badge_id']]['price'], 2);
-                    if (round((float)$line['unit_price'], 2) !== $serverPrice) {
-                        $errors['lines'][$index]['unit_price'] = 'The badge price has changed. Refresh your basket.';
+                $catalogueErrors = [];
+                foreach ($validatedLines as $index => $line) {
+                    $serverPrice = round(Value::float($badges[$line['badge_id']]['price']), 2);
+                    if (round(Value::float($line['unit_price']), 2) !== $serverPrice) {
+                        $catalogueErrors[$index]['unit_price'] = 'The badge price has changed. Refresh your basket.';
                     }
-                    if ($serverPrice * (int)$line['quantity'] > self::MAX_MONEY) {
-                        $errors['lines'][$index]['quantity'] = 'The line total exceeds the maximum order value.';
+                    if ($serverPrice * Value::int($line['quantity']) > self::MAX_MONEY) {
+                        $catalogueErrors[$index]['quantity'] = 'The line total exceeds the maximum order value.';
                     }
+                }
+                foreach ($this->consolidateLines($data['lines']) as $line) {
+                    $quantity = (int)$line['quantity'];
+                    if ($quantity > self::MAX_QUANTITY) {
+                        $catalogueErrors['combined_quantity'] = sprintf(
+                            'Combined quantity for a badge must not exceed %d.',
+                            self::MAX_QUANTITY,
+                        );
+                    } elseif (Value::float($badges[$line['badge_id']]['price']) * $quantity > self::MAX_MONEY) {
+                        $catalogueErrors['combined_amount'] =
+                            'The combined line total exceeds the maximum order value.';
+                    }
+                }
+                if ($catalogueErrors !== []) {
+                    $errors['lines'] = $catalogueErrors;
                 }
             }
         }
@@ -267,18 +296,21 @@ class OrderPlacementService
         return $errors;
     }
 
-    /** @return array{0: \App\Model\Entity\Account, 1: \App\Model\Entity\User} */
+    /**
+     * @param array<string, mixed> $data Validated payload.
+     * @return array{0: \App\Model\Entity\Account, 1: \App\Model\Entity\User}
+     */
     private function resolveParties(array $data): array
     {
-        $sections = $this->getTableLocator()->get('Sections');
-        $accounts = $this->getTableLocator()->get('Accounts');
-        $users = $this->getTableLocator()->get('Users');
+        $sections = $this->typedTable('Sections', SectionsTable::class);
+        $accounts = $this->typedTable('Accounts', AccountsTable::class);
+        $users = $this->typedTable('Users', UsersTable::class);
         $section = $sections->get($data['section_id'], contain: ['Groups', 'Accounts']);
         $account = $section->account;
         if (!$account instanceof Account) {
             // Serialize fallback selection and creation for this group. Without the row lock,
             // concurrent first orders can both observe no account and create duplicates.
-            $this->getTableLocator()->get('Groups')->find()
+            $this->typedTable('Groups', GroupsTable::class)->find()
                 ->select(['id'])
                 ->where(['id' => $section->group_id])
                 ->epilog('FOR UPDATE')
@@ -295,12 +327,12 @@ class OrderPlacementService
             ]);
             $accounts->saveOrFail($account);
         }
-        $email = mb_strtolower(trim((string)$data['email']));
+        $email = mb_strtolower(trim(Value::string($data['email'])));
         $user = $users->find()->where(['LOWER(email)' => $email])->first();
         if (!$user instanceof User) {
             $user = $users->newEntity([
-                'first_name' => trim((string)$data['first_name']),
-                'last_name' => trim((string)$data['last_name']),
+                'first_name' => trim(Value::string($data['first_name'])),
+                'last_name' => trim(Value::string($data['last_name'])),
                 'email' => $email,
                 'group_id' => $section->group_id,
             ]);
@@ -310,17 +342,25 @@ class OrderPlacementService
         return [$account, $user];
     }
 
-    /** @return array<int, array<string, mixed>> */
+    /**
+     * @param array<string, mixed> $data Validated payload.
+     * @return array<int, array<string, mixed>>
+     */
     private function buildLines(array $data): array
     {
-        $badges = $this->getTableLocator()->get('Badges')->find()->select(['id', 'price'])
-            ->where(['id IN' => array_column($data['lines'], 'badge_id')])->enableHydration(false)
-            ->all()->indexBy('id')->toArray();
+        $consolidatedLines = $this->consolidateLines($data['lines']);
+        $badges = $this->typedTable('Badges', BadgesTable::class)->find()
+            ->select(['id', 'price'])
+            ->where(['id IN' => array_column($consolidatedLines, 'badge_id')])
+            ->enableHydration(false)
+            ->all()
+            ->indexBy('id')
+            ->toArray();
         $lines = [];
-        foreach ($data['lines'] as $line) {
+        foreach ($consolidatedLines as $line) {
             $badgeId = (string)$line['badge_id'];
             $quantity = (int)$line['quantity'];
-            $unitPrice = (float)$badges[$badgeId]['price'];
+            $unitPrice = Value::float($badges[$badgeId]['price']);
             $lines[] = [
                 'badge_id' => $badgeId,
                 'quantity' => $quantity,
@@ -331,6 +371,43 @@ class OrderPlacementService
         }
 
         return $lines;
+    }
+
+    /**
+     * Combine validated API order rows for the same badge.
+     *
+     * @param mixed $lines Order lines.
+     * @return list<array{badge_id: string, quantity: int, unit_price: float}>
+     */
+    private function consolidateLines(mixed $lines): array
+    {
+        if (!is_array($lines)) {
+            throw new OrderValidationException(['lines' => 'Order lines must be an array.']);
+        }
+
+        $byBadge = [];
+        foreach ($lines as $line) {
+            if (
+                !is_array($line)
+                || !is_string($line['badge_id'] ?? null)
+                || !is_numeric($line['unit_price'] ?? null)
+            ) {
+                throw new OrderValidationException(['lines' => 'Each line needs a badge, quantity and unit price.']);
+            }
+            $quantity = filter_var($line['quantity'] ?? null, FILTER_VALIDATE_INT);
+            if ($quantity === false || $quantity < 1) {
+                throw new OrderValidationException(['lines' => 'Quantity must be a positive integer.']);
+            }
+            $badgeId = $line['badge_id'];
+            $byBadge[$badgeId] ??= [
+                'badge_id' => $badgeId,
+                'quantity' => 0,
+                'unit_price' => (float)$line['unit_price'],
+            ];
+            $byBadge[$badgeId]['quantity'] += $quantity;
+        }
+
+        return array_values($byBadge);
     }
 
     /**
@@ -345,15 +422,15 @@ class OrderPlacementService
             'badge_id' => (string)$line['badge_id'],
             'quantity' => (int)$line['quantity'],
             'unit_price' => number_format((float)$line['unit_price'], 2, '.', ''),
-        ], $data['lines']);
+        ], $this->consolidateLines($data['lines']));
         usort($lines, static fn(array $left, array $right): int => $left['badge_id'] <=> $right['badge_id']);
 
         $fingerprintData = [
-            'first_name' => trim((string)$data['first_name']),
-            'last_name' => trim((string)$data['last_name']),
-            'email' => mb_strtolower(trim((string)$data['email'])),
-            'group_id' => (string)$data['group_id'],
-            'section_id' => (string)$data['section_id'],
+            'first_name' => trim(Value::string($data['first_name'])),
+            'last_name' => trim(Value::string($data['last_name'])),
+            'email' => mb_strtolower(trim(Value::string($data['email']))),
+            'group_id' => Value::string($data['group_id']),
+            'section_id' => Value::string($data['section_id']),
             'lines' => $lines,
         ];
         if (array_key_exists('postage', $data)) {
@@ -386,15 +463,15 @@ class OrderPlacementService
     ): void {
         if (!array_key_exists($field, $address)) {
             if ($required) {
-                $errors['dispatch_address'][$field] = sprintf('%s is required.', $label);
+                $errors[$field] = sprintf('%s is required.', $label);
             }
 
             return;
         }
         if (!is_string($address[$field]) || trim($address[$field]) === '') {
-            $errors['dispatch_address'][$field] = sprintf('%s must be a non-empty string.', $label);
+            $errors[$field] = sprintf('%s must be a non-empty string.', $label);
         } elseif (mb_strlen($address[$field]) > $maxLength) {
-            $errors['dispatch_address'][$field] = sprintf(
+            $errors[$field] = sprintf(
                 '%s must be no more than %d characters.',
                 $label,
                 $maxLength,
@@ -407,11 +484,11 @@ class OrderPlacementService
      */
     private function addressValue(mixed $address, string $field): ?string
     {
-        if (!is_array($address) || !isset($address[$field])) {
+        if (!is_array($address) || !is_string($address[$field] ?? null)) {
             return null;
         }
 
-        return trim((string)$address[$field]);
+        return trim($address[$field]);
     }
 
     /**

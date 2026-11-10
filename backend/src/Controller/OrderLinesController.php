@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\BadgesTable;
+use App\Model\Table\OrdersTable;
+use App\Model\Table\TypedTableLocatorTrait;
+
 /**
  * OrderLines Controller
  *
@@ -10,6 +14,8 @@ namespace App\Controller;
  */
 class OrderLinesController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -51,16 +57,26 @@ class OrderLinesController extends AppController
     {
         $orderLine = $this->OrderLines->newEmptyEntity();
         if ($this->request->is('post')) {
-            $orderLine = $this->OrderLines->patchEntity($orderLine, $this->request->getData());
-            if ($this->OrderLines->save($orderLine)) {
+            $orderLine = $this->OrderLines->patchEntity($orderLine, $this->requestData());
+            if ($this->OrderLines->save($orderLine) !== false) {
                 $this->Flash->success(__('The order line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The order line could not be saved. Please, try again.'));
         }
-        $orders = $this->OrderLines->Orders->find('list', limit: 200)->all();
-        $badges = $this->OrderLines->Badges->find('list', limit: 200)->all();
+        $orders = $this->associatedQuery(
+            $this->OrderLines->Orders,
+            $this->typedAssociation($this->OrderLines->Orders, OrdersTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $badges = $this->associatedQuery(
+            $this->OrderLines->Badges,
+            $this->typedAssociation($this->OrderLines->Badges, BadgesTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('orderLine', 'orders', 'badges'));
     }
 
@@ -75,16 +91,26 @@ class OrderLinesController extends AppController
     {
         $orderLine = $this->OrderLines->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $orderLine = $this->OrderLines->patchEntity($orderLine, $this->request->getData());
-            if ($this->OrderLines->save($orderLine)) {
+            $orderLine = $this->OrderLines->patchEntity($orderLine, $this->requestData());
+            if ($this->OrderLines->save($orderLine) !== false) {
                 $this->Flash->success(__('The order line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The order line could not be saved. Please, try again.'));
         }
-        $orders = $this->OrderLines->Orders->find('list', limit: 200)->all();
-        $badges = $this->OrderLines->Badges->find('list', limit: 200)->all();
+        $orders = $this->associatedQuery(
+            $this->OrderLines->Orders,
+            $this->typedAssociation($this->OrderLines->Orders, OrdersTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $badges = $this->associatedQuery(
+            $this->OrderLines->Badges,
+            $this->typedAssociation($this->OrderLines->Badges, BadgesTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('orderLine', 'orders', 'badges'));
     }
 
@@ -99,7 +125,7 @@ class OrderLinesController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $orderLine = $this->OrderLines->get($id);
-        if ($this->OrderLines->delete($orderLine)) {
+        if ($this->OrderLines->delete($orderLine) !== false) {
             $this->Flash->success(__('The order line has been deleted.'));
         } else {
             $this->Flash->error(__('The order line could not be deleted. Please, try again.'));

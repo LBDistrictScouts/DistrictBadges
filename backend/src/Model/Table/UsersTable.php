@@ -6,6 +6,7 @@ namespace App\Model\Table;
 use App\Model\Entity\Account;
 use App\Model\Entity\Group;
 use App\Model\Entity\User;
+use App\Utility\Value;
 use ArrayObject;
 use Cake\Database\Expression\FunctionExpression;
 use Cake\Database\Expression\QueryExpression;
@@ -19,25 +20,15 @@ use Cake\Validation\Validator;
 /**
  * Users Model
  *
- * @property \App\Model\Table\GroupsTable&\Cake\ORM\Association\BelongsTo $Groups
- * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\HasMany $Fulfilments
- * @property \App\Model\Table\OrdersTable&\Cake\ORM\Association\HasMany $Orders
- * @method \App\Model\Entity\User newEmptyEntity()
- * @method \App\Model\Entity\User newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\User> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\User get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\User findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\User patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\User> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\User|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\User saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\User>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\User>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\User>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\User> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\User>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\User>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\User>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\User> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\GroupsTable> $Groups
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\FulfilmentsTable> $Fulfilments
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\OrdersTable> $Orders
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\User>
  */
 class UsersTable extends Table
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Initialize method
      *
@@ -110,7 +101,7 @@ class UsersTable extends Table
     /**
      * Keep the stored email-domain flag in sync whenever a user is saved.
      *
-     * @param \Cake\Event\EventInterface $event Event instance.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event instance.
      * @param \Cake\Datasource\EntityInterface $entity User being saved.
      * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
@@ -222,8 +213,8 @@ class UsersTable extends Table
     private function groupFor(User $user): ?Group
     {
         $group = $user->get('group');
-        if ($group === null || (string)$group->id !== (string)$user->group_id) {
-            $group = $this->Groups->find()
+        if (!$group instanceof Group || Value::string($group->id) !== Value::string($user->group_id)) {
+            $group = $this->associatedQuery($this->Groups, $this->typedAssociation($this->Groups, GroupsTable::class))
                 ->where(['Groups.id' => $user->group_id])
                 ->first();
         }

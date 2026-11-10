@@ -121,7 +121,7 @@ class Installer
         // ask if the permissions should be changed
         if ($io->isInteractive()) {
             $validator = function (string $arg): string {
-                if (in_array($arg, ['Y', 'y', 'N', 'n'])) {
+                if (in_array($arg, ['Y', 'y', 'N', 'n'], true)) {
                     return $arg;
                 }
                 throw new Exception('This is not a valid answer. Please choose Y or n.');
@@ -133,7 +133,7 @@ class Installer
                 'Y',
             );
 
-            if (in_array($setFolderPermissions, ['n', 'N'])) {
+            if (in_array($setFolderPermissions, ['n', 'N'], true)) {
                 return;
             }
         }
@@ -142,7 +142,7 @@ class Installer
         $changePerms = function (string $path) use ($io): void {
             $currentPerms = fileperms($path) & 0777;
             $worldWritable = $currentPerms | 0007;
-            if ($worldWritable == $currentPerms) {
+            if ($worldWritable === $currentPerms) {
                 return;
             }
 
@@ -155,7 +155,8 @@ class Installer
         };
 
         $walker = function (string $dir) use (&$walker, $changePerms): void {
-            $files = array_diff(scandir($dir) ?: [], ['.', '..']);
+            $directoryEntries = scandir($dir);
+            $files = array_diff($directoryEntries === false ? [] : $directoryEntries, ['.', '..']);
             foreach ($files as $file) {
                 $path = $dir . '/' . $file;
 
@@ -207,14 +208,14 @@ class Installer
 
         $content = str_replace('__SALT__', $newKey, $content, $count);
 
-        if ($count == 0) {
+        if ($count === 0) {
             $io->write('No Security.salt placeholder to replace.');
 
             return;
         }
 
         $result = file_put_contents($config, $content);
-        if ($result) {
+        if ($result !== false) {
             $io->write('Updated Security.salt value in config/' . $file);
 
             return;
@@ -243,14 +244,14 @@ class Installer
 
         $content = str_replace('__APP_NAME__', $appName, $content, $count);
 
-        if ($count == 0) {
+        if ($count === 0) {
             $io->write('No __APP_NAME__ placeholder to replace.');
 
             return;
         }
 
         $result = file_put_contents($config, $content);
-        if ($result) {
+        if ($result !== false) {
             $io->write('Updated __APP_NAME__ value in config/' . $file);
 
             return;

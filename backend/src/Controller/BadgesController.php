@@ -6,7 +6,14 @@ namespace App\Controller;
 use App\Model\Enum\BadgeStatus;
 use App\Model\Enum\TagCategory;
 use App\Model\Enum\TransactionType;
-use Cake\I18n\Date;
+use App\Model\Table\BadgesBadgeTagsTable;
+use App\Model\Table\BadgeSectionsTable;
+use App\Model\Table\BadgeTagsTable;
+use App\Model\Table\BadgeTypesTable;
+use App\Model\Table\StockTransactionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Utility\Value;
+use Cake\I18n\DateTime;
 
 /**
  * Badges Controller
@@ -15,6 +22,8 @@ use Cake\I18n\Date;
  */
 class BadgesController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     private const VIEW_STYLE_SESSION_KEY = 'Badges.viewStyle';
 
     /**
@@ -24,7 +33,7 @@ class BadgesController extends AppController
      */
     public function index()
     {
-        $viewStyle = (string)$this->request->getSession()->read(self::VIEW_STYLE_SESSION_KEY);
+        $viewStyle = Value::string($this->request->getSession()->read(self::VIEW_STYLE_SESSION_KEY));
         if (in_array($viewStyle, ['cards', 'stock'], true)) {
             $this->viewBuilder()->setTemplate($viewStyle);
         }
@@ -32,12 +41,12 @@ class BadgesController extends AppController
         $query = $this->Badges->find()
             ->contain(['BadgeSections', 'BadgeTypes']);
         $filters = [
-            'name' => trim((string)$this->request->getQuery('name')),
-            'status' => (string)$this->request->getQuery('status'),
-            'stocked' => (string)$this->request->getQuery('stocked', '1'),
-            'listed' => (string)$this->request->getQuery('listed'),
-            'section_tag' => (string)$this->request->getQuery('section_tag'),
-            'type_tag' => (string)$this->request->getQuery('type_tag'),
+            'name' => trim(Value::string($this->request->getQuery('name'))),
+            'status' => Value::string($this->request->getQuery('status')),
+            'stocked' => Value::string($this->request->getQuery('stocked', '1')),
+            'listed' => Value::string($this->request->getQuery('listed')),
+            'section_tag' => Value::string($this->request->getQuery('section_tag')),
+            'type_tag' => Value::string($this->request->getQuery('type_tag')),
         ];
 
         if ($filters['name'] !== '') {
@@ -70,14 +79,26 @@ class BadgesController extends AppController
         }
 
         if ($filters['section_tag'] !== '') {
-            $sectionBadgeIds = $this->Badges->BadgesBadgeTags->find()
+            $sectionBadgeIds = $this->associatedQuery(
+                $this->Badges->BadgesBadgeTags,
+                $this->typedAssociation(
+                    $this->Badges->BadgesBadgeTags,
+                    BadgesBadgeTagsTable::class,
+                ),
+            )
                 ->select(['badge_id'])
                 ->where(['badge_tag_id' => $filters['section_tag']]);
             $query->where(['Badges.id IN' => $sectionBadgeIds]);
         }
 
         if ($filters['type_tag'] !== '') {
-            $typeBadgeIds = $this->Badges->BadgesBadgeTags->find()
+            $typeBadgeIds = $this->associatedQuery(
+                $this->Badges->BadgesBadgeTags,
+                $this->typedAssociation(
+                    $this->Badges->BadgesBadgeTags,
+                    BadgesBadgeTagsTable::class,
+                ),
+            )
                 ->select(['badge_id'])
                 ->where(['badge_tag_id' => $filters['type_tag']]);
             $query->where(['Badges.id IN' => $typeBadgeIds]);
@@ -96,11 +117,22 @@ class BadgesController extends AppController
             '1' => __('Listed'),
             '0' => __('Unlisted'),
         ];
-        $sectionTagOptions = $this->Badges->BadgeSections->find('list')
+        $sectionTagOptions = $this->associatedQuery(
+            $this->Badges->BadgeSections,
+            $this->typedAssociation(
+                $this->Badges->BadgeSections,
+                BadgeSectionsTable::class,
+            ),
+            'list',
+        )
             ->orderByAsc('tag_order')
             ->orderByAsc('tag_name')
             ->all();
-        $typeTagOptions = $this->Badges->BadgeTypes->find('list')
+        $typeTagOptions = $this->associatedQuery(
+            $this->Badges->BadgeTypes,
+            $this->typedAssociation($this->Badges->BadgeTypes, BadgeTypesTable::class),
+            'list',
+        )
             ->orderByAsc('tag_order')
             ->orderByAsc('tag_name')
             ->all();
@@ -180,12 +212,18 @@ class BadgesController extends AppController
     {
         $badge = $this->Badges->get($id, contain: ['BadgeSections', 'BadgeTypes']);
         $filters = [
-            'transaction_type' => (string)$this->request->getQuery('transaction_type'),
-            'date_from' => trim((string)$this->request->getQuery('date_from')),
-            'date_to' => trim((string)$this->request->getQuery('date_to')),
+            'transaction_type' => Value::string($this->request->getQuery('transaction_type')),
+            'date_from' => trim(Value::string($this->request->getQuery('date_from'))),
+            'date_to' => trim(Value::string($this->request->getQuery('date_to'))),
         ];
 
-        $query = $this->Badges->StockTransactions->find()
+        $query = $this->associatedQuery(
+            $this->Badges->StockTransactions,
+            $this->typedAssociation(
+                $this->Badges->StockTransactions,
+                StockTransactionsTable::class,
+            ),
+        )
             ->where(['StockTransactions.badge_id' => $badge->id])
             ->contain(['Fulfilments', 'Audits', 'Replenishments'])
             ->orderByDesc('StockTransactions.transaction_timestamp')
@@ -198,13 +236,13 @@ class BadgesController extends AppController
 
         $dateFrom = $filters['date_from'] === ''
             ? null
-            : Date::parseDate($filters['date_from'], 'yyyy-MM-dd');
+            : DateTime::parseDateTime($filters['date_from'], 'yyyy-MM-dd');
         if ($dateFrom !== null) {
             $query->where(['StockTransactions.transaction_timestamp >=' => $dateFrom->startOfDay()]);
         }
         $dateTo = $filters['date_to'] === ''
             ? null
-            : Date::parseDate($filters['date_to'], 'yyyy-MM-dd');
+            : DateTime::parseDateTime($filters['date_to'], 'yyyy-MM-dd');
         if ($dateTo !== null) {
             $query->where(['StockTransactions.transaction_timestamp <=' => $dateTo->endOfDay()]);
         }
@@ -236,10 +274,10 @@ class BadgesController extends AppController
         if ($this->request->is('post')) {
             $badge = $this->Badges->patchEntity(
                 $badge,
-                $this->request->getData(),
+                $this->requestData(),
                 ['associated' => ['BadgeTags']],
             );
-            if ($this->Badges->save($badge)) {
+            if ($this->Badges->save($badge) !== false) {
                 $this->Flash->success(__('The badge has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
@@ -263,7 +301,7 @@ class BadgesController extends AppController
         $showImageUrl = $badge->unlisted_badge
             && filter_var($this->request->getQuery('unlisted'), FILTER_VALIDATE_BOOLEAN);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $data = $this->request->getData();
+            $data = $this->requestData();
             if (!$showImageUrl) {
                 unset($data['image_url']);
             }
@@ -272,7 +310,7 @@ class BadgesController extends AppController
                 $data,
                 ['associated' => ['BadgeTags']],
             );
-            if ($this->Badges->save($badge)) {
+            if ($this->Badges->save($badge) !== false) {
                 $this->Flash->success(__('The badge has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
@@ -295,7 +333,10 @@ class BadgesController extends AppController
             $options[$category->label()] = [];
         }
 
-        $tags = $this->Badges->BadgeTags->find()
+        $tags = $this->associatedQuery(
+            $this->Badges->BadgeTags,
+            $this->typedAssociation($this->Badges->BadgeTags, BadgeTagsTable::class),
+        )
             ->select(['id', 'tag_name', 'tag_category', 'tag_order'])
             ->orderByAsc('tag_category')
             ->orderByAsc('tag_order')
@@ -331,7 +372,7 @@ class BadgesController extends AppController
         }
 
         $badge->set('stocked', true);
-        if ($this->Badges->save($badge)) {
+        if ($this->Badges->save($badge) !== false) {
             $this->Flash->success(__('The badge is now stocked.'));
         } else {
             $this->Flash->error(__('The badge could not be activated. Please, try again.'));
@@ -360,7 +401,7 @@ class BadgesController extends AppController
             return $this->redirect(['action' => 'index']);
         }
 
-        if ($this->Badges->delete($badge)) {
+        if ($this->Badges->delete($badge) !== false) {
             $this->Flash->success(__('The badge has been deleted.'));
         } else {
             $this->Flash->error(__('The badge could not be deleted. Please, try again.'));

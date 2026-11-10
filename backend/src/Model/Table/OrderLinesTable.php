@@ -10,22 +10,10 @@ use Cake\Validation\Validator;
 /**
  * OrderLines Model
  *
- * @property \App\Model\Table\OrdersTable&\Cake\ORM\Association\BelongsTo $Orders
- * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsTo $Badges
- * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
- * @method \App\Model\Entity\OrderLine newEmptyEntity()
- * @method \App\Model\Entity\OrderLine newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\OrderLine> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\OrderLine get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\OrderLine findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\OrderLine patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\OrderLine> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\OrderLine|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\OrderLine saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\OrderLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\OrderLine>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\OrderLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\OrderLine> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\OrderLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\OrderLine>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\OrderLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\OrderLine> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\OrdersTable> $Orders
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\BadgesTable> $Badges
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\StockTransactionsTable> $StockTransactions
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\OrderLine>
  */
 class OrderLinesTable extends Table
 {

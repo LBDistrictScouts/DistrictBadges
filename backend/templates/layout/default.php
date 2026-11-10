@@ -109,7 +109,6 @@ $entityCategory = $entityCategories[$controller] ?? 'default';
                 </div>
             <?php endif; ?>
         </div>
-        <div class="top-nav-overlay" data-nav-overlay></div>
     </nav>
     <main class="main">
         <div class="container">
@@ -127,21 +126,14 @@ $entityCategory = $entityCategories[$controller] ?? 'default';
                 return;
             }
 
-            var overlay = document.querySelector('[data-nav-overlay]');
             var closeMenu = function () {
                 toggle.setAttribute('aria-expanded', 'false');
                 links.classList.remove('top-nav-links--open');
-                if (overlay) {
-                    overlay.classList.remove('top-nav-overlay--open');
-                }
             };
 
             var openMenu = function () {
                 toggle.setAttribute('aria-expanded', 'true');
                 links.classList.add('top-nav-links--open');
-                if (overlay) {
-                    overlay.classList.add('top-nav-overlay--open');
-                }
             };
 
             toggle.addEventListener('click', function () {
@@ -153,9 +145,18 @@ $entityCategory = $entityCategories[$controller] ?? 'default';
                 }
             });
 
-            if (overlay) {
-                overlay.addEventListener('click', closeMenu);
-            }
+            document.addEventListener('click', function (event) {
+                if (!event.target.closest('[data-nav]')) {
+                    closeMenu();
+                }
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+                    closeMenu();
+                    toggle.focus();
+                }
+            });
+            window.matchMedia('(max-width: 1050px)').addEventListener('change', closeMenu);
         })();
     </script>
 </body>

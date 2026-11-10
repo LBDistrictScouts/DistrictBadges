@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\AccountsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Utility\Value;
 use Cake\Core\Configure;
 use Cake\Http\Response;
 use Cake\I18n\DateTime;
@@ -19,20 +22,22 @@ use ZipArchive;
  */
 class InvoicesController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
-     * @return \Cake\Http\Response|null|void Renders view
+     * @return void Renders view
      */
     public function index()
     {
         $query = $this->Invoices->find()
             ->contain(['Accounts']);
         $filters = [
-            'number' => trim((string)$this->request->getQuery('number')),
-            'account_id' => (string)$this->request->getQuery('account_id'),
-            'invoice_from' => (string)$this->request->getQuery('invoice_from'),
-            'invoice_to' => (string)$this->request->getQuery('invoice_to'),
+            'number' => trim(Value::string($this->request->getQuery('number'))),
+            'account_id' => Value::string($this->request->getQuery('account_id')),
+            'invoice_from' => Value::string($this->request->getQuery('invoice_from')),
+            'invoice_to' => Value::string($this->request->getQuery('invoice_to')),
         ];
 
         if ($filters['number'] !== '') {
@@ -49,13 +54,17 @@ class InvoicesController extends AppController
         }
         $invoiceTo = $this->validDateFilter($filters['invoice_to']);
         if ($invoiceTo !== null) {
-            $query->where(['Invoices.invoice_date <' => date('Y-m-d', strtotime($invoiceTo . ' +1 day'))]);
+            $query->where(['Invoices.invoice_date <' => $this->dateFilter($invoiceTo . ' +1 day', 'Y-m-d')]);
         }
 
         $invoices = $this->paginate($query, [
             'order' => ['Invoices.invoice_number' => 'DESC'],
         ]);
-        $accountOptions = $this->Invoices->Accounts->find('list')
+        $accountOptions = $this->associatedQuery(
+            $this->Invoices->Accounts,
+            $this->typedAssociation($this->Invoices->Accounts, AccountsTable::class),
+            'list',
+        )
             ->orderByAsc('account_name')
             ->all();
         $invoiceGenerationMonth = (new DateTimeImmutable('last day of previous month'))->format('F Y');
@@ -68,12 +77,12 @@ class InvoicesController extends AppController
      *
      * @return \Cake\Http\Response
      */
-    public function runMonthly(): Response
+    public function runMonthly(): ?Response
     {
         $this->request->allowMethod('post');
         $result = $this->Invoices->generateMonthly(
             new DateTimeImmutable(),
-            (float)Configure::read('Invoices.minimumTotal', 15),
+            Value::float(Configure::read('Invoices.minimumTotal', 15)),
         );
         $this->Flash->success(sprintf(
             'Generated %d monthly invoice(s); skipped %d account(s).',
@@ -87,7 +96,7 @@ class InvoicesController extends AppController
     /**
      * Select and download invoice-generator JSON files in a ZIP archive.
      *
-     * @return \Cake\Http\Response|null|void
+     * @return \Cake\Http\Response|null
      */
     public function download(): ?Response
     {
@@ -137,7 +146,7 @@ class InvoicesController extends AppController
         foreach ($invoices as $invoice) {
             $filename = preg_replace('/[^A-Za-z0-9._-]+/', '_', (string)$invoice->invoice_number);
             $archive->addFromString(
-                ($filename ?: $invoice->id) . '.json',
+                ($filename !== null && $filename !== '' ? $filename : $invoice->id) . '.json',
                 json_encode(
                     $this->Invoices->toInvoiceGeneratorData($invoice->id),
                     JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
@@ -166,7 +175,7 @@ class InvoicesController extends AppController
      * View method
      *
      * @param string|null $id Invoice id.
-     * @return \Cake\Http\Response|null|void Renders view
+     * @return void Renders view
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
     public function view(?string $id = null)
@@ -177,11 +186,9 @@ class InvoicesController extends AppController
             'CreatedByUser',
             'UpdatedByUser',
             'InvoiceSummaries' => [
-                'CreatedByUser',
-                'UpdatedByUser',
                 'Orders' => ['Users', 'Sections'],
                 'Fulfilments',
-                'InvoiceLines' => ['Badges', 'CreatedByUser', 'UpdatedByUser'],
+                'InvoiceLines' => ['Badges'],
             ],
         ]);
         $this->set(compact('invoice', 'showAllDetails'));
@@ -201,8 +208,8 @@ class InvoicesController extends AppController
         }
         if ($this->request->is('post')) {
             try {
-                $startInput = (string)$this->request->getData('start_date');
-                $endInput = (string)$this->request->getData('end_date');
+                $startInput = Value::string($this->request->getData('start_date'));
+                $endInput = Value::string($this->request->getData('end_date'));
                 $startDate = DateTimeImmutable::createFromFormat(
                     '!Y-m-d',
                     $startInput,
@@ -221,7 +228,7 @@ class InvoicesController extends AppController
                 $invoice = $this->Invoices->generate(
                     $startDate,
                     $endDate,
-                    (string)$this->request->getData('account_id'),
+                    Value::string($this->request->getData('account_id')),
                 );
                 $this->Flash->success(__('The invoice has been generated.'));
 
@@ -230,7 +237,12 @@ class InvoicesController extends AppController
                 $this->Flash->error(__($exception->getMessage()));
             }
         }
-        $accounts = $this->Invoices->Accounts->find('list', limit: 200)->all();
+        $accounts = $this->associatedQuery(
+            $this->Invoices->Accounts,
+            $this->typedAssociation($this->Invoices->Accounts, AccountsTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $accountStartDates = array_fill_keys(
             array_map('strval', array_keys($accounts->toArray())),
             '2026-01-01',
@@ -244,8 +256,9 @@ class InvoicesController extends AppController
         foreach ($previousInvoices as $previousInvoice) {
             $accountId = (string)$previousInvoice->account_id;
             if (isset($accountStartDates[$accountId]) && !isset($accountsWithPreviousInvoices[$accountId])) {
-                $accountStartDates[$accountId] = $previousInvoice->period_end_date
-                    ->addDays(1)
+                $periodEnd = $previousInvoice->period_end_date
+                    ?? throw new RuntimeException('Invoice period end is missing.');
+                $accountStartDates[$accountId] = $periodEnd->addDays(1)
                     ->format('Y-m-d');
                 $accountsWithPreviousInvoices[$accountId] = true;
             }
@@ -264,15 +277,20 @@ class InvoicesController extends AppController
     {
         $invoice = $this->Invoices->get($id, contain: []);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $invoice = $this->Invoices->patchEntity($invoice, $this->request->getData());
-            if ($this->Invoices->save($invoice)) {
+            $invoice = $this->Invoices->patchEntity($invoice, $this->requestData());
+            if ($this->Invoices->save($invoice) !== false) {
                 $this->Flash->success(__('The invoice has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The invoice could not be saved. Please, try again.'));
         }
-        $accounts = $this->Invoices->Accounts->find('list', limit: 200)->all();
+        $accounts = $this->associatedQuery(
+            $this->Invoices->Accounts,
+            $this->typedAssociation($this->Invoices->Accounts, AccountsTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('invoice', 'accounts'));
     }
 
@@ -287,7 +305,7 @@ class InvoicesController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $invoice = $this->Invoices->get($id);
-        if ($this->Invoices->delete($invoice)) {
+        if ($this->Invoices->delete($invoice) !== false) {
             $this->Flash->success(__('The invoice has been deleted.'));
         } else {
             $this->Flash->error(__('The invoice could not be deleted. Please, try again.'));

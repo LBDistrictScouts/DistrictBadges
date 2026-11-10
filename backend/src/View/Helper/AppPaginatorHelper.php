@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\View\Helper;
 
 use Cake\View\Helper\PaginatorHelper;
+use LogicException;
 
 /**
  * Application paginator helper.
@@ -15,8 +16,8 @@ class AppPaginatorHelper extends PaginatorHelper
 {
     /**
      * @param array<string, mixed> $options Pagination/URL options.
-     * @param array<string, mixed> $url URL options.
-     * @return array<string, mixed>
+     * @param array<array-key, mixed> $url URL options.
+     * @return array<array-key, mixed>
      */
     public function generateUrlParams(array $options = [], array $url = []): array
     {
@@ -24,12 +25,17 @@ class AppPaginatorHelper extends PaginatorHelper
         $query = $this->getView()->getRequest()->getQueryParams();
         unset($query['page'], $query['limit'], $query['sort'], $query['direction']);
 
-        $params['?'] ??= [];
+        $queryParams = $params['?'] ?? [];
+        if (!is_array($queryParams)) {
+            throw new LogicException('Pagination query parameters must be an array.');
+        }
         foreach ($query as $key => $value) {
-            if (!array_key_exists($key, $params['?'])) {
-                $params['?'][$key] = $value;
+            if (!array_key_exists($key, $queryParams)) {
+                $queryParams[$key] = $value;
             }
         }
+
+        $params['?'] = $queryParams;
 
         return $params;
     }

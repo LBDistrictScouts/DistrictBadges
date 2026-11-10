@@ -11,22 +11,10 @@ use Cake\Validation\Validator;
 /**
  * Audits Model
  *
- * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
- * @property \App\Model\Table\StockTransactionsTable&\Cake\ORM\Association\HasMany $StockTransactions
- * @property \App\Model\Table\AuditLinesTable&\Cake\ORM\Association\HasMany $AuditLines
- * @method \App\Model\Entity\Audit newEmptyEntity()
- * @method \App\Model\Entity\Audit newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\Audit> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Audit get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\Audit findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\Audit patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\Audit> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\Audit|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\Audit saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\Audit>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Audit>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Audit>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Audit> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Audit>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Audit>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Audit>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Audit> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\UsersTable> $Users
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\StockTransactionsTable> $StockTransactions
+ * @property \Cake\ORM\Association\HasMany<\App\Model\Table\AuditLinesTable> $AuditLines
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\Audit>
  */
 class AuditsTable extends Table
 {

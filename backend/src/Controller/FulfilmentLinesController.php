@@ -3,6 +3,14 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\AuditsTable;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\FulfilmentsTable;
+use App\Model\Table\OrderLinesTable;
+use App\Model\Table\ReplenishmentsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Utility\Value;
+
 /**
  * FulfilmentLines Controller
  *
@@ -10,6 +18,8 @@ namespace App\Controller;
  */
 class FulfilmentLinesController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -51,19 +61,45 @@ class FulfilmentLinesController extends AppController
         if ($this->request->is('post')) {
             $fulfilmentLine = $this->FulfilmentLines->patchEntity(
                 $fulfilmentLine,
-                $this->request->getData(),
+                $this->requestData(),
             );
-            if ($this->FulfilmentLines->save($fulfilmentLine)) {
+            if ($this->FulfilmentLines->save($fulfilmentLine) !== false) {
                 $this->Flash->success(__('The fulfilment line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The fulfilment line could not be saved. Please, try again.'));
         }
-        $badges = $this->FulfilmentLines->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->FulfilmentLines->Fulfilments->find('list', limit: 200)->all();
-        $audits = $this->FulfilmentLines->Audits->find('list', limit: 200)->all();
-        $replenishments = $this->FulfilmentLines->Replenishments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->FulfilmentLines->Badges,
+            $this->typedAssociation($this->FulfilmentLines->Badges, BadgesTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->FulfilmentLines->Fulfilments,
+            $this->typedAssociation(
+                $this->FulfilmentLines->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $audits = $this->associatedQuery(
+            $this->FulfilmentLines->Audits,
+            $this->typedAssociation($this->FulfilmentLines->Audits, AuditsTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $replenishments = $this->associatedQuery(
+            $this->FulfilmentLines->Replenishments,
+            $this->typedAssociation(
+                $this->FulfilmentLines->Replenishments,
+                ReplenishmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $orderLines = $this->orderLineOptions();
         $this->set(compact(
             'fulfilmentLine',
@@ -88,19 +124,45 @@ class FulfilmentLinesController extends AppController
         if ($this->request->is(['patch', 'post', 'put'])) {
             $fulfilmentLine = $this->FulfilmentLines->patchEntity(
                 $fulfilmentLine,
-                $this->request->getData(),
+                $this->requestData(),
             );
-            if ($this->FulfilmentLines->save($fulfilmentLine)) {
+            if ($this->FulfilmentLines->save($fulfilmentLine) !== false) {
                 $this->Flash->success(__('The fulfilment line has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The fulfilment line could not be saved. Please, try again.'));
         }
-        $badges = $this->FulfilmentLines->Badges->find('list', limit: 200)->all();
-        $fulfilments = $this->FulfilmentLines->Fulfilments->find('list', limit: 200)->all();
-        $audits = $this->FulfilmentLines->Audits->find('list', limit: 200)->all();
-        $replenishments = $this->FulfilmentLines->Replenishments->find('list', limit: 200)->all();
+        $badges = $this->associatedQuery(
+            $this->FulfilmentLines->Badges,
+            $this->typedAssociation($this->FulfilmentLines->Badges, BadgesTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $fulfilments = $this->associatedQuery(
+            $this->FulfilmentLines->Fulfilments,
+            $this->typedAssociation(
+                $this->FulfilmentLines->Fulfilments,
+                FulfilmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
+        $audits = $this->associatedQuery(
+            $this->FulfilmentLines->Audits,
+            $this->typedAssociation($this->FulfilmentLines->Audits, AuditsTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $replenishments = $this->associatedQuery(
+            $this->FulfilmentLines->Replenishments,
+            $this->typedAssociation(
+                $this->FulfilmentLines->Replenishments,
+                ReplenishmentsTable::class,
+            ),
+            'list',
+            limit: 200,
+        )->all();
         $orderLines = $this->orderLineOptions();
         $this->set(compact(
             'fulfilmentLine',
@@ -118,14 +180,19 @@ class FulfilmentLinesController extends AppController
     private function orderLineOptions(): array
     {
         $options = [];
-        $orderLines = $this->FulfilmentLines->OrderLines
-            ->find()
+        $orderLines = $this->associatedQuery(
+            $this->FulfilmentLines->OrderLines,
+            $this->typedAssociation(
+                $this->FulfilmentLines->OrderLines,
+                OrderLinesTable::class,
+            ),
+        )
             ->contain(['Orders', 'Badges'])
             ->orderBy(['Orders.order_number' => 'ASC', 'Badges.badge_name' => 'ASC'])
             ->all();
 
         foreach ($orderLines as $orderLine) {
-            $options[(string)$orderLine->id] = sprintf(
+            $options[Value::string($orderLine->id)] = sprintf(
                 '%s - %s (quantity %d)',
                 $orderLine->order->order_number,
                 $orderLine->badge->badge_name,
@@ -147,7 +214,7 @@ class FulfilmentLinesController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $fulfilmentLine = $this->FulfilmentLines->get($id);
-        if ($this->FulfilmentLines->delete($fulfilmentLine)) {
+        if ($this->FulfilmentLines->delete($fulfilmentLine) !== false) {
             $this->Flash->success(__('The fulfilment line has been deleted.'));
         } else {
             $this->Flash->error(__('The fulfilment line could not be deleted. Please, try again.'));

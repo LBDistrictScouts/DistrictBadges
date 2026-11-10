@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace App\Queue\Processor;
 
+use App\Model\Table\BadgesTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Utility\Value;
 use Cake\Log\LogTrait;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use JsonException;
@@ -11,6 +14,7 @@ use Throwable;
 
 class BadgeImportProcessor
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
     use LogTrait;
 
@@ -57,12 +61,12 @@ class BadgeImportProcessor
          * } $payload
          */
         $product = (array)$payload;
-        $productId = (int)$product['NationalBadgeID'];
+        $productId = Value::int($product['NationalBadgeID']);
         $logContext = [
             'nationalProductCode' => $productId,
-            'badgeName' => (string)$product['BadgeName'],
+            'badgeName' => Value::string($product['BadgeName']),
         ];
-        if (str_ends_with((string)$product['BadgeName'], ' -')) {
+        if (str_ends_with(Value::string($product['BadgeName']), ' -')) {
             $this->logImport('Badge import skipped.', LOG_NOTICE, [
                 'status' => 'skipped',
                 'reason' => 'Badge name ends with " -".',
@@ -74,8 +78,7 @@ class BadgeImportProcessor
         $hash = hash('sha256', json_encode($product, JSON_THROW_ON_ERROR));
 
         try {
-            /** @var \App\Model\Table\BadgesTable $badges */
-            $badges = $this->getTableLocator()->get('Badges');
+            $badges = $this->typedTable('Badges', BadgesTable::class);
             $badge = $badges->find()
                 ->where(['national_product_code' => $productId])
                 ->first();
@@ -92,10 +95,10 @@ class BadgeImportProcessor
                 return self::ACK;
             }
 
-            $price = (float)$product['Price'];
+            $price = Value::float($product['Price']);
 
             $data = [
-                'badge_name' => (string)$product['BadgeName'],
+                'badge_name' => Value::string($product['BadgeName']),
                 'national_product_code' => $productId,
                 'national_data' => ['result' => [$product]],
                 'national_product_hash' => $hash,

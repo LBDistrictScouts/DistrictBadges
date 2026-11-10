@@ -3,11 +3,14 @@ declare(strict_types=1);
 
 namespace App\Console;
 
+use App\Model\Table\BadgesTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use Cake\Console\ConsoleIo;
 use Cake\ORM\Locator\LocatorAwareTrait;
 
 class RefreshNationalDataTask
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
 
     /**
@@ -16,8 +19,7 @@ class RefreshNationalDataTask
      */
     public function run(ConsoleIo $io): void
     {
-        /** @var \App\Console\BadgesTable $badges */
-        $badges = $this->getTableLocator()->get('Badges');
+        $badges = $this->typedTable('Badges', BadgesTable::class);
 
         $io->out('Refreshing national data for badges...');
         $badges->refreshAllNationalData();

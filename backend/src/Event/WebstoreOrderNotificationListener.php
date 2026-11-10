@@ -27,7 +27,7 @@ class WebstoreOrderNotificationListener implements EventListenerInterface
     /**
      * Send the receipt for an order placed through an external storefront path.
      *
-     * @param \Cake\Event\EventInterface $event Order event.
+     * @param \Cake\Event\EventInterface<object> $event Order event.
      * @return void
      */
     public function orderPlaced(EventInterface $event): void

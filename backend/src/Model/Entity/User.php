@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Entity;
 
+use App\Utility\Value;
 use Cake\ORM\Entity;
 
 /**
@@ -62,6 +63,6 @@ class User extends Entity
      */
     protected function _getFullName(): string
     {
-        return trim((string)$this->get('first_name') . ' ' . (string)$this->get('last_name'));
+        return trim(Value::string($this->get('first_name')) . ' ' . Value::string($this->get('last_name')));
     }
 }

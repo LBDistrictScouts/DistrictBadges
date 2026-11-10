@@ -31,12 +31,12 @@ class HostHeaderMiddleware implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        if (Configure::read('debug')) {
+        if (Configure::read('debug') === true) {
             return $handler->handle($request);
         }
 
         $fullBaseUrl = Configure::read('App.fullBaseUrl');
-        if (!$fullBaseUrl) {
+        if (!is_string($fullBaseUrl) || $fullBaseUrl === '') {
             throw new InternalErrorException(
                 'SECURITY: App.fullBaseUrl is not configured. ' .
                 'This is required in production to prevent Host Header Injection attacks. ' .
@@ -47,7 +47,12 @@ class HostHeaderMiddleware implements MiddlewareInterface
         $configuredHost = parse_url($fullBaseUrl, PHP_URL_HOST);
         $requestHost = $request->getUri()->getHost();
 
-        if ($configuredHost && $requestHost && strtolower($configuredHost) !== strtolower($requestHost)) {
+        if (
+            is_string($configuredHost)
+            && $configuredHost !== ''
+            && $requestHost !== ''
+            && strtolower($configuredHost) !== strtolower($requestHost)
+        ) {
             throw new BadRequestException(
                 'Invalid Host header. Request host does not match configured application host.',
             );

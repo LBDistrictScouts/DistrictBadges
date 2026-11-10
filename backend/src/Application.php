@@ -23,6 +23,7 @@ use App\Event\OrderLineFulfilmentListener;
 use App\Event\WebstoreOrderNotificationListener;
 use App\Middleware\ApiCorsMiddleware;
 use App\Middleware\HostHeaderMiddleware;
+use App\Utility\Value;
 use Cake\Core\Configure;
 use Cake\Core\ContainerInterface;
 use Cake\Datasource\FactoryLocator;
@@ -35,14 +36,13 @@ use Cake\Http\MiddlewareQueue;
 use Cake\ORM\Locator\TableLocator;
 use Cake\Routing\Middleware\AssetMiddleware;
 use Cake\Routing\Middleware\RoutingMiddleware;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Application setup class.
  *
  * This defines the bootstrapping logic and middleware layers you
  * want to use in your application.
- *
- * @extends \Cake\Http\BaseApplication<\App\Application>
  */
 class Application extends BaseApplication
 {
@@ -71,7 +71,7 @@ class Application extends BaseApplication
         $middlewareQueue
             // Catch any exceptions in the lower layers,
             // and make an error page/response
-            ->add(new ErrorHandlerMiddleware(Configure::read('Error'), $this))
+            ->add(new ErrorHandlerMiddleware(Value::map(Configure::read('Error')), $this))
 
             // Validate Host header to prevent Host Header Injection attacks.
             // In production, ensures App.fullBaseUrl is configured and validates
@@ -102,7 +102,7 @@ class Application extends BaseApplication
             ->add((new CsrfProtectionMiddleware([
                 'httponly' => true,
             ]))->skipCheckCallback(
-                fn($request): bool => str_starts_with($request->getUri()->getPath(), '/api/'),
+                fn(ServerRequestInterface $request): bool => str_starts_with($request->getUri()->getPath(), '/api/'),
             ));
 
         return $middlewareQueue;

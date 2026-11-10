@@ -9,7 +9,10 @@ use App\Model\Entity\ReplenishmentOrderLine;
 use App\Model\Entity\ReplenishmentReceiptLine;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\TransactionType;
+use App\Utility\Value;
 use ArrayObject;
+use BackedEnum;
+use Cake\Database\Expression\QueryExpression;
 use Cake\Database\Type\EnumType;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -18,28 +21,19 @@ use Cake\ORM\Table;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Security;
 use Cake\Validation\Validator;
+use DateTimeInterface;
+use UnexpectedValueException;
 
 /**
  * StockTransactions Model
  *
- * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsTo $Badges
- * @property \App\Model\Table\FulfilmentsTable&\Cake\ORM\Association\BelongsTo $Fulfilments
- * @property \App\Model\Table\AuditsTable&\Cake\ORM\Association\BelongsTo $Audits
- * @property \App\Model\Table\ReplenishmentsTable&\Cake\ORM\Association\BelongsTo $Replenishments
- * @property \App\Model\Table\OrderLinesTable&\Cake\ORM\Association\BelongsTo $OrderLines
- * @method \App\Model\Entity\StockTransaction newEmptyEntity()
- * @method \App\Model\Entity\StockTransaction newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\StockTransaction> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\StockTransaction get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\StockTransaction findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\StockTransaction patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\StockTransaction> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\StockTransaction|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\StockTransaction saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\StockTransaction>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\StockTransaction>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\StockTransaction>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\StockTransaction> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\StockTransaction>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\StockTransaction>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\StockTransaction>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\StockTransaction> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\BadgesTable> $Badges
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\FulfilmentsTable> $Fulfilments
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\AuditsTable> $Audits
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\ReplenishmentsTable> $Replenishments
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\OrderLinesTable> $OrderLines
+ * @template TEntity of \App\Model\Entity\StockTransaction = \App\Model\Entity\StockTransaction
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, TEntity>
  */
 class StockTransactionsTable extends Table
 {
@@ -166,7 +160,7 @@ class StockTransactionsTable extends Table
             ->requirePresence('transaction_type', 'create')
             ->notEmptyString('transaction_type')
             ->add('transaction_type', 'enum', [
-                'rule' => static fn($value) => TransactionType::tryFrom((int)$value) !== null,
+                'rule' => static fn($value) => TransactionType::tryFrom(Value::int($value)) !== null,
                 'message' => 'Invalid transaction type.',
             ]);
 
@@ -174,9 +168,9 @@ class StockTransactionsTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
-     * @param \ArrayObject $data Data.
-     * @param \ArrayObject $options Options.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
+     * @param \ArrayObject<string, mixed> $data Data.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function beforeMarshal(EventInterface $event, ArrayObject $data, ArrayObject $options): void
@@ -190,23 +184,29 @@ class StockTransactionsTable extends Table
     /**
      * Ensure audit_hash is generated before validation for new records.
      *
-     * @param \Cake\Event\EventInterface $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
      * @return void
      */
     public function generateAuditHash(EntityInterface $entity): void
     {
-        if (!empty($entity->get('audit_hash'))) {
+        if (Value::string($entity->get('audit_hash')) !== '') {
             return;
         }
 
         $badge = $this->Badges->get($entity->get('badge_id'));
-        $latestHash = $badge->get('latest_hash') ?? Security::getSalt();
+        $latestHash = Value::string($badge->get('latest_hash') ?? Security::getSalt());
 
+        $transactionType = $entity->get('transaction_type');
+        if (!$transactionType instanceof BackedEnum) {
+            throw new UnexpectedValueException('Stock transactions require a transaction type enum.');
+        }
+        $timestamp = $entity->get('transaction_timestamp');
+        if (!$timestamp instanceof DateTimeInterface) {
+            throw new UnexpectedValueException('Stock transactions require a transaction timestamp.');
+        }
         $payload = [
             'badge_id' => $entity->get('badge_id'),
-            'transaction_type' => $entity->get('transaction_type')->value,
+            'transaction_type' => $transactionType->value,
             'on_hand_quantity_change' => $entity->get('on_hand_quantity_change'),
             'receipted_quantity_change' => $entity->get('receipted_quantity_change'),
             'pending_quantity_change' => $entity->get('pending_quantity_change'),
@@ -217,7 +217,7 @@ class StockTransactionsTable extends Table
             'fulfilment_id' => $entity->get('fulfilment_id'),
             'replenishment_id' => $entity->get('replenishment_id'),
             'order_line_id' => $entity->get('order_line_id'),
-            'transaction_timestamp' => (string)$entity->get('transaction_timestamp')->format('Y-m-d H:i:s'),
+            'transaction_timestamp' => $timestamp->format('Y-m-d H:i:s'),
         ];
 
         $auditHash = hash('sha256', json_encode($payload) . '|' . $latestHash);
@@ -225,9 +225,9 @@ class StockTransactionsTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function beforeSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
@@ -241,9 +241,9 @@ class StockTransactionsTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @param string $operation Operation name.
      * @return void
      */
@@ -257,20 +257,20 @@ class StockTransactionsTable extends Table
     }
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
     {
-        $badgeId = $entity->get('badge_id');
-        if (!empty($badgeId)) {
+        $badgeId = Value::string($entity->get('badge_id'));
+        if ($badgeId !== '') {
             $this->refreshBadgeStockForBadge($badgeId);
         }
 
-        $originalBadgeId = $entity->getOriginal('badge_id');
-        if (!empty($originalBadgeId) && $originalBadgeId !== $badgeId) {
+        $originalBadgeId = Value::string($entity->getOriginal('badge_id'));
+        if ($originalBadgeId !== '' && $originalBadgeId !== $badgeId) {
             $this->refreshBadgeStockForBadge($originalBadgeId);
         }
     }
@@ -289,13 +289,13 @@ class StockTransactionsTable extends Table
             ->leftJoinWith('Fulfilments')
             ->leftJoinWith('Audits')
             ->where(['StockTransactions.badge_id' => $badgeId])
-            ->where(function ($exp) {
+            ->where(function (QueryExpression $exp) {
                 return $exp->or([
                     'StockTransactions.fulfilment_id IS' => null,
                     'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
                 ]);
             });
-        $query->where(function ($exp) {
+        $query->where(function (QueryExpression $exp) {
             return $exp->or([
                 'StockTransactions.audit_id IS' => null,
                 'Audits.audit_completed' => true,
@@ -317,13 +317,13 @@ class StockTransactionsTable extends Table
             ->leftJoinWith('Audits')
             ->select(['audit_hash'])
             ->where(['StockTransactions.badge_id' => $badgeId])
-            ->where(function ($exp) {
+            ->where(function (QueryExpression $exp) {
                 return $exp->or([
                     'StockTransactions.fulfilment_id IS' => null,
                     'Fulfilments.status' => FulfilmentStatus::Dispatched->value,
                 ]);
             })
-            ->where(function ($exp) {
+            ->where(function (QueryExpression $exp) {
                 return $exp->or([
                     'StockTransactions.audit_id IS' => null,
                     'Audits.audit_completed' => true,
@@ -337,11 +337,11 @@ class StockTransactionsTable extends Table
             ->first();
 
         $badge = $this->Badges->get($badgeId);
-        $badge->set('on_hand_quantity', (int)($totals['on_hand_total'] ?? 0));
-        $badge->set('receipted_quantity', (int)($totals['receipted_total'] ?? 0));
-        $badge->set('pending_quantity', (int)($totals['pending_total'] ?? 0));
-        $badge->set('fulfilled_quantity', (int)($totals['fulfilled_total'] ?? 0));
-        $badge->set('latest_hash', (string)($latest['audit_hash'] ?? ''));
+        $badge->set('on_hand_quantity', Value::int($totals['on_hand_total'] ?? 0));
+        $badge->set('receipted_quantity', Value::int($totals['receipted_total'] ?? 0));
+        $badge->set('pending_quantity', Value::int($totals['pending_total'] ?? 0));
+        $badge->set('fulfilled_quantity', Value::int($totals['fulfilled_total'] ?? 0));
+        $badge->set('latest_hash', Value::string($latest['audit_hash'] ?? ''));
 
         $this->Badges->saveOrFail($badge, ['checkRules' => false, 'validate' => false]);
     }
@@ -352,7 +352,7 @@ class StockTransactionsTable extends Table
      */
     private function resolveEntityTransactionType(?EntityInterface $entity = null): ?TransactionType
     {
-        $entityClass = $entity ? $entity::class : $this->getEntityClass();
+        $entityClass = $entity !== null ? $entity::class : $this->getEntityClass();
 
         return self::ENTITY_TRANSACTION_TYPES[$entityClass] ?? null;
     }

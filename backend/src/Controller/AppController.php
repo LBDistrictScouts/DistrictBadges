@@ -17,10 +17,16 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Model\Entity\User;
+use App\Model\Table\TypedTableLocatorTrait;
 use App\Model\Table\UsersTable;
+use App\Service\CognitoService;
+use App\Utility\Value;
 use Cake\Controller\Controller;
 use Cake\Event\EventInterface;
+use Cake\Http\Exception\BadRequestException;
+use Cake\Log\Log;
 use LogicException;
+use Throwable;
 
 /**
  * Application Controller
@@ -32,7 +38,10 @@ use LogicException;
  */
 class AppController extends Controller
 {
+    use TypedTableLocatorTrait;
+
     private const PAGINATION_LIMITS = [10, 25, 50, 75, 100];
+    private const TOKEN_REFRESH_BUFFER_SECONDS = 60;
 
     /**
      * Initialization hook method.
@@ -60,7 +69,7 @@ class AppController extends Controller
     /**
      * Apply the requested or session-cached page size to every paginated index.
      *
-     * @param \Cake\Event\EventInterface $event Controller beforeFilter event.
+     * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Controller beforeFilter event.
      * @return void
      */
     public function beforeFilter(EventInterface $event): void
@@ -71,13 +80,46 @@ class AppController extends Controller
             return;
         }
 
-        $controller = (string)$this->request->getParam('controller');
+        $controller = Value::string($this->request->getParam('controller'));
         if ($controller === 'Auth') {
             return;
         }
 
         $session = $this->request->getSession();
         $identity = $session->read('Auth.identity');
+
+        if (
+            is_array($identity)
+            && is_int($identity['expires_at'] ?? null)
+            && $identity['expires_at'] <= time() + self::TOKEN_REFRESH_BUFFER_SECONDS
+        ) {
+            if (
+                is_string($identity['refresh_token'] ?? null)
+                && $identity['refresh_token'] !== ''
+                && is_string($identity['cognito_sub'] ?? null)
+            ) {
+                try {
+                    $tokens = (new CognitoService())->refreshIdToken($identity['refresh_token']);
+                    $claims = $tokens['claims'];
+                    if (hash_equals($identity['cognito_sub'], Value::string($claims['sub']))) {
+                        $identity['expires_at'] = Value::int($claims['exp']);
+                        $identity['refresh_token'] = $tokens['refresh_token'];
+                        $session->write('Auth.identity', $identity);
+                    } else {
+                        $identity = null;
+                    }
+                } catch (Throwable $exception) {
+                    Log::write('warning', 'Cognito session token refresh failed.', [
+                        'exception' => $exception::class,
+                    ]);
+                    $identity = null;
+                }
+            } else {
+                // Sessions created before refresh tokens were retained must sign in again.
+                $identity = null;
+            }
+        }
+
         $user = null;
         if (
             is_array($identity)
@@ -86,7 +128,7 @@ class AppController extends Controller
             && is_int($identity['expires_at'] ?? null)
             && $identity['expires_at'] > time()
         ) {
-            $users = $this->fetchTable('Users');
+            $users = $this->typedTable('Users', UsersTable::class);
             if (!$users instanceof UsersTable) {
                 throw new LogicException('The Users table must use UsersTable.');
             }
@@ -105,7 +147,8 @@ class AppController extends Controller
         ) {
             $session->delete('Auth.identity');
             $uri = $this->request->getUri();
-            $returnPath = $uri->getPath() ?: '/';
+            $returnPath = $uri->getPath();
+            $returnPath = $returnPath !== '' ? $returnPath : '/';
             $query = $this->request->getQueryParams();
             if ($query !== []) {
                 $returnPath .= '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
@@ -128,7 +171,7 @@ class AppController extends Controller
             $limit = $requestedLimit;
             $session->write('Pagination.limit', $limit);
         } else {
-            $cachedLimit = (int)$session->read('Pagination.limit');
+            $cachedLimit = Value::int($session->read('Pagination.limit'));
             $limit = in_array($cachedLimit, self::PAGINATION_LIMITS, true) ? $cachedLimit : 25;
         }
 
@@ -146,12 +189,43 @@ class AppController extends Controller
      */
     protected function validDateFilter(string $value): ?string
     {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) !== 1) {
             return null;
         }
 
         [$year, $month, $day] = array_map('intval', explode('-', $value));
 
         return checkdate($month, $day, $year) ? $value : null;
+    }
+
+    /** @return array<string, mixed> */
+    protected function requestData(): array
+    {
+        $data = $this->request->getData();
+        if (!Value::isMap($data)) {
+            throw new BadRequestException('The request body must be an object.');
+        }
+        foreach (array_keys($data) as $key) {
+            if (!is_string($key)) {
+                throw new BadRequestException('Request fields must have string names.');
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param string $value Date filter.
+     * @param string $format Output format.
+     * @return string
+     */
+    protected function dateFilter(string $value, string $format): string
+    {
+        $timestamp = strtotime($value);
+        if ($timestamp === false) {
+            throw new BadRequestException('Invalid date filter.');
+        }
+
+        return date($format, $timestamp);
     }
 }

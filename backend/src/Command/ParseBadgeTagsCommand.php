@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Model\Table\BadgesTable;
+use App\Model\Table\TypedTableLocatorTrait;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -10,6 +12,7 @@ use Cake\ORM\Locator\LocatorAwareTrait;
 
 class ParseBadgeTagsCommand extends Command
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
 
     /**
@@ -27,8 +30,7 @@ class ParseBadgeTagsCommand extends Command
      */
     public function execute(Arguments $args, ConsoleIo $io): int
     {
-        /** @var \App\Model\Table\BadgesTable $badges */
-        $badges = $this->getTableLocator()->get('Badges');
+        $badges = $this->typedTable('Badges', BadgesTable::class);
         $result = $badges->associateTagsForAllBadges();
 
         $io->success(sprintf(

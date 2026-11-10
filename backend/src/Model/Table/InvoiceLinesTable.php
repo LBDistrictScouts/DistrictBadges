@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Utility\Value;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -13,30 +14,18 @@ use Cake\Validation\Validator;
 /**
  * InvoiceLines Model
  *
- * @property \App\Model\Table\InvoiceSummariesTable&\Cake\ORM\Association\BelongsTo $InvoiceSummaries
- * @property \App\Model\Table\BadgesTable&\Cake\ORM\Association\BelongsTo $Badges
- * @method \App\Model\Entity\InvoiceLine newEmptyEntity()
- * @method \App\Model\Entity\InvoiceLine newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\InvoiceLine> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\InvoiceLine get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\InvoiceLine findOrCreate($search, ?callable $callback = null, array $options = [])
- * @method \App\Model\Entity\InvoiceLine patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\InvoiceLine> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\InvoiceLine|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\InvoiceLine saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\InvoiceLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\InvoiceLine>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\InvoiceLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\InvoiceLine> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\InvoiceLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\InvoiceLine>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\InvoiceLine>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\InvoiceLine> deleteManyOrFail(iterable $entities, array $options = [])
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\InvoiceSummariesTable> $InvoiceSummaries
+ * @property \Cake\ORM\Association\BelongsTo<\App\Model\Table\BadgesTable> $Badges
+ * @extends \Cake\ORM\Table<array<string, \Cake\ORM\Behavior>, \App\Model\Entity\InvoiceLine>
  */
 class InvoiceLinesTable extends Table
 {
     /**
      * Refresh cached badge invoice quantities after a line is saved.
      *
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Invoice line.
-     * @param \ArrayObject $options Save options.
+     * @param \ArrayObject<string, mixed> $options Save options.
      * @return void
      */
     public function afterSave(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
@@ -47,9 +36,9 @@ class InvoiceLinesTable extends Table
     /**
      * Refresh cached badge invoice quantities after a line is deleted.
      *
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Invoice line.
-     * @param \ArrayObject $options Delete options.
+     * @param \ArrayObject<string, mixed> $options Delete options.
      * @return void
      */
     public function afterDelete(EventInterface $event, EntityInterface $entity, ArrayObject $options): void
@@ -63,13 +52,13 @@ class InvoiceLinesTable extends Table
      */
     private function refreshAffectedBadges(EntityInterface $entity): void
     {
-        $badgeIds = array_unique(array_filter([
+        $badgeIds = array_values(array_unique(array_filter(array_map(Value::string(...), [
             $entity->get('badge_id'),
             $entity->getOriginal('badge_id'),
-        ]));
+        ]), static fn(string $id): bool => $id !== '')));
 
         foreach ($badgeIds as $badgeId) {
-            $this->refreshBadgeInvoicedQuantity((string)$badgeId);
+            $this->refreshBadgeInvoicedQuantity(Value::string($badgeId));
         }
     }
 
@@ -88,7 +77,7 @@ class InvoiceLinesTable extends Table
             ->first();
 
         $badge = $this->Badges->get($badgeId);
-        $badge->set('invoiced_quantity', (int)($totals['quantity'] ?? 0));
+        $badge->set('invoiced_quantity', Value::int($totals['quantity'] ?? 0));
         $this->Badges->saveOrFail($badge, [
             'checkRules' => false,
             'validate' => false,

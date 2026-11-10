@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Model\Enum\TagCategory;
+use App\Model\Table\TypedTableLocatorTrait;
 
 /**
  * BadgeTags Controller
@@ -12,6 +13,8 @@ use App\Model\Enum\TagCategory;
  */
 class BadgeTagsController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -62,8 +65,8 @@ class BadgeTagsController extends AppController
     {
         $badgeTag = $this->BadgeTags->newEmptyEntity();
         if ($this->request->is('post')) {
-            $badgeTag = $this->BadgeTags->patchEntity($badgeTag, $this->request->getData());
-            if ($this->BadgeTags->save($badgeTag)) {
+            $badgeTag = $this->BadgeTags->patchEntity($badgeTag, $this->requestData());
+            if ($this->BadgeTags->save($badgeTag) !== false) {
                 $this->Flash->success(__('The badge tag has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
@@ -84,8 +87,8 @@ class BadgeTagsController extends AppController
     {
         $badgeTag = $this->BadgeTags->get($id);
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $badgeTag = $this->BadgeTags->patchEntity($badgeTag, $this->request->getData());
-            if ($this->BadgeTags->save($badgeTag)) {
+            $badgeTag = $this->BadgeTags->patchEntity($badgeTag, $this->requestData());
+            if ($this->BadgeTags->save($badgeTag) !== false) {
                 $this->Flash->success(__('The badge tag has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
@@ -106,7 +109,7 @@ class BadgeTagsController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $badgeTag = $this->BadgeTags->get($id);
-        if ($this->BadgeTags->delete($badgeTag)) {
+        if ($this->BadgeTags->delete($badgeTag) !== false) {
             $this->Flash->success(__('The badge tag has been deleted.'));
         } else {
             $this->Flash->error(__('The badge tag could not be deleted. Please, try again.'));

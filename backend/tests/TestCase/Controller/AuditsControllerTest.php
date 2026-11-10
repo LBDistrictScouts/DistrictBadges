@@ -88,7 +88,7 @@ class AuditsControllerTest extends AuthenticatedControllerTestCase
 
         $this->enableCsrfToken();
         $this->post('/audits/add', [
-            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'user_id' => '00000000-0000-4000-8000-000000000000',
             'audit_timestamp' => '2026-02-22 10:00:00',
             'audit_completed' => true,
         ]);
@@ -103,6 +103,26 @@ class AuditsControllerTest extends AuthenticatedControllerTestCase
         $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
         $this->assertFalse($saved->audit_completed);
         $this->assertMatchesRegularExpression('/^AUD-\d{4}-\d{2}-\d+$/', $saved->audit_number);
+    }
+
+    public function testAddFormDoesNotOfferAuditorSelection(): void
+    {
+        $this->get('/audits/add');
+
+        $this->assertResponseOk();
+        $this->assertResponseNotContains('name="user_id"');
+        $this->assertResponseContains('This audit will be recorded against your logged-in user account.');
+    }
+
+    public function testAddWithoutAuditorUsesLoggedInUser(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $this->enableCsrfToken();
+        $this->post('/audits/add');
+
+        $saved = $audits->find()->where(['audit_completed' => false])->firstOrFail();
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $saved->id]);
+        $this->assertSame('30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1', $saved->user_id);
     }
 
     public function testCannotBeginSecondAuditWhileOneIsOpen(): void
@@ -205,6 +225,47 @@ class AuditsControllerTest extends AuthenticatedControllerTestCase
         ]);
         $this->assertResponseCode(405);
         $this->assertSame(7, (int)$lines->get($line->id)->audit_actual_quantity);
+    }
+
+    public function testCompletingAuditConsolidatesDuplicateBadgeLinesAndSumsActualCounts(): void
+    {
+        $audits = $this->getTableLocator()->get('Audits');
+        $lines = $this->getTableLocator()->get('AuditLines');
+        $badges = $this->getTableLocator()->get('Badges');
+        $badgeId = '0f3b8a4a-6c12-4f12-9a2e-0d9e4e4b2f70';
+        $audit = $audits->newEntity([
+            'user_id' => '30350fc5-a8b7-4b3e-85ae-9f2f5f3a30e1',
+            'audit_completed' => false,
+        ]);
+        $audits->saveOrFail($audit);
+        $stockBefore = (int)$badges->get($badgeId)->on_hand_quantity;
+
+        foreach ([4, 3] as $actual) {
+            $line = $lines->newEntity([
+                'audit_id' => $audit->id,
+                'badge_id' => $badgeId,
+                'audit_expected_quantity' => 0,
+                'audit_actual_quantity' => $actual,
+                'on_hand_quantity_change' => $actual,
+                'receipted_quantity_change' => 0,
+                'pending_quantity_change' => 0,
+                'fulfilled_quantity_change' => 0,
+            ]);
+            $lines->saveOrFail($line);
+        }
+
+        $this->enableCsrfToken();
+        $this->post('/audits/complete/' . $audit->id);
+
+        $this->assertRedirect(['controller' => 'Audits', 'action' => 'view', $audit->id]);
+        $consolidated = $lines->find()
+            ->where(['audit_id' => $audit->id, 'badge_id' => $badgeId])
+            ->all()
+            ->toList();
+        $this->assertCount(1, $consolidated);
+        $this->assertSame(7, (int)$consolidated[0]->audit_actual_quantity);
+        $this->assertSame(7, (int)$consolidated[0]->on_hand_quantity_change);
+        $this->assertSame($stockBefore + 7, (int)$badges->get($badgeId)->on_hand_quantity);
     }
 
     public function testOpenAuditCanStockAnUnstockedBadge(): void

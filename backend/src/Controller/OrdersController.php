@@ -4,8 +4,17 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Model\Entity\Order;
+use App\Model\Entity\User;
 use App\Model\Enum\OrderStatus;
+use App\Model\Table\AccountsTable;
+use App\Model\Table\GroupsTable;
+use App\Model\Table\SectionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Model\Table\UsersTable;
 use App\Service\OrderNotificationService;
+use App\Utility\Value;
+use Cake\Event\Event;
+use Cake\Http\Response;
 use Cake\Utility\Text;
 use Throwable;
 
@@ -14,9 +23,12 @@ use Throwable;
  *
  * @property \App\Model\Table\OrdersTable $Orders
  * @property \App\Controller\Component\StockTransactionLinesComponent $StockTransactionLines
+ * @phpstan-import-type LineConfig from \App\Controller\Component\StockTransactionLinesComponent
  */
 class OrdersController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -27,12 +39,12 @@ class OrdersController extends AppController
         $query = $this->Orders->find()
             ->contain(['Accounts.Groups', 'Users']);
         $filters = [
-            'number' => trim((string)$this->request->getQuery('number')),
-            'status' => (string)$this->request->getQuery('status'),
-            'created_from' => (string)$this->request->getQuery('created_from'),
-            'created_to' => (string)$this->request->getQuery('created_to'),
-            'group_id' => (string)$this->request->getQuery('group_id'),
-            'user_id' => (string)$this->request->getQuery('user_id'),
+            'number' => trim(Value::string($this->request->getQuery('number'))),
+            'status' => Value::string($this->request->getQuery('status')),
+            'created_from' => Value::string($this->request->getQuery('created_from')),
+            'created_to' => Value::string($this->request->getQuery('created_to')),
+            'group_id' => Value::string($this->request->getQuery('group_id')),
+            'user_id' => Value::string($this->request->getQuery('user_id')),
         ];
 
         if ($filters['number'] !== '') {
@@ -51,7 +63,7 @@ class OrdersController extends AppController
 
         $createdTo = $this->validDateFilter($filters['created_to']);
         if ($createdTo !== null) {
-            $query->where(['placed_date <' => date('Y-m-d', strtotime($createdTo . ' +1 day'))]);
+            $query->where(['placed_date <' => $this->dateFilter($createdTo . ' +1 day', 'Y-m-d')]);
         }
 
         if ($filters['group_id'] !== '') {
@@ -80,12 +92,18 @@ class OrdersController extends AppController
         foreach (OrderStatus::cases() as $case) {
             $statusOptions[$case->value] = $case->label();
         }
-        $groupOptions = $this->Orders->Accounts->Groups->find('list')
+        $groupOptions = $this->associatedQuery(
+            $this->Orders->Accounts->Groups,
+            $this->typedAssociation($this->Orders->Accounts->Groups, GroupsTable::class),
+            'list',
+        )
             ->orderByAsc('group_name')
             ->all();
-        $userOptions = $this->Orders->Users->find(
+        $userOptions = $this->associatedQuery(
+            $this->Orders->Users,
+            $this->typedAssociation($this->Orders->Users, UsersTable::class),
             'list',
-            valueField: static fn($user): string => $user->full_name,
+            valueField: static fn(User $user): string => $user->full_name,
         )
             ->orderByAsc('last_name')
             ->orderByAsc('first_name')
@@ -118,7 +136,8 @@ class OrdersController extends AppController
             'OrderLines.Badges',
         ]);
         $canEdit = $this->orderCanBeEdited($order);
-        $contactEmail = trim((string)$order->contact_email) ?: (string)$order->user->email;
+        $contactEmail = trim($order->contact_email ?? '');
+        $contactEmail = $contactEmail !== '' ? $contactEmail : $order->user->email;
         $isNonDistrictEmail = $this->Orders->Users->isNonDistrictEmail($contactEmail, $order->account);
         $this->set(compact('order', 'contactEmail', 'isNonDistrictEmail', 'canEdit'));
     }
@@ -127,9 +146,9 @@ class OrdersController extends AppController
      * Resend the received-order email using the order's original creation path.
      *
      * @param string|null $id Order id.
-     * @return \Cake\Http\Response
+     * @return \Cake\Http\Response|null
      */
-    public function resendNotification(?string $id = null)
+    public function resendNotification(?string $id = null): ?Response
     {
         $this->request->allowMethod(['post']);
         $order = $this->Orders->get($id);
@@ -162,7 +181,7 @@ class OrdersController extends AppController
         if ($this->request->is('post')) {
             $order->set('id', Text::uuid());
             $config = $this->orderLineConfig();
-            $requestData = $this->request->getData();
+            $requestData = $this->requestData();
             $selectedGroupId = is_string($requestData['group_id'] ?? null)
                 ? trim($requestData['group_id'])
                 : '';
@@ -192,7 +211,7 @@ class OrdersController extends AppController
                     'associated' => ['OrderLines'],
                     'orderNotificationSource' => 'backend',
                     'userId' => $this->authenticatedUserId(),
-                ])
+                ]) !== false
             ) {
                 $this->Flash->success(__('The order has been saved.'));
 
@@ -200,18 +219,27 @@ class OrdersController extends AppController
             }
             $this->Flash->error(__('The order could not be saved. Please, try again.'));
         }
-        $groups = $this->Orders->Accounts->Groups->find('list')
+        $groups = $this->associatedQuery(
+            $this->Orders->Accounts->Groups,
+            $this->typedAssociation($this->Orders->Accounts->Groups, GroupsTable::class),
+            'list',
+        )
             ->orderByAsc('group_name')
             ->all();
-        $sections = $this->Orders->Sections->find()
+        $sections = $this->associatedQuery(
+            $this->Orders->Sections,
+            $this->typedAssociation($this->Orders->Sections, SectionsTable::class),
+        )
             ->select(['id', 'group_id', 'section_name'])
             ->orderByAsc('section_name')
             ->all();
         $sectionOptions = $sections->combine('id', 'section_name')->toArray();
         $sectionGroups = $sections->combine('id', 'group_id')->toArray();
-        $users = $this->Orders->Users->find(
+        $users = $this->associatedQuery(
+            $this->Orders->Users,
+            $this->typedAssociation($this->Orders->Users, UsersTable::class),
             'list',
-            valueField: static fn($user): string => $user->full_name,
+            valueField: static fn(User $user): string => $user->full_name,
             limit: 200,
         )->all();
         $badges = $this->StockTransactionLines->badgeOptions(
@@ -273,9 +301,9 @@ class OrdersController extends AppController
         }
 
         $canChangeOrderParty = $this->orderCanChangeParty($order);
-        $selectedGroupId = (string)($order->section?->group_id ?? $order->account?->group_id ?? '');
+        $selectedGroupId = (string)($order->section->group_id ?? $order->account->group_id ?? '');
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $requestData = $this->request->getData();
+            $requestData = $this->requestData();
             if ($canChangeOrderParty) {
                 $selectedGroupId = is_string($requestData['group_id'] ?? null)
                     ? trim($requestData['group_id'])
@@ -325,31 +353,42 @@ class OrdersController extends AppController
                         $this->Orders->OrderLines->saveOrFail($line, ['userId' => $userId]);
                     }
                     if ($lineUpdates['lines'] !== []) {
-                        $this->Orders->dispatchEvent('Order.afterLineQuantityChange', [], $order);
+                        $this->Orders->getEventManager()->dispatch(
+                            new Event('Order.afterLineQuantityChange', $order, []),
+                        );
                     }
 
                     return true;
                 });
             }
-            if ($saved) {
+            if ($saved === true) {
                 $this->Flash->success(__('The order has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The order could not be saved. Please, try again.'));
         }
-        $groups = $this->Orders->Accounts->Groups->find('list')
+        $groups = $this->associatedQuery(
+            $this->Orders->Accounts->Groups,
+            $this->typedAssociation($this->Orders->Accounts->Groups, GroupsTable::class),
+            'list',
+        )
             ->orderByAsc('group_name')
             ->all();
-        $sections = $this->Orders->Sections->find()
+        $sections = $this->associatedQuery(
+            $this->Orders->Sections,
+            $this->typedAssociation($this->Orders->Sections, SectionsTable::class),
+        )
             ->select(['id', 'group_id', 'section_name'])
             ->orderByAsc('section_name')
             ->all();
         $sectionOptions = $sections->combine('id', 'section_name')->toArray();
         $sectionGroups = $sections->combine('id', 'group_id')->toArray();
-        $users = $this->Orders->Users->find(
+        $users = $this->associatedQuery(
+            $this->Orders->Users,
+            $this->typedAssociation($this->Orders->Users, UsersTable::class),
             'list',
-            valueField: static fn($user): string => $user->full_name,
+            valueField: static fn(User $user): string => $user->full_name,
             limit: 200,
         )->all();
         $this->set(compact(
@@ -373,7 +412,10 @@ class OrdersController extends AppController
         $errors = [];
         $group = $groupId === ''
             ? null
-            : $this->Orders->Accounts->Groups->find()
+            : $this->associatedQuery(
+                $this->Orders->Accounts->Groups,
+                $this->typedAssociation($this->Orders->Accounts->Groups, GroupsTable::class),
+            )
                 ->where(['id' => $groupId])
                 ->first();
         if ($group === null) {
@@ -382,7 +424,10 @@ class OrdersController extends AppController
 
         $section = $sectionId === ''
             ? null
-            : $this->Orders->Sections->find()
+            : $this->associatedQuery(
+                $this->Orders->Sections,
+                $this->typedAssociation($this->Orders->Sections, SectionsTable::class),
+            )
                 ->select(['id', 'group_id', 'account_id'])
                 ->where(['id' => $sectionId, 'group_id' => $groupId])
                 ->first();
@@ -392,7 +437,10 @@ class OrdersController extends AppController
 
         $accountQuery = $groupId === ''
             ? null
-            : $this->Orders->Accounts->find()
+            : $this->associatedQuery(
+                $this->Orders->Accounts,
+                $this->typedAssociation($this->Orders->Accounts, AccountsTable::class),
+            )
                 ->select(['id'])
                 ->where(['group_id' => $groupId])
                 ->orderByAsc('account_name');
@@ -571,7 +619,7 @@ class OrdersController extends AppController
     }
 
     /**
-     * @return array<string, mixed>
+     * @return LineConfig
      */
     private function orderLineConfig(): array
     {
@@ -582,6 +630,17 @@ class OrdersController extends AppController
             'foreignKey' => 'order_id',
             'stockTransaction' => false,
             'defaults' => ['fulfilled' => false],
+            'deduplicate' => [
+                'sum' => [
+                    'quantity' => 'quantity',
+                    'amount' => 'money',
+                ],
+                'weightedPrice' => [
+                    'field' => 'unit_price',
+                    'quantity' => 'quantity',
+                    'amount' => 'amount',
+                ],
+            ],
             'legend' => __('Order Lines'),
             'rowUrl' => ['action' => 'lineRow'],
             'priceUrl' => ['action' => 'badgePrice'],

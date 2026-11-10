@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Table\GroupsTable;
+use App\Model\Table\SectionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use Cake\ORM\Query\SelectQuery;
+
 /**
  * Accounts Controller
  *
@@ -10,6 +15,8 @@ namespace App\Controller;
  */
 class AccountsController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -37,14 +44,14 @@ class AccountsController extends AppController
             'CreatedByUser',
             'UpdatedByUser',
             'Groups',
-            'Sections' => fn($query) => $query->orderByAsc('section_name'),
-            'Invoices' => fn($query) => $query
+            'Sections' => fn(SelectQuery $query) => $query->orderByAsc('section_name'),
+            'Invoices' => fn(SelectQuery $query) => $query
                 ->contain(['InvoiceSummaries'])
                 ->orderByDesc('invoice_date'),
-            'Orders' => fn($query) => $query
+            'Orders' => fn(SelectQuery $query) => $query
                 ->contain(['Users', 'Sections'])
                 ->orderByDesc('placed_date'),
-            'Fulfilments' => fn($query) => $query->orderByDesc('fulfilment_date'),
+            'Fulfilments' => fn(SelectQuery $query) => $query->orderByDesc('fulfilment_date'),
         ]);
         $this->set(compact('account'));
     }
@@ -58,15 +65,20 @@ class AccountsController extends AppController
     {
         $account = $this->Accounts->newEmptyEntity();
         if ($this->request->is('post')) {
-            $account = $this->Accounts->patchEntity($account, $this->request->getData());
-            if ($this->Accounts->save($account)) {
+            $account = $this->Accounts->patchEntity($account, $this->requestData());
+            if ($this->Accounts->save($account) !== false) {
                 $this->Flash->success(__('The account has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The account could not be saved. Please, try again.'));
         }
-        $groups = $this->Accounts->Groups->find('list', limit: 200)->all();
+        $groups = $this->associatedQuery(
+            $this->Accounts->Groups,
+            $this->typedAssociation($this->Accounts->Groups, GroupsTable::class),
+            'list',
+            limit: 200,
+        )->all();
         $this->set(compact('account', 'groups'));
     }
 
@@ -85,13 +97,16 @@ class AccountsController extends AppController
             $account->sections,
         );
         if ($this->request->is(['patch', 'post', 'put'])) {
-            $data = $this->request->getData();
+            $data = $this->requestData();
             $selectedSectionIds = array_values(array_unique(array_filter(
                 (array)($data['section_ids'] ?? []),
                 'is_string',
             )));
             $account = $this->Accounts->patchEntity($account, $data);
-            $validSectionCount = $selectedSectionIds === [] ? 0 : $this->Accounts->Sections->find()
+            $validSectionCount = $selectedSectionIds === [] ? 0 : $this->associatedQuery(
+                $this->Accounts->Sections,
+                $this->typedAssociation($this->Accounts->Sections, SectionsTable::class),
+            )
                 ->where([
                     'Sections.id IN' => $selectedSectionIds,
                     'Sections.group_id' => $account->group_id,
@@ -106,7 +121,7 @@ class AccountsController extends AppController
                     $account,
                     $selectedSectionIds,
                 ): bool {
-                    if (!$this->Accounts->save($account)) {
+                    if ($this->Accounts->save($account) === false) {
                         return false;
                     }
                     $this->Accounts->Sections->updateAll(
@@ -123,15 +138,23 @@ class AccountsController extends AppController
                     return true;
                 });
             }
-            if ($saved) {
+            if ($saved === true) {
                 $this->Flash->success(__('The account has been saved.'));
 
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The account could not be saved. Please, try again.'));
         }
-        $groups = $this->Accounts->Groups->find('list', limit: 200)->all();
-        $sections = $this->Accounts->Sections->find()
+        $groups = $this->associatedQuery(
+            $this->Accounts->Groups,
+            $this->typedAssociation($this->Accounts->Groups, GroupsTable::class),
+            'list',
+            limit: 200,
+        )->all();
+        $sections = $this->associatedQuery(
+            $this->Accounts->Sections,
+            $this->typedAssociation($this->Accounts->Sections, SectionsTable::class),
+        )
             ->select(['id', 'group_id', 'section_name'])
             ->orderByAsc('section_name')
             ->all();
@@ -151,7 +174,7 @@ class AccountsController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $account = $this->Accounts->get($id);
-        if ($this->Accounts->delete($account)) {
+        if ($this->Accounts->delete($account) !== false) {
             $this->Flash->success(__('The account has been deleted.'));
         } else {
             $this->Flash->error(__('The account could not be deleted. Please, try again.'));

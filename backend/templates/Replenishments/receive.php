@@ -41,7 +41,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($receiptRows as $orderLineId => $row) : ?>
+                            <?php foreach ($receiptRows as $badgeId => $row) : ?>
                             <tr>
                                 <td><?= h($row['badge_name']) ?></td>
                                 <td data-expected-quantity="<?= h((string)$row['expected_quantity']) ?>">
@@ -49,7 +49,7 @@
                                 </td>
                                 <td>
                                     <?= $this->Form->control(
-                                        "receipt_lines.{$orderLineId}.quantity",
+                                        "receipt_lines.{$badgeId}.quantity",
                                         [
                                             'label' => false,
                                             'type' => 'number',

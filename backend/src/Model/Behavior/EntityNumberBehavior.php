@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Behavior;
 
+use App\Utility\Value;
 use ArrayObject;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
@@ -24,9 +25,9 @@ class EntityNumberBehavior extends Behavior
     private ?DateTime $date = null;
 
     /**
-     * @param \Cake\Event\EventInterface $event Event.
+     * @param \Cake\Event\EventInterface<\Cake\ORM\Table> $event Event.
      * @param \Cake\Datasource\EntityInterface $entity Entity.
-     * @param \ArrayObject $options Options.
+     * @param \ArrayObject<string, mixed> $options Options.
      * @return void
      */
     public function beforeSave(
@@ -38,8 +39,8 @@ class EntityNumberBehavior extends Behavior
             return;
         }
 
-        $field = (string)$this->getConfig('field');
-        $prefix = strtoupper((string)$this->getConfig('prefix'));
+        $field = Value::string($this->getConfig('field'));
+        $prefix = strtoupper(Value::string($this->getConfig('prefix')));
         if ($field === '' || $prefix === '') {
             throw new RuntimeException('EntityNumber behavior requires field and prefix configuration.');
         }
@@ -56,7 +57,10 @@ class EntityNumberBehavior extends Behavior
             ['sequence_key' => $sequenceKey],
         );
         $result = $statement->fetch('assoc');
-        $increment = (int)($result['last_number'] ?? 0);
+        if (!is_array($result)) {
+            throw new RuntimeException('Unable to generate entity number.');
+        }
+        $increment = Value::int($result['last_number'] ?? 0);
         if ($increment < 1) {
             throw new RuntimeException('Unable to generate entity number.');
         }

@@ -64,7 +64,12 @@ class OrdersControllerTest extends TestCase
             'lines' => [
                 [
                     'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
-                    'quantity' => 2,
+                    'quantity' => 10,
+                    'unit_price' => 1.5,
+                ],
+                [
+                    'badge_id' => 'f525eb6d-021c-4ef2-811f-feac8db8d35d',
+                    'quantity' => 5,
                     'unit_price' => 1.5,
                 ],
             ],
@@ -79,12 +84,12 @@ class OrdersControllerTest extends TestCase
         $this->assertSame(OrderStatus::Placed, $order->status);
         $this->assertSame('d9534dcb-a846-5a22-a2fe-b67580555563', $order->section_id);
         $this->assertSame('ae471706-04cc-4c9c-8916-e4be1f913edf', $order->account_id);
-        $this->assertSame(2, $order->total_ordered_quantity);
-        $this->assertEquals(3.0, $order->total_ordered_amount);
+        $this->assertSame(15, $order->total_ordered_quantity);
+        $this->assertEquals(22.5, $order->total_ordered_amount);
         $this->assertCount(1, $order->order_lines);
-        $this->assertSame(2, $order->order_lines[0]->quantity);
+        $this->assertSame(15, $order->order_lines[0]->quantity);
         $this->assertSame('1.50', $order->order_lines[0]->unit_price);
-        $this->assertSame('3.00', $order->order_lines[0]->amount);
+        $this->assertSame('22.50', $order->order_lines[0]->amount);
         $this->assertSame($beforeUsers + 1, $users->find()->count());
         $createdUser = $users->find()->where(['email' => 'alex@example.org'])->firstOrFail();
         $this->assertSame($createdUser->id, $order->user_id);

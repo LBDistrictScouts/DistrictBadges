@@ -4,6 +4,12 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\Enum\GroupType;
+use App\Model\Table\AccountsTable;
+use App\Model\Table\GroupsTable;
+use App\Model\Table\SectionsTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Model\Table\UsersTable;
+use App\Utility\Value;
 use Cake\Core\Configure;
 use Cake\Http\Client;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -11,6 +17,7 @@ use RuntimeException;
 
 class DistrictCoreDataService
 {
+    use TypedTableLocatorTrait;
     use LocatorAwareTrait;
 
     private Client $client;
@@ -24,18 +31,19 @@ class DistrictCoreDataService
     public function __construct(?array $config = null, ?Client $client = null)
     {
         $config ??= (array)Configure::read('DistrictCoreData');
-        $endpoint = trim((string)($config['url'] ?? ''));
-        $username = (string)($config['username'] ?? '');
-        $password = (string)($config['password'] ?? '');
+        $endpoint = trim(Value::string($config['url'] ?? ''));
+        $username = Value::string($config['username'] ?? '');
+        $password = Value::string($config['password'] ?? '');
 
         if ($endpoint === '' || $username === '' || $password === '') {
             throw new RuntimeException('DistrictCoreData URL and Basic Auth credentials must be configured.');
         }
 
         $path = (string)(parse_url($endpoint, PHP_URL_PATH) ?? '');
+        $parentUrl = preg_replace('#[^/]*$#', '', $endpoint);
         $this->baseUrl = $path === '' || $path === '/'
             ? rtrim($endpoint, '/') . '/'
-            : (preg_replace('#[^/]*$#', '', $endpoint) ?: rtrim($endpoint, '/') . '/');
+            : ($parentUrl !== null && $parentUrl !== '' ? $parentUrl : rtrim($endpoint, '/') . '/');
         $this->authorization = 'Basic ' . base64_encode($username . ':' . $password);
         $this->client = $client ?? new Client();
     }
@@ -60,16 +68,12 @@ class DistrictCoreDataService
     {
         $this->validateDatasets($groupData, $sectionData);
 
-        /** @var \App\Model\Table\GroupsTable $groups */
-        $groups = $this->getTableLocator()->get('Groups');
-        /** @var \App\Model\Table\SectionsTable $sections */
-        $sections = $this->getTableLocator()->get('Sections');
-        /** @var \App\Model\Table\AccountsTable $accounts */
-        $accounts = $this->getTableLocator()->get('Accounts');
-        /** @var \App\Model\Table\UsersTable $users */
-        $users = $this->getTableLocator()->get('Users');
+        $groups = $this->typedTable('Groups', GroupsTable::class);
+        $sections = $this->typedTable('Sections', SectionsTable::class);
+        $accounts = $this->typedTable('Accounts', AccountsTable::class);
+        $users = $this->typedTable('Users', UsersTable::class);
 
-        return $groups->getConnection()->transactional(function () use (
+        $result = $groups->getConnection()->transactional(function () use (
             $groups,
             $sections,
             $accounts,
@@ -79,7 +83,7 @@ class DistrictCoreDataService
         ): array {
             $accountIds = [];
             foreach ($groupData as $record) {
-                $id = (string)$record['id'];
+                $id = Value::string($record['id']);
                 $entity = $groups->find()->where(['id' => $id])->first()
                     ?? $groups->find()->where(['group_name' => $record['group_name']])->first();
 
@@ -116,7 +120,7 @@ class DistrictCoreDataService
             }
 
             foreach ($sectionData as $record) {
-                $id = (string)$record['id'];
+                $id = Value::string($record['id']);
                 $entity = $sections->find()->where(['id' => $id])->first()
                     ?? $sections->find()->where(['section_osm_id' => $record['section_id']])->first();
 
@@ -144,7 +148,7 @@ class DistrictCoreDataService
                     'group_id' => $record['group_id'],
                 ]);
                 if (!$hasValidAccount) {
-                    $sectionFields['account_id'] = $accountIds[$record['group_id']];
+                    $sectionFields['account_id'] = $accountIds[Value::string($record['group_id'])];
                 }
                 $sections->patchEntity($entity, $sectionFields);
                 $sections->saveOrFail($entity);
@@ -156,6 +160,11 @@ class DistrictCoreDataService
 
             return ['groups' => count($groupData), 'sections' => count($sectionData)];
         });
+        if (!is_array($result) || !is_int($result['groups'] ?? null) || !is_int($result['sections'] ?? null)) {
+            throw new RuntimeException('The core data transaction did not commit.');
+        }
+
+        return ['groups' => $result['groups'], 'sections' => $result['sections']];
     }
 
     /**
@@ -183,7 +192,7 @@ class DistrictCoreDataService
             throw new RuntimeException(sprintf('DistrictCoreData %s did not return a JSON list.', $filename));
         }
 
-        return $data;
+        return Value::maps($data);
     }
 
     /**

@@ -8,10 +8,21 @@ use App\Model\Enum\DispatchType;
 use App\Model\Enum\FulfilmentStatus;
 use App\Model\Enum\OrderStatus;
 use App\Model\Enum\TransactionType;
+use App\Model\Table\BadgesTable;
+use App\Model\Table\OrderLinesTable;
+use App\Model\Table\OrdersTable;
+use App\Model\Table\TypedTableLocatorTrait;
+use App\Model\Table\UsersTable;
 use App\Service\FulfilmentNotificationService;
+use App\Utility\Value;
+use App\View\Helper\StockTransactionLinesHelper;
 use Cake\Core\Configure;
 use Cake\Datasource\EntityInterface;
+use Cake\Event\Event;
+use Cake\Http\Response;
+use Cake\ORM\Query\SelectQuery;
 use Cake\Utility\Text;
+use LogicException;
 use Throwable;
 
 /**
@@ -19,9 +30,13 @@ use Throwable;
  *
  * @property \App\Model\Table\FulfilmentsTable $Fulfilments
  * @property \App\Controller\Component\StockTransactionLinesComponent $StockTransactionLines
+ * @phpstan-import-type OrderDetails from \App\View\Helper\StockTransactionLinesHelper
+ * @phpstan-import-type LineConfig from \App\Controller\Component\StockTransactionLinesComponent
  */
 class FulfilmentsController extends AppController
 {
+    use TypedTableLocatorTrait;
+
     /**
      * Index method
      *
@@ -31,10 +46,10 @@ class FulfilmentsController extends AppController
     {
         $query = $this->Fulfilments->find();
         $filters = [
-            'number' => trim((string)$this->request->getQuery('number')),
-            'status' => (string)$this->request->getQuery('status'),
-            'created_from' => (string)$this->request->getQuery('created_from'),
-            'created_to' => (string)$this->request->getQuery('created_to'),
+            'number' => trim(Value::string($this->request->getQuery('number'))),
+            'status' => Value::string($this->request->getQuery('status')),
+            'created_from' => Value::string($this->request->getQuery('created_from')),
+            'created_to' => Value::string($this->request->getQuery('created_to')),
         ];
 
         if ($filters['number'] !== '') {
@@ -53,7 +68,7 @@ class FulfilmentsController extends AppController
 
         $createdTo = $this->validDateFilter($filters['created_to']);
         if ($createdTo !== null) {
-            $query->where(['fulfilment_date <' => date('Y-m-d', strtotime($createdTo . ' +1 day'))]);
+            $query->where(['fulfilment_date <' => $this->dateFilter($createdTo . ' +1 day', 'Y-m-d')]);
         }
 
         $fulfilments = $this->paginate($query, [
@@ -109,9 +124,9 @@ class FulfilmentsController extends AppController
     /**
      * Retry the customer notification for a dispatched fulfilment.
      *
-     * @return \Cake\Http\Response
+     * @return \Cake\Http\Response|null
      */
-    public function resendNotification(?string $id = null)
+    public function resendNotification(?string $id = null): ?Response
     {
         $this->request->allowMethod(['post']);
         $fulfilment = $this->Fulfilments->get($id);
@@ -149,7 +164,7 @@ class FulfilmentsController extends AppController
             $fulfilment->set('id', Text::uuid());
             $config = $this->fulfilmentLineConfig();
             $data = $this->StockTransactionLines->normalise(
-                $this->request->getData(),
+                $this->requestData(),
                 (string)$fulfilment->id,
                 $config,
             );
@@ -167,7 +182,7 @@ class FulfilmentsController extends AppController
             $this->applyDispatchDetails($fulfilment, $data);
             if (
                 !$fulfilment->hasErrors()
-                && $this->Fulfilments->save($fulfilment, ['associated' => ['FulfilmentLines']])
+                && $this->Fulfilments->save($fulfilment, ['associated' => ['FulfilmentLines']]) !== false
             ) {
                 $this->Flash->success(__('The fulfilment has been saved.'));
 
@@ -223,13 +238,13 @@ class FulfilmentsController extends AppController
     public function orderLines()
     {
         $this->request->allowMethod(['get']);
-        $orderId = (string)$this->request->getQuery('order_id');
+        $orderId = Value::string($this->request->getQuery('order_id'));
         $existingOrderLineIds = array_values(array_filter(
             (array)$this->request->getQuery('existing_order_line_ids'),
             'is_string',
         ));
         $allocatedByBadge = array_map(
-            static fn($quantity): int => max(0, (int)$quantity),
+            static fn($quantity): int => max(0, Value::int($quantity)),
             (array)$this->request->getQuery('existing_badge_quantities'),
         );
         $index = filter_var(
@@ -242,8 +257,7 @@ class FulfilmentsController extends AppController
         }
 
         $orders = $this->Fulfilments->FulfilmentLines->OrderLines->Orders;
-        $order = $orders
-            ->find()
+        $order = $this->associatedQuery($orders, $this->typedAssociation($orders, OrdersTable::class))
             ->select([
                 'id',
                 'order_number',
@@ -274,8 +288,8 @@ class FulfilmentsController extends AppController
         if (
             !$this->orderLinesMatchCustomer(
                 $existingOrderLineIds,
-                (string)$order->user_id,
-                (string)$order->account_id,
+                Value::string($order->user_id),
+                Value::string($order->account_id),
             )
         ) {
             return $this->jsonError(__('All orders in a fulfilment must belong to the same user and account.'));
@@ -287,16 +301,33 @@ class FulfilmentsController extends AppController
             $order->postage === true ? $order->dispatch_town : $user->town,
             $order->postage === true ? $order->dispatch_county : $user->county,
             $order->postage === true ? $order->dispatch_postcode : $user->postcode,
-        ], static fn($line): bool => trim((string)$line) !== ''));
+        ], static fn($line): bool => trim(Value::string($line)) !== ''));
 
         $config = $this->fulfilmentLineConfig($this->orderLineOptions());
         $view = $this->createView();
+        $lineHelper = $view->loadHelper('StockTransactionLines');
+        if (!$lineHelper instanceof StockTransactionLinesHelper) {
+            throw new LogicException('StockTransactionLines must use StockTransactionLinesHelper.');
+        }
+        $renderFields = [];
+        foreach ($config['fields'] as $field => $fieldConfig) {
+            $renderFields[$field] = ['label' => $fieldConfig['label'] ?? $field] + $fieldConfig;
+        }
+        $renderSelectors = [];
+        foreach ($config['selectors'] ?? [] as $field => $selector) {
+            $renderSelectors[$field] = ['label' => $selector['label'] ?? $field];
+        }
         $html = '';
         $fulfilledOmitted = 0;
         $noStockOmitted = 0;
         $lowStockReduced = 0;
-        $orderLinesQuery = $this->Fulfilments->FulfilmentLines->OrderLines
-            ->find()
+        $orderLinesQuery = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines,
+                OrderLinesTable::class,
+            ),
+        )
             ->contain(['Badges'])
             ->where(['order_id' => $orderId])
             ->orderBy(['Badges.badge_name' => 'ASC']);
@@ -306,15 +337,15 @@ class FulfilmentsController extends AppController
         $orderLines = $orderLinesQuery->all();
 
         foreach ($orderLines as $orderLine) {
-            $badgeId = (string)$orderLine->badge_id;
-            $remaining = (int)$orderLine->remaining_quantity;
+            $badgeId = Value::string($orderLine->badge_id);
+            $remaining = Value::int($orderLine->remaining_quantity);
             if ($remaining < 1) {
                 $fulfilledOmitted++;
                 continue;
             }
             $available = max(
                 0,
-                (int)$orderLine->badge->on_hand_quantity - ($allocatedByBadge[$badgeId] ?? 0),
+                Value::int($orderLine->badge->on_hand_quantity) - ($allocatedByBadge[$badgeId] ?? 0),
             );
             if ($available < 1) {
                 $noStockOmitted++;
@@ -325,14 +356,14 @@ class FulfilmentsController extends AppController
                 $lowStockReduced++;
             }
 
-            $unitPrice = number_format((float)$orderLine->badge->price, 2, '.', '');
-            $html .= $view->StockTransactionLines->row([
+            $unitPrice = number_format(Value::float($orderLine->badge->price), 2, '.', '');
+            $html .= $lineHelper->row([
                 'inputKey' => $config['inputKey'],
                 'badgeId' => $badgeId,
-                'badgeName' => (string)$orderLine->badge->badge_name,
+                'badgeName' => Value::string($orderLine->badge->badge_name),
                 'selectors' => [
                     'order_line_id' => [
-                        'value' => (string)$orderLine->id,
+                        'value' => Value::string($orderLine->id),
                         'label' => sprintf(
                             '%s - %s',
                             $order->order_number,
@@ -345,16 +376,16 @@ class FulfilmentsController extends AppController
                     'unit_price' => $unitPrice,
                     'monetary_amount' => number_format($quantity * (float)$unitPrice, 2, '.', ''),
                 ],
-                'fields' => $config['fields'],
+                'fields' => $renderFields,
                 'index' => $index,
             ]);
             $allocatedByBadge[$badgeId] = ($allocatedByBadge[$badgeId] ?? 0) + $quantity;
             $index++;
         }
         if ($html !== '') {
-            $html = $view->StockTransactionLines->orderGroup(
+            $html = $lineHelper->orderGroup(
                 $this->orderGroupDetails($order),
-                $config,
+                ['fields' => $renderFields, 'selectors' => $renderSelectors],
                 $html,
             );
         }
@@ -401,8 +432,8 @@ class FulfilmentsController extends AppController
                 'html' => $html,
                 'next_index' => $index,
                 'alerts' => $alerts,
-                'user_id' => (string)$order->user_id,
-                'account_id' => (string)$order->account_id,
+                'user_id' => Value::string($order->user_id),
+                'account_id' => Value::string($order->account_id),
                 'dispatch_type' => ($order->postage === true
                     ? DispatchType::PostalDispatch
                     : DispatchType::ShopCollection)->value,
@@ -414,10 +445,10 @@ class FulfilmentsController extends AppController
      * Dispatch a draft fulfilment.
      *
      * @param string|null $id Fulfilment id.
-     * @return \Cake\Http\Response Redirects to view.
+     * @return \Cake\Http\Response|null Redirects to view.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function dispatch(?string $id = null)
+    public function dispatch(?string $id = null): ?Response
     {
         $this->request->allowMethod(['post']);
         $fulfilment = $this->Fulfilments->get($id, contain: [
@@ -439,7 +470,7 @@ class FulfilmentsController extends AppController
             return $this->redirect($redirect);
         }
 
-        $this->Fulfilments->dispatchEvent('Fulfilment.afterDispatch', [], $fulfilment);
+        $this->Fulfilments->getEventManager()->dispatch(new Event('Fulfilment.afterDispatch', $fulfilment, []));
         $this->Flash->success(__('The fulfilment has been dispatched.'));
 
         return $this->redirect($redirect);
@@ -455,13 +486,42 @@ class FulfilmentsController extends AppController
     public function delete(?string $id = null)
     {
         $this->request->allowMethod(['post', 'delete']);
-        $fulfilment = $this->Fulfilments->get($id);
-        if ($fulfilment->status === FulfilmentStatus::Dispatched) {
+        $result = $this->Fulfilments->getConnection()->transactional(function () use ($id): string {
+            $fulfilment = $this->Fulfilments->find()
+                ->where(['id' => $id])
+                ->epilog('FOR UPDATE')
+                ->firstOrFail();
+
+            if ($fulfilment->status === FulfilmentStatus::Dispatched) {
+                return 'dispatched';
+            }
+
+            if (
+                in_array(
+                    $fulfilment->status,
+                    [FulfilmentStatus::Draft, FulfilmentStatus::Cancelled],
+                    true,
+                )
+            ) {
+                $fulfilmentLines = $this->Fulfilments->FulfilmentLines->getTarget();
+                $lines = $fulfilmentLines->find()
+                    ->where(['fulfilment_id' => $fulfilment->id])
+                    ->all();
+                foreach ($lines as $line) {
+                    $fulfilmentLines->deleteOrFail($line);
+                }
+            }
+
+            return $this->Fulfilments->delete($fulfilment) ? 'deleted' : 'failed';
+        });
+
+        if ($result === 'dispatched') {
             $this->Flash->error(__('Dispatched fulfilments cannot be deleted.'));
 
             return $this->redirect(['action' => 'index']);
         }
-        if ($this->Fulfilments->delete($fulfilment)) {
+
+        if ($result === 'deleted') {
             $this->Flash->success(__('The fulfilment has been deleted.'));
         } else {
             $this->Flash->error(__('The fulfilment could not be deleted. Please, try again.'));
@@ -471,7 +531,13 @@ class FulfilmentsController extends AppController
     }
 
     /**
-     * @return array<string, mixed>
+     * @param array<string, string> $orderLines Order line options.
+     * @param array<string, string|array<string, string>> $orders Order options.
+     * @param array<string, array<string, string>> $orderLineGroups Order group details.
+     * @param array<string, array{html: string}> $orderAlerts Order alerts.
+     * @param array<string, string> $orderUserIds Order users.
+     * @param array<string, string> $orderAccountIds Order accounts.
+     * @return LineConfig
      */
     private function fulfilmentLineConfig(
         array $orderLines = [],
@@ -490,6 +556,18 @@ class FulfilmentsController extends AppController
             'rowUrl' => ['action' => 'lineRow'],
             'priceUrl' => ['action' => 'badgePrice'],
             'badgePriceField' => 'price',
+            'deduplicate' => [
+                'sum' => [
+                    'on_hand_quantity_change' => 'quantity',
+                    'fulfilled_quantity_change' => 'quantity',
+                    'monetary_amount' => 'money',
+                ],
+                'weightedPrice' => [
+                    'field' => 'unit_price',
+                    'quantity' => 'fulfilled_quantity_change',
+                    'amount' => 'monetary_amount',
+                ],
+            ],
             'requiredMessage' => __('Add at least one fulfilment line.'),
             'invalidMessage' => __(
                 'Select a matching order line and badge, then enter a valid quantity and unit price.',
@@ -561,8 +639,13 @@ class FulfilmentsController extends AppController
     private function orderLineOptions(): array
     {
         $options = [];
-        $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines
-            ->find()
+        $orderLines = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines,
+                OrderLinesTable::class,
+            ),
+        )
             ->contain(['Orders', 'Badges'])
             ->innerJoinWith('Orders')
             ->where([
@@ -575,7 +658,7 @@ class FulfilmentsController extends AppController
             ->all();
 
         foreach ($orderLines as $orderLine) {
-            $options[(string)$orderLine->id] = sprintf(
+            $options[Value::string($orderLine->id)] = sprintf(
                 '%s - %s (quantity %d)',
                 $orderLine->order->order_number,
                 $orderLine->badge->badge_name,
@@ -593,7 +676,7 @@ class FulfilmentsController extends AppController
     {
         $options = [];
         $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines;
-        $orderIds = $orderLines->find()
+        $orderIds = $this->associatedQuery($orderLines, $this->typedAssociation($orderLines, OrderLinesTable::class))
             ->select(['order_id'])
             ->distinct(['order_id'])
             ->disableHydration()
@@ -604,8 +687,10 @@ class FulfilmentsController extends AppController
             return $options;
         }
 
-        $orders = $orderLines->Orders
-            ->find()
+        $orders = $this->associatedQuery(
+            $orderLines->Orders,
+            $this->typedAssociation($orderLines->Orders, OrdersTable::class),
+        )
             ->contain(['Users', 'Accounts.Groups'])
             ->where([
                 'Orders.id IN' => $orderIds,
@@ -625,7 +710,7 @@ class FulfilmentsController extends AppController
         foreach ($orders as $order) {
             $userName = $order->user->full_name;
             $date = $order->placed_date?->i18nFormat('dd-MMM') ?? '';
-            $options[$userName][(string)$order->id] = sprintf(
+            $options[$userName][Value::string($order->id)] = sprintf(
                 '%s - %s - %s',
                 $order->order_number,
                 $date,
@@ -642,7 +727,7 @@ class FulfilmentsController extends AppController
     private function orderUserIds(): array
     {
         $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines;
-        $orderIds = $orderLines->find()
+        $orderIds = $this->associatedQuery($orderLines, $this->typedAssociation($orderLines, OrderLinesTable::class))
             ->select(['order_id'])
             ->distinct(['order_id'])
             ->disableHydration()
@@ -653,7 +738,10 @@ class FulfilmentsController extends AppController
             return [];
         }
 
-        $orders = $orderLines->Orders->find()
+        $orders = $this->associatedQuery(
+            $orderLines->Orders,
+            $this->typedAssociation($orderLines->Orders, OrdersTable::class),
+        )
             ->select(['id', 'user_id'])
             ->where([
                 'Orders.id IN' => $orderIds,
@@ -666,7 +754,7 @@ class FulfilmentsController extends AppController
 
         $userIds = [];
         foreach ($orders as $order) {
-            $userIds[(string)$order->id] = (string)$order->user_id;
+            $userIds[Value::string($order->id)] = Value::string($order->user_id);
         }
 
         return $userIds;
@@ -678,7 +766,7 @@ class FulfilmentsController extends AppController
     private function orderAccountIds(): array
     {
         $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines;
-        $orderIds = $orderLines->find()
+        $orderIds = $this->associatedQuery($orderLines, $this->typedAssociation($orderLines, OrderLinesTable::class))
             ->select(['order_id'])
             ->distinct(['order_id'])
             ->disableHydration()
@@ -689,7 +777,10 @@ class FulfilmentsController extends AppController
             return [];
         }
 
-        $orders = $orderLines->Orders->find()
+        $orders = $this->associatedQuery(
+            $orderLines->Orders,
+            $this->typedAssociation($orderLines->Orders, OrdersTable::class),
+        )
             ->select(['id', 'account_id'])
             ->where([
                 'Orders.id IN' => $orderIds,
@@ -702,7 +793,7 @@ class FulfilmentsController extends AppController
 
         $accountIds = [];
         foreach ($orders as $order) {
-            $accountIds[(string)$order->id] = (string)$order->account_id;
+            $accountIds[Value::string($order->id)] = Value::string($order->account_id);
         }
 
         return $accountIds;
@@ -714,8 +805,13 @@ class FulfilmentsController extends AppController
     private function nonDistrictEmailOrderAlerts(): array
     {
         $alerts = [];
-        $orders = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
-            ->find()
+        $orders = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines->Orders,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines->Orders,
+                OrdersTable::class,
+            ),
+        )
             ->contain(['Users', 'Accounts.Groups'])
             ->innerJoinWith('OrderLines')
             ->where([
@@ -728,7 +824,7 @@ class FulfilmentsController extends AppController
 
         foreach ($orders as $order) {
             if ($this->isNonDistrictEmailForOrder($order)) {
-                $alerts[(string)$order->id] = $this->nonDistrictEmailOrderAlert($order);
+                $alerts[Value::string($order->id)] = $this->nonDistrictEmailOrderAlert($order);
             }
         }
 
@@ -742,7 +838,7 @@ class FulfilmentsController extends AppController
     private function nonDistrictEmailOrderAlert(Order $order): array
     {
         return [
-            'html' => (string)$this->createView()->element('non_district_email_alert', [
+            'html' => $this->createView()->element('non_district_email_alert', [
                 'email' => $this->orderContactEmail($order),
                 'isNonDistrictEmail' => true,
             ]),
@@ -755,7 +851,7 @@ class FulfilmentsController extends AppController
      */
     private function isNonDistrictEmailForOrder(Order $order): bool
     {
-        return $this->getTableLocator()->get('Users')->isNonDistrictEmail(
+        return $this->typedTable('Users', UsersTable::class)->isNonDistrictEmail(
             $this->orderContactEmail($order),
             $order->account,
         );
@@ -767,7 +863,9 @@ class FulfilmentsController extends AppController
      */
     private function orderContactEmail(Order $order): string
     {
-        return trim((string)$order->contact_email) ?: (string)$order->user->email;
+        $email = trim($order->contact_email ?? '');
+
+        return $email !== '' ? $email : $order->user->email;
     }
 
     /**
@@ -778,8 +876,13 @@ class FulfilmentsController extends AppController
     private function orderLineGroups(): array
     {
         $groups = [];
-        $orderLines = $this->Fulfilments->FulfilmentLines->OrderLines
-            ->find()
+        $orderLines = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines,
+                OrderLinesTable::class,
+            ),
+        )
             ->contain([
                 'Orders.Users',
                 'Orders.Accounts.Groups',
@@ -788,7 +891,7 @@ class FulfilmentsController extends AppController
             ->all();
 
         foreach ($orderLines as $orderLine) {
-            $groups[(string)$orderLine->id] = $this->orderGroupDetails($orderLine->order);
+            $groups[Value::string($orderLine->id)] = $this->orderGroupDetails($orderLine->order);
         }
 
         return $groups;
@@ -796,19 +899,19 @@ class FulfilmentsController extends AppController
 
     /**
      * @param \App\Model\Entity\Order $order Source order.
-     * @return array<string, string>
+     * @return OrderDetails
      */
     private function orderGroupDetails(Order $order): array
     {
         $section = $order->section;
-        $group = $section?->group ?? $order->account?->group;
+        $group = $section->group ?? $order->account->group;
 
         return [
             'id' => (string)$order->id,
             'order_number' => (string)$order->order_number,
-            'section' => (string)($section?->section_name ?? __('No section')),
+            'section' => (string)($section->section_name ?? __('No section')),
             'user' => (string)$order->user->full_name,
-            'group' => (string)($group?->group_name ?? __('No group')),
+            'group' => (string)($group->group_name ?? __('No group')),
         ];
     }
 
@@ -822,14 +925,14 @@ class FulfilmentsController extends AppController
     private function requireCompatibleOrderLines(EntityInterface $fulfilment, array $data): void
     {
         $orderLineIds = array_values(array_filter(array_map(
-            static fn(array $line): string => (string)($line['order_line_id'] ?? ''),
-            $data['fulfilment_lines'] ?? [],
-        )));
+            static fn(array $line): string => Value::string($line['order_line_id'] ?? ''),
+            Value::maps($data['fulfilment_lines'] ?? []),
+        ), static fn(string $id): bool => $id !== ''));
         if (
             count($orderLineIds) !== count(array_unique($orderLineIds))
             || !$this->orderLinesMatchCustomer($orderLineIds)
             || !$this->orderLinesAreFulfillable($orderLineIds)
-            || !$this->quantitiesFitAvailableStock($data['fulfilment_lines'] ?? [])
+            || !$this->quantitiesFitAvailableStock(Value::maps($data['fulfilment_lines'] ?? []))
         ) {
             $fulfilment->setError(
                 'fulfilment_lines',
@@ -851,17 +954,22 @@ class FulfilmentsController extends AppController
     private function applyCustomerDetails(EntityInterface $fulfilment, array $data): void
     {
         $orderLineIds = array_values(array_filter(array_map(
-            static fn(array $line): string => (string)($line['order_line_id'] ?? ''),
-            $data['fulfilment_lines'] ?? [],
-        )));
+            static fn(array $line): string => Value::string($line['order_line_id'] ?? ''),
+            Value::maps($data['fulfilment_lines'] ?? []),
+        ), static fn(string $id): bool => $id !== ''));
         if ($orderLineIds === []) {
             return;
         }
 
-        $order = $this->Fulfilments->FulfilmentLines->OrderLines->Orders
-            ->find()
+        $order = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines->Orders,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines->Orders,
+                OrdersTable::class,
+            ),
+        )
             ->select(['Orders.id', 'Orders.user_id', 'Orders.account_id'])
-            ->innerJoinWith('OrderLines', function ($query) use ($orderLineIds) {
+            ->innerJoinWith('OrderLines', function (SelectQuery $query) use ($orderLineIds) {
                 return $query->where(['OrderLines.id IN' => $orderLineIds]);
             })
             ->first();
@@ -881,15 +989,20 @@ class FulfilmentsController extends AppController
     private function applyDispatchDetails(EntityInterface $fulfilment, array $data): void
     {
         $orderLineIds = array_values(array_filter(array_map(
-            static fn(array $line): string => (string)($line['order_line_id'] ?? ''),
-            $data['fulfilment_lines'] ?? [],
-        )));
+            static fn(array $line): string => Value::string($line['order_line_id'] ?? ''),
+            Value::maps($data['fulfilment_lines'] ?? []),
+        ), static fn(string $id): bool => $id !== ''));
         if ($orderLineIds === []) {
             return;
         }
 
-        $orders = $this->Fulfilments->FulfilmentLines->OrderLines
-            ->find()
+        $sourceLines = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines,
+                OrderLinesTable::class,
+            ),
+        )
             ->select(['OrderLines.id', 'OrderLines.order_id'])
             ->contain(['Orders' => ['fields' => [
                 'id',
@@ -902,10 +1015,13 @@ class FulfilmentsController extends AppController
                 'dispatch_postcode',
             ]]])
             ->where(['OrderLines.id IN' => $orderLineIds])
-            ->all()
-            ->extract('order')
-            ->indexBy('id')
-            ->toList();
+            ->all();
+        $orders = [];
+        foreach ($sourceLines as $sourceLine) {
+            $sourceOrder = $sourceLine->order;
+            $orders[$sourceOrder->id] = $sourceOrder;
+        }
+        $orders = array_values($orders);
         if ($orders === []) {
             return;
         }
@@ -942,13 +1058,13 @@ class FulfilmentsController extends AppController
             }
         }
 
-        $dispatchType = DispatchType::tryFrom((int)($data['dispatch_type'] ?? 0))
+        $dispatchType = DispatchType::tryFrom(Value::int($data['dispatch_type'] ?? 0))
             ?? ($postage ? DispatchType::PostalDispatch : DispatchType::ShopCollection);
         if (
             $dispatchType !== DispatchType::ShopCollection
             && array_filter(
                 ['dispatch_address_line_1', 'dispatch_town', 'dispatch_postcode'],
-                static fn(string $field): bool => trim((string)($details[$field] ?? '')) === '',
+                static fn(string $field): bool => trim(Value::string($details[$field] ?? '')) === '',
             ) !== []
         ) {
             $fulfilment->setError(
@@ -959,7 +1075,7 @@ class FulfilmentsController extends AppController
             return;
         }
         $fulfilment->set('postage_charge', $dispatchType === DispatchType::PostalDispatch
-            ? number_format((float)Configure::read('Postage.price', 0), 2, '.', '')
+            ? number_format(Value::float(Configure::read('Postage.price', 0)), 2, '.', '')
             : '0.00');
         $fulfilment->set('dispatch_type', $dispatchType);
         foreach ($fields as $field) {
@@ -982,16 +1098,21 @@ class FulfilmentsController extends AppController
 
         $requestedByBadge = [];
         foreach ($lines as $line) {
-            $badgeId = (string)($line['badge_id'] ?? '');
+            $badgeId = Value::string($line['badge_id'] ?? '');
             if ($badgeId === '') {
                 return false;
             }
             $requestedByBadge[$badgeId] = ($requestedByBadge[$badgeId] ?? 0)
-                + (int)($line['fulfilled_quantity_change'] ?? 0);
+                + Value::int($line['fulfilled_quantity_change'] ?? 0);
         }
 
-        $badges = $this->Fulfilments->FulfilmentLines->Badges
-            ->find()
+        $badges = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->Badges,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->Badges,
+                BadgesTable::class,
+            ),
+        )
             ->select(['id', 'on_hand_quantity'])
             ->where(['id IN' => array_keys($requestedByBadge)])
             ->disableHydration()
@@ -1003,7 +1124,7 @@ class FulfilmentsController extends AppController
         }
 
         foreach ($requestedByBadge as $badgeId => $requested) {
-            if ($requested > max(0, (int)$badges[$badgeId]['on_hand_quantity'])) {
+            if ($requested > max(0, Value::int($badges[$badgeId]['on_hand_quantity']))) {
                 return false;
             }
         }
@@ -1026,7 +1147,7 @@ class FulfilmentsController extends AppController
             $quantity = (int)$line->fulfilled_quantity_change;
             if (
                 !$line->hasValue('badge')
-                || !$line->hasValue('order_line')
+                || $line->order_line === null
                 || $quantity > max(0, (int)$line->badge->on_hand_quantity)
                 || $quantity > (int)$line->order_line->remaining_quantity
             ) {
@@ -1052,8 +1173,13 @@ class FulfilmentsController extends AppController
             return true;
         }
 
-        $rows = $this->Fulfilments->FulfilmentLines->OrderLines
-            ->find()
+        $rows = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines,
+                OrderLinesTable::class,
+            ),
+        )
             ->select([
                 'order_line_id' => 'OrderLines.id',
                 'user_id' => 'Orders.user_id',
@@ -1067,13 +1193,13 @@ class FulfilmentsController extends AppController
         if (count($rows) !== count(array_unique($orderLineIds))) {
             return false;
         }
-        $users = array_values(array_unique(array_column($rows, 'user_id')));
-        $accounts = array_values(array_unique(array_column($rows, 'account_id')));
+        $users = array_values(array_unique(Value::stringList(array_column($rows, 'user_id'))));
+        $accounts = array_values(array_unique(Value::stringList(array_column($rows, 'account_id'))));
 
         return count($users) === 1
             && count($accounts) === 1
-            && ($expectedUserId === null || (string)$users[0] === $expectedUserId)
-            && ($expectedAccountId === null || (string)$accounts[0] === $expectedAccountId);
+            && ($expectedUserId === null || Value::string($users[0]) === $expectedUserId)
+            && ($expectedAccountId === null || Value::string($accounts[0]) === $expectedAccountId);
     }
 
     /**
@@ -1086,8 +1212,13 @@ class FulfilmentsController extends AppController
             return true;
         }
 
-        $invalid = $this->Fulfilments->FulfilmentLines->OrderLines
-            ->find()
+        $invalid = $this->associatedQuery(
+            $this->Fulfilments->FulfilmentLines->OrderLines,
+            $this->typedAssociation(
+                $this->Fulfilments->FulfilmentLines->OrderLines,
+                OrderLinesTable::class,
+            ),
+        )
             ->innerJoinWith('Orders')
             ->where([
                 'OrderLines.id IN' => $orderLineIds,
