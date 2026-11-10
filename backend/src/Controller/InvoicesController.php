@@ -186,11 +186,9 @@ class InvoicesController extends AppController
             'CreatedByUser',
             'UpdatedByUser',
             'InvoiceSummaries' => [
-                'CreatedByUser',
-                'UpdatedByUser',
                 'Orders' => ['Users', 'Sections'],
                 'Fulfilments',
-                'InvoiceLines' => ['Badges', 'CreatedByUser', 'UpdatedByUser'],
+                'InvoiceLines' => ['Badges'],
             ],
         ]);
         $this->set(compact('invoice', 'showAllDetails'));
