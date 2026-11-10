@@ -118,7 +118,6 @@
       <path value="$PROJECT_DIR$/backend/vendor/symfony/process" />
       <path value="$PROJECT_DIR$/backend/vendor/symfony/service-contracts" />
       <path value="$PROJECT_DIR$/backend/vendor/symfony/string" />
-      <path value="$PROJECT_DIR$/backend/vendor/theseer/tokenizer" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/markdown-extra" />
       <path value="$PROJECT_DIR$/backend/vendor/twig/twig" />
       <path value="$PROJECT_DIR$/backend/vendor/enqueue/enqueue" />
