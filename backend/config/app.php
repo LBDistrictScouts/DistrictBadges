@@ -512,10 +512,13 @@ return [
      * Make sure the class implements PHP's `SessionHandlerInterface` and set
      * Session.handler to <name>
      *
-     * To use database sessions, load the SQL file located at config/schema/sessions.sql
+     * The sessions table is managed by the application migrations.
      */
     'Session' => [
-        'defaults' => 'php',
+        'defaults' => 'database',
+        'handler' => [
+            'engine' => \App\Http\Session\PostgresSession::class,
+        ],
     ],
 
     /**
