@@ -184,7 +184,7 @@ __metadata:
   dependencies:
     jquery: "npm:^3.7.1"
     sass: "npm:^1.105.0"
-    select2: "npm:^4.1.0"
+    select2: "npm:^4.1.1"
   languageName: unknown
   linkType: soft
 
@@ -352,10 +352,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"select2@npm:^4.1.0":
-  version: 4.1.0
-  resolution: "select2@npm:4.1.0"
-  checksum: 10c0/4cb595600e91a319473013ffdf37cc14cfdb31ba3c0a930a0b652cbd924abccce17b1f45630d073da18ad820ecd402420c57355b15b045e683ef0a96783eaf1d
+"select2@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "select2@npm:4.1.1"
+  checksum: 10c0/a398cf5976cc2318b0bc16905c8770201dc59aeb24cb609fc2d1b2d85e8490cff57f7ed88a0a0583fb1ca787d15ef5600d12791df8fe066f65bea86733f75a8d
   languageName: node
   linkType: hard
 
